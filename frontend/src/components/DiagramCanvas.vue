@@ -15,11 +15,11 @@
 
       <!-- liens -->
       <g v-for="l in drawnLinks" :key="l.id" class="link" :class="{ sel: selected?.type === 'link' && selected.id === l.id, down: l.st.down, unknown: !l.st.known }"
-        @pointerdown.stop="onLinkDown(l, $event)" @dblclick.stop="$emit('edit-link', l.raw)">
+        @pointerdown.stop="onLinkDown(l, $event)" @dblclick.stop="$emit('edit-link', l.raw)"
+        @pointerenter="hoverLink(l, $event)" @pointermove="hoverLink(l, $event)" @pointerleave="unhover">
         <path :d="l.d" class="hit" />
         <path :d="l.d" class="line" :stroke="l.st.color" :stroke-width="l.st.width" :stroke-dasharray="l.st.down ? '8 6' : null" />
         <path v-if="l.st.known && !l.st.down && l.st.util > 1" :d="l.d" class="flow" :stroke-width="Math.max(1.5, l.st.width - 1.5)" :style="{ animationDuration: `${Math.max(0.6, 4 - l.st.util / 30)}s` }" />
-        <title>{{ l.tip }}</title>
       </g>
 
       <!-- trait en cours de création -->
@@ -50,7 +50,8 @@
       </g>
       <!-- étiquettes (ports, débits) au-dessus des cartes -->
       <g class="labels">
-        <g v-for="l in drawnLinks" :key="'lb' + l.id" @pointerdown.stop="onLinkDown(l, $event)" @dblclick.stop="$emit('edit-link', l.raw)">
+        <g v-for="l in drawnLinks" :key="'lb' + l.id" @pointerdown.stop="onLinkDown(l, $event)" @dblclick.stop="$emit('edit-link', l.raw)"
+          @pointerenter="hoverLink(l, $event)" @pointermove="hoverLink(l, $event)" @pointerleave="unhover">
           <template v-if="view.showPorts !== false">
             <text v-if="l.pa" :x="l.pA.x" :y="l.pA.y" class="plabel" text-anchor="middle" dominant-baseline="middle">{{ l.pa }}</text>
             <text v-if="l.pb" :x="l.pB.x" :y="l.pB.y" class="plabel" text-anchor="middle" dominant-baseline="middle">{{ l.pb }}</text>
@@ -62,6 +63,8 @@
         </g>
       </g>
     </svg>
+
+    <LinkHover v-if="hover && hoverData" :link="hoverData" :x="hover.x" :y="hover.y" />
 
     <div class="zoom">
       <button class="btn ghost sm icon" title="Zoom +" @click="zoomBy(0.8)"><ZoomIn /></button>
@@ -76,6 +79,7 @@ import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } 
 import { useRouter } from 'vue-router'
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-vue-next'
 import { linkState, nodeStatus } from '../diagram/core'
+import LinkHover from './LinkHover.vue'
 import { devName, fmtBits, fmtSpeed, osIcon, statusLabel } from '../utils'
 
 const props = defineProps({
@@ -123,13 +127,29 @@ const drawnLinks = computed(() => (props.diagram?.links || []).map((l) => {
   const text = l.label && !(view.value.showRates !== false && st.known && !st.down) ? l.label
     : `${l.label ? l.label + ' · ' : ''}↓${compact(st.rin)} ↑${compact(st.rout)}`
   const devA = props.live.devById.value[A.device_id]; const devB = props.live.devById.value[B.device_id]
-  const tip = [
-    `${devA ? devName(devA) : A.label || 'A'} ${pa ? `(${pa.ifName})` : ''} ↔ ${devB ? devName(devB) : B.label || 'B'} ${pb ? `(${pb.ifName})` : ''}`,
-    st.known ? (st.down ? 'Lien coupé' : `${fmtSpeed(st.speed)} · charge ${Math.round(st.util)} %`) : 'Ports non renseignés : état inconnu',
-    st.known && !st.down ? `vers ${devA ? devName(devA) : 'A'} : ${fmtBits(st.rin)} · depuis : ${fmtBits(st.rout)}` : '',
-  ].filter(Boolean).join('\n')
-  return { id: l.id, raw: l, d, st, mid: at(0.5), pA: at(offA), pB: at(1 - offB), pa: short(pa), pb: short(pb), text, lw: text.length * 7.2 + 18, tip }
+  const nameA = devA ? devName(devA) : A.label || 'A'
+  // historique : RRD du port A, à défaut celui du port B (sens inversé)
+  const rp = pa || pb; const rdev = rp && props.live.devById.value[rp.device_id]
+  const info = {
+    titleA: `${nameA}${pa ? ` (${pa.ifName})` : ''}`, titleB: `${devB ? devName(devB) : B.label || 'B'}${pb ? ` (${pb.ifName})` : ''}`, nameA,
+    status: st.known ? (st.down ? 'Lien coupé' : `${fmtSpeed(st.speed)} · charge ${Math.round(st.util)} % · ↓ ${fmtBits(st.rin)} ↑ ${fmtBits(st.rout)}`) : 'Ports non renseignés : état inconnu',
+    host: rdev?.hostname || null, portId: rp ? +rp.port_id : null, flip: !pa && !!pb,
+  }
+  return { id: l.id, raw: l, d, st, mid: at(0.5), pA: at(offA), pB: at(1 - offB), pa: short(pa), pb: short(pb), text, lw: text.length * 7.2 + 18, info }
 }).filter(Boolean))
+
+// --------------------------------------------------------------- survol d'un lien : graphe de trafic
+const hover = ref(null) // { id, x, y } en pixels dans le canevas
+const hoverData = computed(() => hover.value && drawnLinks.value.find((l) => l.id === hover.value.id)?.info)
+function hoverLink(l, e) {
+  if (drag.value || (props.editing && props.tool === 'link')) { hover.value = null; return }
+  const r = wrap.value.getBoundingClientRect()
+  const W = 324; const H = 200; const px = e.clientX - r.left; const py = e.clientY - r.top
+  const x = px + 16 + W > r.width ? Math.max(4, px - 16 - W) : px + 16
+  const y = Math.max(4, Math.min(py + 16, r.height - H - 4))
+  hover.value = { id: l.id, x, y }
+}
+function unhover() { hover.value = null }
 
 // --------------------------------------------------------------- vue (zoom / déplacement)
 function toSvg(e) {
@@ -172,6 +192,7 @@ const cursor = ref(null)
 watch(() => props.tool, () => { linkFrom.value = null })
 
 function onBgDown(e) {
+  hover.value = null
   if (e.button !== 0 && e.button !== 1) return
   emit('update:selected', null)
   linkFrom.value = null
