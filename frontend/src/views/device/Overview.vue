@@ -18,11 +18,26 @@
     </div>
 
     <div class="col" style="gap:18px;min-width:0">
+      <template v-if="isPing">
+        <div class="grid g4">
+          <div v-for="a in availList" :key="a.d" class="card ring-card">
+            <Ring :value="a.v" :text="a.v !== null ? a.v.toFixed(1) + '%' : '—'" :label="'Dispo. ' + a.label" :colors="availColors(a.v)" />
+            <span class="small muted">{{ a.v === null ? 'pas encore de données' : a.v >= 100 ? 'aucune coupure' : 'indisponible ' + fmtDown(a) }}</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><Activity :size="17" /> Latence ICMP <div class="right small muted">actuelle <b class="mono" style="color:var(--text)">{{ fmtNum(device.last_ping_timetaken) }} ms</b></div></div>
+          <RrdChart v-if="has('icmp-perf.rrd')" :host="device.hostname" file="icmp-perf.rrd" height="260px" range="-1d" />
+          <div v-else class="empty small">Aucune donnée de latence (icmp-perf.rrd absent)</div>
+        </div>
+      </template>
+
+      <template v-else>
       <div class="grid g4">
         <div class="card ring-card"><Ring :value="cpu" :label="'CPU'" /><span class="small muted">{{ procs.length }} processeur(s)</span></div>
         <div class="card ring-card"><Ring :value="mem.pct" label="Mémoire" :colors="['#a78bfa', '#f472b6']" /><span class="small muted">{{ fmtBytes(mem.used) }} / {{ fmtBytes(mem.total) }}</span></div>
         <div class="card ring-card"><Ring :value="disk.pct" label="Stockage" :colors="['#34d399', '#22d3ee']" /><span class="small muted">{{ fmtBytes(disk.used) }} / {{ fmtBytes(disk.total) }}</span></div>
-        <div class="card ring-card"><Ring :value="avail" :text="avail !== null ? avail.toFixed(2) + '%' : '—'" label="Dispo. 30 j" :colors="['#22c55e', '#34d399']" /><span class="small muted">{{ fmtNum(device.last_ping_timetaken) }} ms ICMP</span></div>
+        <div class="card ring-card"><Ring :value="avail" :text="avail !== null ? avail.toFixed(1) + '%' : '—'" label="Dispo. 30 j" :colors="availColors(avail)" /><span class="small muted">{{ fmtNum(device.last_ping_timetaken) }} ms ICMP</span></div>
       </div>
 
       <div v-if="device.type === 'network' && swCount !== 0" class="card"><WSwitches :config="{ device: device.hostname, embedded: true }" @count="(c) => (swCount = c)" /></div>
@@ -50,7 +65,13 @@
         </div>
       </div>
 
+      </template>
+
       <div class="grid g2">
+        <div v-if="isPing" class="card">
+          <RrdChart v-if="has('availability-86400.rrd')" :host="device.hostname" file="availability-86400.rrd" :icon="Activity" title="Disponibilité dans le temps (glissante 24 h)" height="180px" range="-7d" />
+          <div v-else class="empty small">Aucun historique de disponibilité (availability-86400.rrd absent)</div>
+        </div>
         <div v-if="has('poller-perf.rrd')" class="card"><RrdChart :host="device.hostname" file="poller-perf.rrd" :icon="Gauge" height="180px" range="-1d" hide-range :show-stats="false" title="Durée de polling (24 h)" :zoom="false" /></div>
         <div v-if="has('ucd_load.rrd')" class="card"><RrdChart :host="device.hostname" file="ucd_load.rrd" :icon="Cpu" height="180px" range="-1d" hide-range :show-stats="false" title="Load average (24 h)" :zoom="false" /></div>
         <div v-else-if="procFile" class="card"><RrdChart :host="device.hostname" :file="procFile" :icon="Cpu" height="180px" range="-1d" hide-range :show-stats="false" title="CPU (24 h)" :zoom="false" /></div>
@@ -69,7 +90,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Info, FileText, MapPin, ArrowDownUp, Gauge, Cpu, ScrollText, HeartPulse } from 'lucide-vue-next'
+import { Info, FileText, MapPin, ArrowDownUp, Gauge, Cpu, ScrollText, HeartPulse, Activity } from 'lucide-vue-next'
 import DevHealth from './DevHealth.vue'
 import Ring from '../../components/Ring.vue'
 import RrdChart from '../../components/RrdChart.vue'
@@ -79,7 +100,7 @@ import WSwitches from '../../components/widgets/WSwitches.vue'
 import { api, pick, safeList, L } from '../../api'
 import { useLoader } from '../../refresh'
 import { loadHealth } from '../../health'
-import { devStatus, fmtUptime, fmtDate, fmtBytes, fmtBits, fmtNum, timeAgo, portStatus, portUtil, utilColor } from '../../utils'
+import { devStatus, fmtUptime, fmtDate, fmtBytes, fmtBits, fmtNum, timeAgo, portStatus, portUtil, utilColor, availColors } from '../../utils'
 
 const props = defineProps({ device: Object, files: Array })
 const enc = L.enc
@@ -91,6 +112,15 @@ const ports = ref([])
 const events = ref([])
 const avail = ref(null)
 const swCount = ref(null)
+const availAll = ref([])
+// équipement ajouté en ping seul : ni SNMP ni ports, seule la latence ICMP et la disponibilité ont du sens
+const isPing = computed(() => props.device.os === 'ping' || !!+props.device.snmp_disable)
+const PERIODS = [[86400, '24 h'], [604800, '7 j'], [2592000, '30 j'], [31536000, '1 an']]
+const availList = computed(() => PERIODS.map(([d, label]) => {
+  const m = availAll.value.find((x) => +x.duration === d)
+  return { d, label, v: m ? +m.availability_perc : null }
+}))
+const fmtDown = (a) => { const s = Math.round(a.d * (100 - a.v) / 100); return s < 60 ? `${s} s` : fmtUptime(s) }
 
 const info = computed(() => {
   const d = props.device
@@ -120,9 +150,10 @@ const procFile = computed(() => (props.files || []).find((f) => f.startsWith('pr
 
 useLoader(async ({ silent }) => {
   const h = enc(props.device.hostname)
+  const ping = isPing.value
   const [hl, p, e, a] = await Promise.all([
-    loadHealth(props.device.hostname, ['device_processor', 'device_mempool', 'device_storage']),
-    safeList(`devices/${h}/ports`, { columns: 'port_id,ifName,ifAlias,ifType,ifOperStatus,ifAdminStatus,ifSpeed,ifInOctets_rate,ifOutOctets_rate,deleted,disabled' }, 'ports'),
+    ping ? { data: {} } : loadHealth(props.device.hostname, ['device_processor', 'device_mempool', 'device_storage']),
+    ping ? [] : safeList(`devices/${h}/ports`, { columns: 'port_id,ifName,ifAlias,ifType,ifOperStatus,ifAdminStatus,ifSpeed,ifInOctets_rate,ifOutOctets_rate,deleted,disabled' }, 'ports'),
     safeList(`logs/eventlog/${h}`, { limit: 10, sortorder: 'DESC' }, 'logs'),
     silent && avail.value !== null ? null : api.get(`devices/${h}/availability`).catch(() => null),
   ])
@@ -134,6 +165,7 @@ useLoader(async ({ silent }) => {
     const list = pick(a, 'availability')
     const m = list.find((x) => +x.duration === 2592000) || list[list.length - 1]
     avail.value = m ? +m.availability_perc : null
+    availAll.value = list
   }
 })
 </script>

@@ -2,12 +2,15 @@
   <div class="col" style="gap:18px">
     <div class="grid g4">
       <div v-for="a in avail" :key="a.duration" class="card av">
-        <Ring :value="+a.availability_perc" :text="(+a.availability_perc).toFixed(3) + '%'" :size="120" :colors="+a.availability_perc > 99.9 ? ['#22c55e', '#34d399'] : +a.availability_perc > 99 ? ['#facc15', '#fb923c'] : ['#f43f5e', '#fb7185']" />
+        <Ring :value="+a.availability_perc" :text="(+a.availability_perc).toFixed(1) + '%'" :size="120" :colors="availColors(+a.availability_perc)" />
         <b>{{ period(a.duration) }}</b>
       </div>
       <div v-if="!avail.length && !loading" class="card empty span2">Aucune donnée de disponibilité</div>
     </div>
-    <div v-if="files?.includes('availability-2592000.rrd')" class="card"><RrdChart :host="device.hostname" file="availability-2592000.rrd" title="Disponibilité glissante 30 j" range="-30d" /></div>
+    <div v-if="files?.includes('availability-86400.rrd') || files?.includes('poller-perf.rrd')" class="grid g2">
+      <div v-if="files?.includes('availability-86400.rrd')" class="card"><RrdChart :host="device.hostname" file="availability-86400.rrd" :icon="Activity" title="Disponibilité dans le temps (glissante 24 h)" height="180px" range="-7d" /></div>
+      <div v-if="files?.includes('poller-perf.rrd')" class="card"><RrdChart :host="device.hostname" file="poller-perf.rrd" :icon="Gauge" height="180px" range="-1d" hide-range :show-stats="false" title="Durée de polling (24 h)" :zoom="false" /></div>
+    </div>
     <div v-if="files?.includes('uptime.rrd')" class="card"><RrdChart :host="device.hostname" file="uptime.rrd" title="Uptime" range="-30d" /></div>
     <div class="card">
       <div class="card-title"><Unplug :size="17" /> Coupures <span class="sub">{{ outages.length }}</span></div>
@@ -21,13 +24,13 @@
 </template>
 <script setup>
 import { ref, computed } from 'vue'
-import { Unplug } from 'lucide-vue-next'
+import { Unplug, Activity, Gauge } from 'lucide-vue-next'
 import Ring from '../../components/Ring.vue'
 import RrdChart from '../../components/RrdChart.vue'
 import DataTable from '../../components/DataTable.vue'
 import { safeList, L } from '../../api'
 import { useLoader } from '../../refresh'
-import { fmtDate, fmtUptime } from '../../utils'
+import { fmtDate, fmtUptime, availColors } from '../../utils'
 const props = defineProps({ device: Object, files: Array })
 const avail = ref([])
 const rawOut = ref([])

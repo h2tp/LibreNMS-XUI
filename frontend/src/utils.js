@@ -151,3 +151,8 @@ export const RANGES = [
 export const reducedMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export function confirmAction(msg) { return window.confirm(msg) }
+// couleurs d'une jauge de disponibilité : vert ≥ 99,4 %, orange ≥ 99 %, rouge en dessous
+export function availColors(v) {
+  if (v === null || v === undefined || isNaN(v)) return ['#64748b', '#94a3b8']
+  return v >= 99.4 ? ['#22c55e', '#34d399'] : v >= 99 ? ['#facc15', '#fb923c'] : ['#f43f5e', '#fb7185']
+}
