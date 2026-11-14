@@ -1,0 +1,14 @@
+services:
+  librenms-xui:
+    build: .
+    image: librenms-xui:latest
+    container_name: librenms-xui
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${XUI_BIND:-0.0.0.0}:${XUI_PORT:-8095}:8080"
+    volumes:
+      # RRD de LibreNMS en lecture seule -> graphiques interactifs
+      - ${RRD_PATH:-/opt/docker-compose/librenms/docker-master/examples/compose/librenms/rrd}:/rrd:ro
+      # Tableaux de bord personnalisés (persistants)
+      - ./data:/data
