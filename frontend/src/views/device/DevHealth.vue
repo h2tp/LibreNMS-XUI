@@ -9,7 +9,7 @@
         <div class="proc-grid">
           <div v-for="p in procs" :key="p._id" class="proc" :class="{ sel: open === 'p' + p._id }" @click="toggle('p' + p._id)">
             <Ring :value="+p.processor_usage || 0" :size="76" :stroke="8" />
-            <span class="small muted ellipsis" style="max-width:110px" :title="p.processor_descr || p.desc">{{ p.processor_descr || p.desc }}</span>
+            <span class="small muted ellipsis" style="max-width:110px" :title="p.tip">{{ p.label }}</span>
           </div>
         </div>
         <HealthChart v-if="open && open.startsWith('p')" :device="device" :files="files" type="device_processor" :row="procs.find((x) => 'p' + x._id === open)" />
@@ -67,7 +67,21 @@ const data = ref({})
 const open = ref(null)
 const toggle = (k) => (open.value = open.value === k ? null : k)
 
-const procs = computed(() => data.value.device_processor || [])
+// LibreNMS donne souvent la même description à tous les cœurs (« Processor » via HOST-RESOURCES) :
+// on les numérote alors dans l'ordre de leur index SNMP (« CPU 1 », « CPU 2 »…)
+const procs = computed(() => {
+  const list = [...(data.value.device_processor || [])].sort((a, b) => (+a.processor_index || 0) - (+b.processor_index || 0) || a._id - b._id)
+  const descr = (p) => String(p.processor_descr || p.desc || 'Processeur').trim()
+  const count = {}; for (const p of list) count[descr(p)] = (count[descr(p)] || 0) + 1
+  const rank = {}
+  return list.map((p) => {
+    const d = descr(p)
+    if (count[d] < 2) return { ...p, label: d, tip: d }
+    const n = (rank[d] = (rank[d] || 0) + 1)
+    const label = /^(processor|cpu|processeur)$/i.test(d) ? `CPU ${n}` : `${d} #${n}`
+    return { ...p, label, tip: `${label} — ${d} (index ${p.processor_index ?? '?'})` }
+  })
+})
 const mempools = computed(() => data.value.device_mempool || [])
 const storage = computed(() => data.value.device_storage || [])
 const sensorGroups = computed(() => types.value.filter((t) => !['device_processor', 'device_mempool', 'device_storage'].includes(t.name) && data.value[t.name]?.length)
