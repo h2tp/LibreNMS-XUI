@@ -1,5 +1,5 @@
 <template>
-  <RrdChart v-if="hasRrd" :host="config.device" :file="`port-id${config.port}.rrd`" :range="config.range || '-1d'" hide-range compact :zoom="false"
+  <RrdChart v-if="hasRrd" :host="config.device" :file="`port-id${config.port}.rrd`" :range="config.range || '-1d'" hide-range compact :axes="config.scale !== false" :zoom="false"
     :show-stats="config.stats !== false" :height="`${Math.max(100, size.h - (config.stats !== false ? 56 : 0))}px`" />
   <ApiGraph v-else-if="hasRrd === false" :path="`devices/${encodeURIComponent(config.device)}/ports/${encodeURIComponent(config.portName || '')}/port_bits`" :range="config.range || '-1d'" :width="Math.round(size.w)" :height="Math.max(80, Math.round(size.h * 0.62))" />
 </template>

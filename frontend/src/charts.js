@@ -26,7 +26,7 @@ export function unitFor(u) {
  * Option ECharts pour séries temporelles.
  * series: [{ name, data: [[ms, v], ...], color, area, negate, dashed, stack }]
  */
-export function timeOption(series, { unit = 'num', zoom = true, legend = true, compact = false, min, max, stack = false } = {}) {
+export function timeOption(series, { unit = 'num', zoom = true, legend = true, compact = false, axes = !compact, min, max, stack = false } = {}) {
   const u = unitFor(unit)
   const text = css('--muted') || '#8b97ad'
   const grid = css('--border') || 'rgba(148,163,184,.12)'
@@ -36,17 +36,18 @@ export function timeOption(series, { unit = 'num', zoom = true, legend = true, c
     animationDuration: 900,
     animationEasing: 'cubicOut',
     color: PALETTE,
-    grid: { left: compact ? 4 : 10, right: compact ? 4 : 16, top: legend && !compact ? 34 : 10, bottom: zoom ? 46 : compact ? 4 : 8, containLabel: !compact },
+    grid: { left: compact ? 4 : 10, right: compact ? 8 : 16, top: legend && !compact ? 34 : compact && axes ? 8 : 10, bottom: zoom ? 46 : compact ? 4 : 8, containLabel: axes },
     legend: legend && !compact ? { top: 0, left: 0, textStyle: { color: text }, icon: 'roundRect', itemWidth: 12, itemHeight: 6 } : undefined,
     tooltip: {
       trigger: 'axis', backgroundColor: panel, borderColor: grid, textStyle: { color: fg, fontSize: 12 },
       axisPointer: { type: 'line', lineStyle: { color: css('--accent'), opacity: 0.5 } },
       valueFormatter: (v) => (v === null || v === undefined ? '—' : u.fmt(Math.abs(v))),
     },
-    xAxis: { type: 'time', show: !compact, axisLine: { lineStyle: { color: grid } }, axisLabel: { color: text, hideOverlap: true }, splitLine: { show: false } },
+    // en compact (widgets), échelle discrète : petits libellés, peu de graduations
+    xAxis: { type: 'time', show: axes, splitNumber: compact ? 4 : undefined, axisLine: { lineStyle: { color: grid } }, axisTick: { show: !compact }, axisLabel: { color: text, hideOverlap: true, fontSize: compact ? 10 : 12 }, splitLine: { show: false } },
     yAxis: {
-      type: 'value', show: !compact, min, max,
-      axisLabel: { color: text, formatter: (v) => u.short(Math.abs(v)) },
+      type: 'value', show: axes, min, max, splitNumber: compact ? 3 : undefined,
+      axisLabel: { color: text, fontSize: compact ? 10 : 12, formatter: (v) => u.short(Math.abs(v)) },
       splitLine: { lineStyle: { color: grid, type: 'dashed' } },
     },
     dataZoom: zoom ? [{ type: 'inside' }, { type: 'slider', height: 22, bottom: 6, borderColor: 'transparent', backgroundColor: 'transparent', fillerColor: 'rgba(34,211,238,.12)', dataBackground: { lineStyle: { color: grid }, areaStyle: { color: grid } }, textStyle: { color: text } }] : undefined,

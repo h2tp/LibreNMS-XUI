@@ -13,7 +13,7 @@
       <div><span>OS</span><b class="ellipsis">{{ [dev.os, dev.version].filter(Boolean).join(' ') || '—' }}</b></div>
       <div><span>Emplacement</span><b class="ellipsis">{{ (dev.location || '—').replace(/\s*\[[-\d.,\s]+\]\s*$/, '') }}</b></div>
     </div>
-    <RrdChart v-if="session.rrd && size.h > 230" :host="dev.hostname" file="icmp-perf.rrd" range="-1d" hide-range compact :show-stats="false" :zoom="false" :height="`${size.h - 150}px`" />
+    <RrdChart v-if="session.rrd && size.h > 230" :host="dev.hostname" file="icmp-perf.rrd" range="-1d" hide-range compact axes :show-stats="false" :zoom="false" :height="`${size.h - 150}px`" />
   </div>
 </template>
 <script setup>

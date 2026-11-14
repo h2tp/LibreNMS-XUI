@@ -308,6 +308,7 @@ export const WIDGETS = {
       { key: 'file', label: 'Métrique', type: 'rrd', required: true, depends: 'device' },
       RANGE_FIELD,
       { key: 'stats', label: 'Afficher actuel / moyenne / max', type: 'bool', default: true },
+      { key: 'scale', label: 'Afficher l\'échelle (axes)', type: 'bool', default: true },
     ],
   },
   port: {
@@ -318,6 +319,7 @@ export const WIDGETS = {
       { key: 'port', label: 'Port', type: 'port', required: true, depends: 'device' },
       RANGE_FIELD,
       { key: 'stats', label: 'Afficher actuel / moyenne / max', type: 'bool', default: true },
+      { key: 'scale', label: 'Afficher l\'échelle (axes)', type: 'bool', default: true },
     ],
   },
   graph: {

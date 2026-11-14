@@ -35,7 +35,7 @@ import { prefs } from '../utils'
 
 const props = defineProps({
   host: String, file: String, title: String, range: String, hideRange: Boolean, icon: Object,
-  height: { type: String, default: '260px' }, compact: Boolean, showStats: { type: Boolean, default: true },
+  height: { type: String, default: '260px' }, compact: Boolean, axes: { type: Boolean, default: undefined }, showStats: { type: Boolean, default: true },
   ds: Object, unit: String, zoom: { type: Boolean, default: true }, cf: { type: String, default: 'AVERAGE' },
 })
 const localRange = ref(props.range || prefs.range)
@@ -50,7 +50,7 @@ const u = computed(() => unitFor(meta.value.unit))
 const series = computed(() => (raw.value ? toSeries(raw.value, meta.value) : null))
 const st = computed(() => (series.value || []).map((s) => stats(s.data)))
 const option = computed(() => series.value && timeOption(series.value, {
-  unit: meta.value.unit, zoom: props.zoom && !props.compact, compact: props.compact, stack: meta.value.stack,
+  unit: meta.value.unit, zoom: props.zoom && !props.compact, compact: props.compact, axes: props.axes ?? !props.compact, stack: meta.value.stack,
   max: meta.value.unit === 'pct' ? 100 : undefined, min: meta.value.unit === 'pct' ? 0 : undefined,
 }))
 
