@@ -1,10 +1,14 @@
 <template>
   <div v-if="error" class="err small">{{ error }}</div>
   <div v-else-if="!loaded" class="col" style="gap:10px"><div v-for="i in 2" :key="i" class="skeleton" style="height:120px"></div></div>
-  <div v-else-if="!switches.length" class="empty small"><Network /><div>Aucun switch{{ config.device || config.group ? ' pour ce filtre' : ' détecté' }}</div></div>
-  <div v-else class="col" style="gap:14px">
-    <div v-for="sw in switches" :key="sw.device_id" class="sw" :class="{ down: sw.down }">
-      <div class="head">
+  <div v-else-if="!switches.length && !config.embedded" class="empty small"><Network /><div>Aucun switch{{ config.device || config.group ? ' pour ce filtre' : ' détecté' }}</div></div>
+  <div v-else-if="switches.length" class="col" style="gap:14px">
+    <div v-for="sw in switches" :key="sw.device_id" class="sw" :class="{ down: sw.down, embedded: config.embedded }">
+      <div v-if="config.embedded" class="head">
+        <Network :size="17" /><b class="grow">Façade</b>
+        <span class="small muted nowrap"><b style="color:var(--text)">{{ sw.up }}</b> / {{ sw.ports.length }} ports actifs</span>
+      </div>
+      <div v-else class="head">
         <span class="dot" :class="sw.down ? 'down' : 'up'"></span>
         <router-link :to="`/device/${encodeURIComponent(sw.hostname)}`" class="grow" style="min-width:0;color:var(--text)">
           <b class="ellipsis" style="display:block">{{ sw.name }}</b>
@@ -49,13 +53,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Network, ArrowDown, ArrowUp } from 'lucide-vue-next'
 import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName, fmtBits, fmtSpeed, fmtUptime, portUtil, utilColor } from '../../utils'
 
 const props = defineProps({ config: Object, size: Object })
+const emit = defineEmits(['count'])
 const ports = ref([]); const devById = ref({}); const cpu = ref([]); const mem = ref([]); const sensors = ref([]); const loaded = ref(false)
 const n = (v) => +v || 0
 const PHYS = /^(ethernetCsmacd|gigabitEthernet|fastEther|fastEtherFX|iso88023Csmacd|ethernet3Mbit)$/i
@@ -120,6 +125,8 @@ const switches = computed(() => {
   }).sort((a, b) => b.down - a.down || a.name.localeCompare(b.name))
 })
 
+watch(() => (loaded.value ? switches.value.length : null), (c) => c !== null && emit('count', c), { immediate: true })
+
 const { error } = useLoader(async () => {
   // la façade n'attend que les ports ; CPU / RAM (agrégations plus lentes à froid) complètent ensuite
   D.cpu().then((c) => (cpu.value = c)).catch(() => {})
@@ -134,6 +141,7 @@ const { error } = useLoader(async () => {
 <style scoped>
 .sw { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--panel-2); border: 1px solid var(--border); }
 .sw.down { border-color: var(--red); }
+.sw.embedded { padding: 0; background: none; border: 0; }
 .head { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .head a:hover { text-decoration: none; }
 .plate { overflow-x: auto; padding: 10px; border-radius: 10px; background: linear-gradient(180deg, #1f2937, #111827); border: 1px solid #374151; }

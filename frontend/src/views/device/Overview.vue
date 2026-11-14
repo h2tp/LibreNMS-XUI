@@ -25,6 +25,8 @@
         <div class="card ring-card"><Ring :value="avail" :text="avail !== null ? avail.toFixed(2) + '%' : '—'" label="Dispo. 30 j" :colors="['#22c55e', '#34d399']" /><span class="small muted">{{ fmtNum(device.last_ping_timetaken) }} ms ICMP</span></div>
       </div>
 
+      <div v-if="device.type === 'network' && swCount !== 0" class="card"><WSwitches :config="{ device: device.hostname, embedded: true }" @count="(c) => (swCount = c)" /></div>
+
       <div class="card"><DeviceTraffic :device="device" :files="files" height="240px" /></div>
 
       <div class="card">
@@ -63,6 +65,7 @@ import Ring from '../../components/Ring.vue'
 import RrdChart from '../../components/RrdChart.vue'
 import MiniMap from '../../components/MiniMap.vue'
 import DeviceTraffic from '../../components/DeviceTraffic.vue'
+import WSwitches from '../../components/widgets/WSwitches.vue'
 import { api, pick, safeList, L } from '../../api'
 import { useLoader } from '../../refresh'
 import { loadHealth } from '../../health'
@@ -77,6 +80,7 @@ const storage = ref([])
 const ports = ref([])
 const events = ref([])
 const avail = ref(null)
+const swCount = ref(null)
 
 const info = computed(() => {
   const d = props.device
