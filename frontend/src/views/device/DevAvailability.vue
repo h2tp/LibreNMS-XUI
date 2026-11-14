@@ -11,6 +11,10 @@
       <div v-if="files?.includes('availability-86400.rrd')" class="card"><RrdChart :host="device.hostname" file="availability-86400.rrd" :icon="Activity" title="Disponibilité dans le temps (glissante 24 h)" height="180px" range="-7d" /></div>
       <div v-if="files?.includes('poller-perf.rrd')" class="card"><RrdChart :host="device.hostname" file="poller-perf.rrd" :icon="Gauge" height="180px" range="-1d" hide-range :show-stats="false" title="Durée de polling (24 h)" :zoom="false" /></div>
     </div>
+    <div v-if="files?.includes('icmp-perf.rrd')" class="card">
+      <div class="card-title"><Activity :size="17" /> Latence ICMP <div class="right small muted">actuelle <b class="mono" style="color:var(--text)">{{ fmtNum(device.last_ping_timetaken) }} ms</b></div></div>
+      <RrdChart :host="device.hostname" file="icmp-perf.rrd" height="260px" range="-1d" />
+    </div>
     <div v-if="files?.includes('uptime.rrd')" class="card"><RrdChart :host="device.hostname" file="uptime.rrd" title="Uptime" range="-30d" /></div>
     <div class="card">
       <div class="card-title"><Unplug :size="17" /> Coupures <span class="sub">{{ outages.length }}</span></div>
@@ -30,7 +34,7 @@ import RrdChart from '../../components/RrdChart.vue'
 import DataTable from '../../components/DataTable.vue'
 import { safeList, L } from '../../api'
 import { useLoader } from '../../refresh'
-import { fmtDate, fmtUptime, availColors } from '../../utils'
+import { fmtDate, fmtUptime, fmtNum, availColors } from '../../utils'
 const props = defineProps({ device: Object, files: Array })
 const avail = ref([])
 const rawOut = ref([])
