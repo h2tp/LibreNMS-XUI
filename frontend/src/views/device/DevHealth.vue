@@ -3,18 +3,18 @@
     <div v-if="loading && !types.length" class="grid gauto"><div v-for="i in 6" :key="i" class="skeleton" style="height:120px"></div></div>
     <div v-else-if="!types.length" class="card empty"><HeartPulse /><div>Aucune donnée de santé pour cet équipement</div></div>
 
-    <div v-if="procs.length" class="card mb">
-      <div class="card-title"><Cpu :size="17" /> Processeurs <span class="sub">{{ procs.length }}</span></div>
-      <div class="proc-grid">
-        <div v-for="p in procs" :key="p._id" class="proc" :class="{ sel: open === 'p' + p._id }" @click="toggle('p' + p._id)">
-          <Ring :value="+p.processor_usage || 0" :size="76" :stroke="8" />
-          <span class="small muted ellipsis" style="max-width:110px" :title="p.processor_descr || p.desc">{{ p.processor_descr || p.desc }}</span>
+    <div v-if="procs.length || mempools.length || storage.length" class="grid g2 mb usage-grid" :class="{ compact }">
+      <div v-if="procs.length" class="card procs">
+        <div class="card-title"><Cpu :size="17" /> Processeurs <span class="sub">{{ procs.length }}</span></div>
+        <div class="proc-grid">
+          <div v-for="p in procs" :key="p._id" class="proc" :class="{ sel: open === 'p' + p._id }" @click="toggle('p' + p._id)">
+            <Ring :value="+p.processor_usage || 0" :size="76" :stroke="8" />
+            <span class="small muted ellipsis" style="max-width:110px" :title="p.processor_descr || p.desc">{{ p.processor_descr || p.desc }}</span>
+          </div>
         </div>
+        <HealthChart v-if="open && open.startsWith('p')" :device="device" :files="files" type="device_processor" :row="procs.find((x) => 'p' + x._id === open)" />
       </div>
-      <HealthChart v-if="open && open.startsWith('p')" :device="device" :files="files" type="device_processor" :row="procs.find((x) => 'p' + x._id === open)" />
-    </div>
 
-    <div class="grid g2 mb" v-if="mempools.length || storage.length">
       <div v-if="mempools.length" class="card">
         <div class="card-title"><MemoryStick :size="17" /> Mémoire</div>
         <div v-for="m in mempools" :key="m._id" class="usage" @click="toggle('m' + m._id)">
@@ -60,7 +60,8 @@ import { loadHealth, sensorClassOf } from '../../health'
 import { SENSOR_LABELS, sensorUnit } from '../../rrdmeta'
 import { fmtBytes, utilColor } from '../../utils'
 
-const props = defineProps({ device: Object, files: Array })
+// compact (vue d'ensemble) : processeurs et mémoire côte à côte
+const props = defineProps({ device: Object, files: Array, compact: Boolean })
 const types = ref([])
 const data = ref({})
 const open = ref(null)
@@ -94,6 +95,8 @@ const { loading } = useLoader(async () => {
 </script>
 
 <style scoped>
+.usage-grid:not(.compact) > .procs { grid-column: 1 / -1; }
+.usage-grid.compact > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .proc-grid { display: flex; flex-wrap: wrap; gap: 14px; }
 .proc { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; border-radius: 12px; cursor: pointer; transition: background .2s; }
 .proc:hover, .proc.sel { background: var(--panel-2); }

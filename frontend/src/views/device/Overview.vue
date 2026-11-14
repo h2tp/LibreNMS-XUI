@@ -29,6 +29,15 @@
 
       <div class="card"><DeviceTraffic :device="device" :files="files" height="240px" /></div>
 
+      <!-- tout le contenu de l'onglet Santé (processeurs, mémoire, stockage, capteurs) -->
+      <div>
+        <div class="row health-head">
+          <HeartPulse :size="18" /><b>Santé</b><span class="grow"></span>
+          <router-link :to="{ name: 'device', params: { host: device.hostname, tab: 'health' } }" class="small">Onglet Santé →</router-link>
+        </div>
+        <DevHealth :device="device" :files="files" compact class="health-in" />
+      </div>
+
       <div class="card">
         <div class="card-title"><ArrowDownUp :size="17" /> Ports les plus actifs <div class="right"><router-link :to="{ name: 'device', params: { host: device.hostname, tab: 'ports' } }" class="small">Tous les ports →</router-link></div></div>
         <div v-if="!topPorts.length" class="empty small">Aucun port</div>
@@ -60,7 +69,8 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Info, FileText, MapPin, ArrowDownUp, Gauge, Cpu, ScrollText } from 'lucide-vue-next'
+import { Info, FileText, MapPin, ArrowDownUp, Gauge, Cpu, ScrollText, HeartPulse } from 'lucide-vue-next'
+import DevHealth from './DevHealth.vue'
 import Ring from '../../components/Ring.vue'
 import RrdChart from '../../components/RrdChart.vue'
 import MiniMap from '../../components/MiniMap.vue'
@@ -129,6 +139,8 @@ useLoader(async ({ silent }) => {
 </script>
 
 <style scoped>
+.health-head { gap: 8px; margin-bottom: 12px; font-size: 15px; }
+.health-in > :deep(.mb:last-child) { margin-bottom: 0; }
 .ov { grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); }
 @media (max-width: 1100px) { .ov { grid-template-columns: minmax(0, 1fr); } }
 .ring-card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 10px; }
