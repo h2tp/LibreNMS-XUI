@@ -5,14 +5,14 @@
   <div v-else-if="switches.length" class="col" style="gap:14px">
     <div v-for="sw in switches" :key="sw.device_id" class="sw" :class="{ down: sw.down, embedded: config.embedded }">
       <div v-if="config.embedded" class="head">
-        <Network :size="17" /><b class="grow">Façade</b>
+        <Network :size="17" /><b>Façade</b><span class="grow small muted mono ellipsis" style="min-width:0">{{ sw.ip }}</span>
         <span class="small muted nowrap"><b style="color:var(--text)">{{ sw.up }}</b> / {{ sw.ports.length }} ports actifs</span>
       </div>
       <div v-else class="head">
         <span class="dot" :class="sw.down ? 'down' : 'up'"></span>
         <router-link :to="`/device/${encodeURIComponent(sw.hostname)}`" class="grow" style="min-width:0;color:var(--text)">
           <b class="ellipsis" style="display:block">{{ sw.name }}</b>
-          <span class="small muted ellipsis" style="display:block">{{ sw.model }}</span>
+          <span class="small muted ellipsis" style="display:block"><span v-if="sw.ip" class="mono">{{ sw.ip }}</span><template v-if="sw.ip && sw.model"> · </template>{{ sw.model }}</span>
         </router-link>
         <span class="small muted nowrap"><b style="color:var(--text)">{{ sw.up }}</b> / {{ sw.ports.length }} ports actifs</span>
       </div>
@@ -111,7 +111,7 @@ const switches = computed(() => {
     const poeT = sens.find((s) => s.sensor_class === 'power' && /poe/i.test(s.sensor_descr) && /total|budget|avail|max/i.test(s.sensor_descr))
     const poeU = sens.find((s) => s.sensor_class === 'power' && /poe/i.test(s.sensor_descr) && /used|consum|draw/i.test(s.sensor_descr))
     return {
-      device_id: +id, hostname: d.hostname, name: devName(d), model: [d.hardware, d.version].filter(Boolean).join(' · '), down: +d.status === 0, uptime: n(d.uptime),
+      device_id: +id, hostname: d.hostname, name: devName(d), ip: d.overwrite_ip || d.ip || (/^[\d.]+$|:/.test(d.hostname) ? d.hostname : ''), model: [d.hardware, d.version].filter(Boolean).join(' · '), down: +d.status === 0, uptime: n(d.uptime),
       ports: list, layout, cols, up: upList.length,
       rin: upList.reduce((s, p) => s + n(p.ifInOctets_rate) * 8, 0), rout: upList.reduce((s, p) => s + n(p.ifOutOctets_rate) * 8, 0),
       cpu: procs.length ? Math.round(procs.reduce((s, c) => s + +c.usage, 0) / procs.length) : null,
