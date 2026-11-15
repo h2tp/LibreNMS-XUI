@@ -1209,4 +1209,6 @@ export default {
   "État (vert)": "Status (green)",
   "Latence (vert → rouge)": "Latency (green → red)",
   "Aucun câble déclaré pour cet équipement.": "No cable declared for this device.",
+  "Pleine largeur": "Full width",
+  "Largeur normale": "Normal width",
 }

@@ -38,6 +38,9 @@
             <option :value="60">1 min</option><option :value="300">5 min</option>
           </select>
         </div>
+        <button class="btn ghost icon wide-btn" :class="{ on: prefs.wide }" :title="prefs.wide ? t('Largeur normale') : t('Pleine largeur')" @click="toggleWide">
+          <FoldHorizontal v-if="prefs.wide" /><UnfoldHorizontal v-else />
+        </button>
         <button class="btn ghost icon" :title="prefs.theme === 'dark' ? t('Thème clair') : t('Thème sombre')" @click="toggleTheme">
           <Sun v-if="prefs.theme === 'dark'" /><Moon v-else />
         </button>
@@ -49,7 +52,7 @@
         </div>
       </header>
 
-      <main class="content">
+      <main class="content" :class="{ wide: prefs.wide }">
         <router-view v-slot="{ Component, route }">
           <transition name="fade" mode="out-in">
             <component :is="Component" :key="route.name === 'device' ? route.params.host : route.fullPath.split('?')[0].split('/').slice(0, 2).join('/')" />
@@ -78,7 +81,7 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import {
   Activity, LayoutDashboard, Server, Network, Bell, ScrollText, Map, Share2, Boxes, MapPin, HeartPulse,
   Route, Database, Receipt, Settings2, Search, PanelLeft, Sun, Moon, ExternalLink, LogOut, UserRound, RefreshCw,
-  Loader2, CircleCheck, CircleAlert, Info, Lock, Thermometer, Code2, X, Workflow, Rows3,
+  Loader2, CircleCheck, CircleAlert, Info, Lock, Thermometer, Code2, X, Workflow, Rows3, FoldHorizontal, UnfoldHorizontal,
 } from 'lucide-vue-next'
 import { session, auth, api, pick } from './api'
 import { prefs, save, toasts } from './utils'
@@ -123,6 +126,7 @@ const alertCount = ref(0)
 const spinning = ref(false)
 
 function applyTheme() { document.documentElement.dataset.theme = prefs.theme }
+function toggleWide() { prefs.wide = !prefs.wide; save('wide', prefs.wide); window.dispatchEvent(new Event('resize')) }
 function toggleTheme() { prefs.theme = prefs.theme === 'dark' ? 'light' : 'dark'; save('theme', prefs.theme); applyTheme() }
 // Sur mobile, le menu est un panneau superposé : il se ferme par la croix, le fond, Échap ou en changeant de page.
 const isMobile = ref(window.innerWidth < 900)
@@ -163,4 +167,6 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKey); window.rem
 .boot { height: 100vh; display: grid; place-items: center; color: var(--accent); }
 .user-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 20px; background: var(--panel-2); border: 1px solid var(--border); font-size: 12.5px; font-weight: 500; }
 @media (max-width: 900px) { .refresh-ctl, .user-chip { display: none !important; } }
+@media (max-width: 1900px) { .wide-btn { display: none !important; } } /* sans effet sous 1800 px de contenu */
+.wide-btn.on { color: var(--accent); }
 </style>

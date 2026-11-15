@@ -39,7 +39,8 @@ the **LibreNMS API** and its **RRD files** (mounted read-only): nothing to chang
   routing, services, alerts, logs, availability, Oxidized config, management.
 - **Management**: add / delete devices, acknowledge alerts, alert rules with a wizard, groups, locations,
   maintenance.
-- **Convenience**: English / French interface, global search `Ctrl+K`, light / dark theme, auto-refresh, CSV export everywhere.
+- **Convenience**: English / French interface, global search `Ctrl+K`, light / dark theme, full width on large screens, auto-refresh, CSV
+  export everywhere.
 
 ## Quick start
 

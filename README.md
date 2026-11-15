@@ -39,7 +39,7 @@ lecture seule) : rien à modifier ni à installer dans LibreNMS.
 - **Gestion** : ajout / suppression d'équipements, acquittement d'alertes, règles d'alerte avec assistant,
   groupes, emplacements, maintenance.
 - **Confort** : interface en français ou en anglais (bouton FR / EN, langue du navigateur par défaut), recherche globale `Ctrl+K`,
-  thème clair / sombre, rafraîchissement automatique, export CSV partout.
+  thème clair / sombre, pleine largeur sur les grands écrans, rafraîchissement automatique, export CSV partout.
 
 ## Démarrage rapide
 
