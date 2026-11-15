@@ -1093,4 +1093,7 @@ export default {
   "Déconnecté": "Disconnected",
   '{ "json": "corps de la requête" }': '{ "json": "request body" }',
   "Adresse (http:// ou https://)": "Address (http:// or https://)",
+  "Afficher {p} en grand": "Show {p} enlarged",
+  "{p} % de {s}": "{p}% of {s}",
+  "par seconde · discards {i}/{o}": "per second · discards {i}/{o}",
 }

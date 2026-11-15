@@ -15,10 +15,10 @@
       </div>
 
       <div class="grid g4 stagger">
-        <div class="card big-stat"><span class="muted small">{{ t('Entrant') }}</span><b style="color:var(--accent)">{{ fmtBits(port.ifInOctets_rate * 8) }}</b><div class="bar"><i :style="{ width: pIn + '%', background: 'var(--accent)' }"></i></div><span class="small faint">{{ pIn.toFixed(1) }} % de {{ fmtSpeed(port.ifSpeed) }}</span></div>
-        <div class="card big-stat"><span class="muted small">{{ t('Sortant') }}</span><b style="color:#a78bfa">{{ fmtBits(port.ifOutOctets_rate * 8) }}</b><div class="bar"><i :style="{ width: pOut + '%', background: '#a78bfa' }"></i></div><span class="small faint">{{ pOut.toFixed(1) }} % de {{ fmtSpeed(port.ifSpeed) }}</span></div>
+        <div class="card big-stat"><span class="muted small">{{ t('Entrant') }}</span><b style="color:var(--accent)">{{ fmtBits(port.ifInOctets_rate * 8) }}</b><div class="bar"><i :style="{ width: pIn + '%', background: 'var(--accent)' }"></i></div><span class="small faint">{{ t('{p} % de {s}', { p: pIn.toFixed(1), s: fmtSpeed(port.ifSpeed) }) }}</span></div>
+        <div class="card big-stat"><span class="muted small">{{ t('Sortant') }}</span><b style="color:#a78bfa">{{ fmtBits(port.ifOutOctets_rate * 8) }}</b><div class="bar"><i :style="{ width: pOut + '%', background: '#a78bfa' }"></i></div><span class="small faint">{{ t('{p} % de {s}', { p: pOut.toFixed(1), s: fmtSpeed(port.ifSpeed) }) }}</span></div>
         <div class="card big-stat"><span class="muted small">{{ t('Paquets in / out') }}</span><b>{{ fmtNum(port.ifInUcastPkts_rate) }} / {{ fmtNum(port.ifOutUcastPkts_rate) }}</b><span class="small faint">{{ t('pps unicast') }}</span></div>
-        <div class="card big-stat"><span class="muted small">{{ t('Erreurs in / out') }}</span><b :style="{ color: errs ? 'var(--red)' : '' }">{{ fmtNum(port.ifInErrors_rate) }} / {{ fmtNum(port.ifOutErrors_rate) }}</b><span class="small faint">par seconde · discards {{ fmtNum(port.ifInDiscards_rate) }}/{{ fmtNum(port.ifOutDiscards_rate) }}</span></div>
+        <div class="card big-stat"><span class="muted small">{{ t('Erreurs in / out') }}</span><b :style="{ color: errs ? 'var(--red)' : '' }">{{ fmtNum(port.ifInErrors_rate) }} / {{ fmtNum(port.ifOutErrors_rate) }}</b><span class="small faint">{{ t('par seconde · discards {i}/{o}', { i: fmtNum(port.ifInDiscards_rate), o: fmtNum(port.ifOutDiscards_rate) }) }}</span></div>
       </div>
 
       <div class="card mt">
@@ -28,8 +28,18 @@
             <RangePicker v-model="range" />
           </div>
         </div>
-        <RrdChart v-if="hasRrd" :key="view" :host="device.hostname" :file="`port-id${port.port_id}.rrd`" :range="range" hide-range :ds="views.find((v) => v.id === view).ds" :unit="views.find((v) => v.id === view).unit" height="340px" />
-        <ApiGraph v-else-if="device" :path="`devices/${enc(device.hostname)}/ports/${enc(port.ifName)}/${views.find((v) => v.id === view).png}`" :range="range" :height="300" />
+        <!-- comme dans LibreNMS : la même métrique sur 4 périodes côte à côte ; un clic l'affiche en grand -->
+        <div class="grid g4 periods">
+          <div v-for="pr in PERIODS" :key="pr.v" class="period" :class="{ on: range === pr.v }" role="button" tabindex="0" :aria-pressed="range === pr.v"
+            :title="t('Afficher {p} en grand', { p: pr.l })" @click="range = pr.v" @keydown.enter.prevent="range = pr.v" @keydown.space.prevent="range = pr.v">
+            <span class="period-lbl">{{ pr.l }}</span>
+            <RrdChart v-if="hasRrd" :key="view + pr.v" :host="device.hostname" :file="`port-id${port.port_id}.rrd`" :range="pr.v" hide-range compact :axes="true"
+              :show-stats="false" :zoom="false" :ds="curView.ds" :unit="curView.unit" height="120px" />
+            <ApiGraph v-else-if="device" :path="`devices/${enc(device.hostname)}/ports/${enc(port.ifName)}/${curView.png}`" :range="pr.v" :width="400" :height="130" />
+          </div>
+        </div>
+        <RrdChart v-if="hasRrd" :key="view" :host="device.hostname" :file="`port-id${port.port_id}.rrd`" :range="range" hide-range :ds="curView.ds" :unit="curView.unit" height="340px" />
+        <ApiGraph v-else-if="device" :path="`devices/${enc(device.hostname)}/ports/${enc(port.ifName)}/${curView.png}`" :range="range" :height="300" />
       </div>
 
       <div class="grid g2 mt">
@@ -70,7 +80,7 @@ import DataTable from '../components/DataTable.vue'
 import Modal from '../components/Modal.vue'
 import { session, api, pick, safeList, devicesCached, rrd, L } from '../api'
 import { useLoader } from '../refresh'
-import { timeAgo, devName, portStatus, fmtBits, fmtSpeed, fmtNum, fmtUptime, prefs, toast, toastError } from '../utils'
+import { timeAgo, devName, portStatus, fmtBits, fmtSpeed, fmtNum, fmtUptime, prefs, toast, toastError, RANGES } from '../utils'
 import { locale } from '../i18n'
 import { t } from '../i18n'
 
@@ -90,6 +100,9 @@ const views = [
   { id: 'nupkts', l: t('Broad/Multicast'), unit: 'pps', png: 'port_nupkts', ds: { INBROADCASTPKTS: { label: t('Broadcast in') }, OUTBROADCASTPKTS: { label: t('Broadcast out'), negate: true }, INMULTICASTPKTS: { label: t('Multicast in') }, OUTMULTICASTPKTS: { label: t('Multicast out'), negate: true } } },
   { id: 'errors', l: t('Erreurs'), unit: 'ps', png: 'port_errors', ds: { INERRORS: { label: t('Erreurs in'), color: '#f43f5e' }, OUTERRORS: { label: t('Erreurs out'), negate: true, color: '#fb923c' }, INDISCARDS: { label: t('Discards in'), color: '#facc15' }, OUTDISCARDS: { label: t('Discards out'), negate: true, color: '#f472b6' } } },
 ]
+const curView = computed(() => views.find((v) => v.id === view.value))
+// les 4 périodes des vignettes (jour, semaine, mois, année)
+const PERIODS = RANGES.filter((r) => ['-1d', '-7d', '-30d', '-1y'].includes(r.v))
 const pIn = computed(() => (port.value?.ifSpeed ? Math.min(100, (port.value.ifInOctets_rate * 800) / port.value.ifSpeed) : 0))
 const pOut = computed(() => (port.value?.ifSpeed ? Math.min(100, (port.value.ifOutOctets_rate * 800) / port.value.ifSpeed) : 0))
 const errs = computed(() => +port.value?.ifInErrors_rate + +port.value?.ifOutErrors_rate > 0)
@@ -132,5 +145,14 @@ async function saveDesc() {
 
 <style scoped>
 .big-stat { display: flex; flex-direction: column; gap: 8px; }
+.periods { gap: 10px; margin-bottom: 14px; }
+.period { box-sizing: border-box; display: block; min-width: 0; cursor: pointer; padding: 8px 8px 4px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--panel-2); transition: border-color .15s, box-shadow .15s; }
+.period:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.period.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+.period:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.period-lbl { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin: 0 0 2px 2px; }
+.period.on .period-lbl { color: var(--accent); }
+.period :deep(img) { width: 100%; height: auto; display: block; }
 .big-stat b { font-size: 24px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 </style>
