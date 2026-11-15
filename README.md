@@ -1,5 +1,7 @@
 # LibreNMS XUI
 
+**Français** · [English](README.en.md)
+
 **Une interface web moderne pour [LibreNMS](https://www.librenms.org/).**
 
 LibreNMS continue de faire ce qu'il fait bien (découverte, collecte SNMP, alertes) ; XUI propose par-dessus
