@@ -32,6 +32,9 @@ the **LibreNMS API** and its **RRD files** (mounted read-only): nothing to chang
 - **Live network diagrams**: device status, alerts, throughput; links colored by load or throughput (custom
   colors), traffic graph and one-click access to ports, custom images, elements that are not in LibreNMS
   (ISP router, camera…), background (floor plan, rack photo), generation from LLDP.
+- **Network racks**: one or more racks per room, LibreNMS devices and passive items (patch panels, PDUs,
+  shelves…) placed by U with drag-and-drop, front panels with real port status, port-to-port cabling (including
+  between racks) with live status and traffic, exportable cable list.
 - **Complete device page**: overview with photos, ports, health, inventory, CDP/LLDP neighbours, network,
   routing, services, alerts, logs, availability, Oxidized config, management.
 - **Management**: add / delete devices, acknowledge alerts, alert rules with a wizard, groups, locations,
@@ -101,6 +104,7 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
 |---|---|
 | `dashboards.json` | dashboards |
 | `diagrams.json`, `diagram-bg/`, `diagram-img/` | diagrams, background images, device / element images |
+| `racks.json` | rooms, racks, placed items and cables |
 | `device-photos.json`, `device-photos/` | device photos |
 
 <details>
@@ -126,6 +130,13 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   load (%) or throughput, with per-diagram custom thresholds and colors. Hovering a link shows a 24 h traffic
   graph; clicking pins it with links to the port pages. Custom image per device or element (inside the card or
   instead of it), shared image library. Generation from the LLDP topology (tree layout). Shared like dashboards.
+- **Racks** (Visualization › Racks): rooms holding one or more racks (4 to 48 U) shown side by side; LibreNMS
+  devices and passive items (12/24/48-port patch panels, PDU, shelf, cable manager, blanking panel, custom item)
+  dragged into U positions, moved between racks, adjustable height and socket count, front panel drawn from the real
+  ports (speed, status, errors, traffic on hover) or a front photo. Port-to-port cabling in two clicks, including
+  between racks and to patch panels: color, type (copper, fiber, DAC, power), length, label; cables shown by their
+  color or by status / load, traffic popup on hover, cable list exportable to CSV. Shared like diagrams. Storage:
+  `./data/racks.json`.
 - **Devices**: cards / table, filters (status, OS, type, location, group), SNMP v1/v2c/v3 or ICMP onboarding.
 - **Device page**: overview (CPU / RAM / disk / availability gauges, photos with captions and full-screen view),
   ports with sparklines, health (processors, memory, storage, sensors + graphs), browser for every RRD file,

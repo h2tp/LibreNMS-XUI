@@ -16,13 +16,15 @@
       <!-- prises : ports réels (équipement) ou numérotés (panneau, PDU, élément libre) -->
       <div v-if="grid.rows" class="sockets" :style="{ gridTemplateColumns: `repeat(${grid.cols}, ${grid.pw}px)`, gridTemplateRows: `repeat(${grid.rows}, ${grid.ph}px)`, gap: `${grid.gap}px` }">
         <template v-if="item.kind === 'device'">
-          <component :is="editing ? 'span' : 'router-link'" v-for="(p, i) in devPorts" :key="p.port_id" :to="editing ? undefined : `/port/${p.port_id}`"
-            class="sock" :class="p.cls" :style="{ gridRow: grid.pos(i).row, gridColumn: grid.pos(i).col, '--fill': p.color }" :title="p.tip" draggable="false">
+          <component :is="editing || cableMode ? 'span' : 'router-link'" v-for="(p, i) in devPorts" :key="p.port_id" :to="editing || cableMode ? undefined : `/port/${p.port_id}`"
+            class="sock" :class="[p.cls, sockCls(+p.port_id)]" :style="{ gridRow: grid.pos(i).row, gridColumn: grid.pos(i).col, '--fill': p.color }" :title="p.tip"
+            :data-ep="`${item.id}:${p.port_id}`" draggable="false" @click="onSock($event, +p.port_id)">
             <span v-if="grid.pw >= 14 && grid.ph >= 11" class="num">{{ p.label }}</span>
           </component>
         </template>
         <template v-else>
-          <span v-for="i in item.ports" :key="i" class="sock passive" :class="item.kind" :style="{ gridRow: grid.pos(i - 1).row, gridColumn: grid.pos(i - 1).col }" :title="`${name} · ${i}`">
+          <span v-for="i in item.ports" :key="i" class="sock passive" :class="[item.kind, sockCls(i)]" :style="{ gridRow: grid.pos(i - 1).row, gridColumn: grid.pos(i - 1).col }"
+            :title="`${name} · ${i}`" :data-ep="`${item.id}:${i}`" @click="onSock($event, i)">
             <span v-if="grid.pw >= 14 && grid.ph >= 11" class="num">{{ i }}</span>
           </span>
         </template>
@@ -42,7 +44,20 @@ import { faceGrid, shortName, speedColor, UH, FACE_W, KIND_LABEL } from '../rack
 import { t } from '../i18n'
 
 const LABEL_W = 118
-const props = defineProps({ item: Object, dev: Object, ports: { type: Array, default: () => [] }, editing: Boolean })
+const props = defineProps({
+  item: Object, dev: Object, ports: { type: Array, default: () => [] }, editing: Boolean,
+  cableMode: Boolean, cabled: { type: Object, default: () => new Set() }, highlight: { type: Object, default: () => new Set() },
+})
+const emit = defineEmits(['socket'])
+const sockCls = (port) => {
+  const k = `${props.item.id}:${port}`
+  return { cabled: props.cabled.has(k), hl: props.highlight.has(k), pick: props.cableMode }
+}
+function onSock(e, port) {
+  if (!props.cableMode) return
+  e.preventDefault(); e.stopPropagation()
+  emit('socket', { item: props.item.id, port })
+}
 const n = (v) => +v || 0
 const hpx = computed(() => props.item.h * UH)
 const showImage = computed(() => props.item.display === 'image' && !!props.item.image)
@@ -93,6 +108,10 @@ a.sock:hover { border-color: #e2e8f0; text-decoration: none; }
 .sock.passive { background: #05080d; border-color: #2a3442; color: #7c8aa0; }
 .sock.pdu { border-radius: 40%; background: #111; }
 .num { position: relative; z-index: 1; line-height: 1; }
+.sock.cabled::after { content: ''; position: absolute; right: 1px; top: 1px; width: 4px; height: 4px; border-radius: 50%; background: #e2e8f0; }
+.sock.pick { cursor: crosshair; }
+.sock.pick:hover { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); z-index: 2; }
+.sock.hl { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); z-index: 2; }
 .brush { flex: 1; align-self: stretch; margin: 2px 0; border-radius: 3px; background: repeating-linear-gradient(90deg, #0f141c 0 2px, #1e2633 2px 5px); }
 .tray { flex: 1; align-self: flex-end; height: 5px; border-radius: 2px; background: #475569; }
 .ri.img { padding: 0; background: #111827; }

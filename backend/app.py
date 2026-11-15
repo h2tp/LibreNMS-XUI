@@ -910,6 +910,42 @@ def _clean_room(body: dict, d: dict) -> None:
                 "display": "image" if it.get("display") == "image" else "face",
             })
         d["items"] = items
+    if "cables" in body or "items" in body or "racks" in body:
+        # câbles : deux extrémités {item, port} ; port = port_id LibreNMS (équipement) ou n° de prise (élément passif)
+        its = {i["id"]: i for i in d.get("items", [])}
+        raw = body["cables"] if "cables" in body else d.get("cables", [])
+        cables, used, ids = [], set(), set()
+        for c in (raw if isinstance(raw, list) else [])[:2000]:
+            if not isinstance(c, dict):
+                continue
+            ends = []
+            for k in ("a", "b"):
+                e = c.get(k) if isinstance(c.get(k), dict) else {}
+                it = its.get(e.get("item"))
+                port = e.get("port")
+                if not it or not str(port).isdigit():
+                    break
+                port = int(port)
+                if it["kind"] != "device" and not 1 <= port <= it["ports"]:
+                    break
+                ends.append({"item": it["id"], "port": port})
+            if len(ends) != 2 or ends[0] == ends[1]:
+                continue
+            keys = [(e["item"], e["port"]) for e in ends]
+            if any(k in used for k in keys):
+                continue
+            cid = _txt(c.get("id"), 40) or secrets.token_hex(5)
+            if cid in ids:
+                continue
+            ids.add(cid)
+            used.update(keys)
+            cables.append({
+                "id": cid, "a": ends[0], "b": ends[1],
+                "color": _hex(c.get("color")) or "#3b82f6",
+                "type": c.get("type") if c.get("type") in ("copper", "fiber", "dac", "power", "other") else "copper",
+                "label": _txt(c.get("label"), 40), "length": _txt(c.get("length"), 20),
+            })
+        d["cables"] = cables
 
 
 def _rack_summary(d: dict, user: str) -> dict:

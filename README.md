@@ -30,6 +30,9 @@ lecture seule) : rien à modifier ni à installer dans LibreNMS.
 - **Schémas réseau en direct** : état des équipements, alertes, débits ; liens colorés selon la charge ou le
   débit (couleurs au choix), graphe de trafic et accès aux ports d'un clic, images personnalisées, éléments
   hors LibreNMS (box, caméra…), fond (plan, photo de baie), création depuis LLDP.
+- **Baies de brassage** : une ou plusieurs baies par salle, équipements LibreNMS et éléments passifs (panneaux de
+  brassage, PDU, étagères…) placés en U par glisser-déposer, façades avec l'état réel des ports, câblage port à port
+  (y compris entre baies) avec état et trafic en direct, liste des câbles exportable.
 - **Fiche équipement complète** : vue d'ensemble avec photos, ports, santé, inventaire, voisins CDP/LLDP,
   réseau, routage, services, alertes, journaux, disponibilité, config Oxidized, gestion.
 - **Gestion** : ajout / suppression d'équipements, acquittement d'alertes, règles d'alerte avec assistant,
@@ -100,6 +103,7 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
 |---|---|
 | `dashboards.json` | tableaux de bord |
 | `diagrams.json`, `diagram-bg/`, `diagram-img/` | schémas, images de fond, images d'équipements |
+| `racks.json` | salles, baies, éléments placés et câbles |
 | `device-photos.json`, `device-photos/` | photos des équipements |
 
 <details>
@@ -128,6 +132,13 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   vers les fiches des ports. Image personnalisée par équipement ou élément (dans la carte ou à la place de la carte),
   bibliothèque d'images partagée. Création depuis la topologie LLDP (disposition en arbre). Partage comme les
   tableaux de bord.
+- **Baies** (Visualisation › Baies) : salles contenant une ou plusieurs baies (4 à 48 U) affichées côte à côte ;
+  équipements LibreNMS et éléments passifs (panneaux de brassage 12/24/48 ports, PDU, étagère, passe-câbles, obturateur,
+  élément libre) glissés en U, déplacement entre baies, hauteur et nombre de prises réglables, façade dessinée à partir
+  des ports réels (vitesse, état, erreurs, trafic au survol) ou photo de façade. Câblage port à port en deux clics,
+  y compris entre baies et vers les panneaux de brassage : couleur, type (cuivre, fibre, DAC, alimentation), longueur,
+  étiquette ; câbles affichés selon leur couleur ou leur état / charge, fenêtre de trafic au survol, liste des câbles
+  exportable en CSV. Partage comme les schémas. Stockage : `./data/racks.json`.
 - **Équipements** : cartes / tableau, filtres (état, OS, type, emplacement, groupe), ajout SNMP v1/v2c/v3 ou ICMP.
 - **Fiche équipement** : vue d'ensemble (jauges CPU / RAM / disque / dispo, photos avec légendes et plein écran),
   ports avec sparklines, santé (processeurs, mémoire, stockage, capteurs + graphiques), explorateur de tous les

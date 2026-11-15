@@ -9,6 +9,9 @@
         </div>
       </div>
       <div class="right">
+        <div class="seg cview" :title="t('Affichage des câbles')">
+          <button v-for="b in [['real', t('Couleur')], ['state', t('État')], ['hidden', t('Masqués')]]" :key="b[0]" :class="{ on: cableView === b[0] }" @click="setCableView(b[0])"><Cable v-if="b[0] === 'real'" :size="13" />{{ b[1] }}</button>
+        </div>
         <div class="zoomctl row">
           <button class="btn ghost sm icon" :title="t('Zoom −')" @click="setZoom(-0.1)"><ZoomOut :size="15" /></button>
           <span class="small muted mono">{{ Math.round(zoom * 100) }} %</span>
@@ -32,8 +35,38 @@
 
     <div v-if="room" class="layout" :class="{ editing }">
       <aside v-if="editing" class="card side">
+        <div class="seg" style="width:100%">
+          <button :class="{ on: tool === 'place' }" @click="setTool('place')"><Move :size="14" /> {{ t('Placer') }}</button>
+          <button :class="{ on: tool === 'cable' }" @click="setTool('cable')"><Cable :size="14" /> {{ t('Câbler') }}</button>
+        </div>
+        <div v-if="tool === 'cable'" class="hint small">{{ cableFrom ? t('Cliquez maintenant sur la seconde prise (Échap pour annuler).') : t('Cliquez sur une prise, puis sur une autre pour les relier. Une prise déjà câblée sélectionne son câble.') }}</div>
+
+        <!-- inspecteur : câble sélectionné -->
+        <div v-if="selCable" class="insp">
+          <div class="insp-title"><Cable :size="15" /> {{ t('Câble') }}</div>
+          <div class="ends small">
+            <div><span class="faint">A</span> {{ epName(selCable.a) }}</div>
+            <div><span class="faint">B</span> {{ epName(selCable.b) }}</div>
+          </div>
+          <div class="field"><span>{{ t('Couleur') }}</span>
+            <div class="row wrap" style="gap:5px">
+              <button v-for="c in CABLE_COLORS" :key="c" class="cswatch" :class="{ on: selCable.color === c }" :style="{ background: c }" :title="c" @click="selCable.color = c; lastColor = c; changed()"></button>
+              <input v-model="selCable.color" type="color" class="cpick" @change="lastColor = selCable.color; changed()" />
+            </div>
+          </div>
+          <div class="row" style="gap:10px">
+            <label class="field grow"><span>{{ t('Type') }}</span>
+              <select v-model="selCable.type" class="input" @change="lastType = selCable.type; changed()"><option v-for="(l, v) in CABLE_TYPES" :key="v" :value="v">{{ l }}</option></select></label>
+            <label class="field grow"><span>{{ t('Longueur') }}</span><input v-model="selCable.length" class="input" maxlength="20" placeholder="1 m" @input="changed()" /></label>
+          </div>
+          <label class="field"><span>{{ t('Étiquette') }}</span><input v-model="selCable.label" class="input" maxlength="40" :placeholder="t('Ex. C-042, bureau 3…')" @input="changed()" /></label>
+          <div class="row wrap" style="gap:6px">
+            <button class="btn sm danger" @click="removeCable(selCable)"><Trash2 :size="13" /> {{ t('Supprimer le câble') }}</button>
+          </div>
+        </div>
+
         <!-- inspecteur : élément sélectionné -->
-        <div v-if="selItem" class="insp">
+        <div v-else-if="selItem" class="insp">
           <div class="insp-title"><component :is="selItem.kind === 'device' ? Server : Box" :size="15" /> {{ itemName(selItem) }}</div>
           <div class="small faint">{{ KIND_LABEL[selItem.kind] }} · {{ t('U {a} à {b}', { a: selItem.u, b: selItem.u + selItem.h - 1 }) }} · {{ rackName(selItem.rack) }}</div>
           <label class="field"><span>{{ selItem.kind === 'device' ? t('Libellé (vide : nom de l\'équipement)') : t('Libellé') }}</span><input v-model="selItem.label" class="input" maxlength="60" @input="changed()" /></label>
@@ -78,9 +111,9 @@
             <button class="btn sm danger" @click="removeRack(selRack)"><Trash2 :size="13" /> {{ t('Supprimer la baie') }}</button>
           </div>
         </div>
-        <div v-else class="hint small">{{ t('Glissez un équipement ou un élément passif dans une baie. Cliquez sur un élément ou sur le titre d\'une baie pour le modifier ; glissez un élément pour le déplacer.') }}</div>
+        <div v-else-if="tool === 'place'" class="hint small">{{ t('Glissez un équipement ou un élément passif dans une baie. Cliquez sur un élément ou sur le titre d\'une baie pour le modifier ; glissez un élément pour le déplacer.') }}</div>
 
-        <div class="insp">
+        <div v-if="tool === 'place'" class="insp">
           <div class="insp-title"><Plus :size="15" /> {{ t('Ajouter') }}</div>
           <button class="btn sm" style="align-self:flex-start" @click="addRack"><Rows3 :size="13" /> {{ t('Ajouter une baie') }}</button>
           <div class="passives">
@@ -101,9 +134,12 @@
         </div>
       </aside>
 
-      <div class="card rack-card">
-        <RackView :room="room" :dev-by-id="devById" :ports-by-dev="portsByDev" :editing="editing" :selected="selected" :zoom="zoom"
-          @select="(s) => (selected = s)" @drop="onDrop" @invalid="toast(t('Pas assez de place à cet endroit'), 'error')" @open="openItem" />
+      <div ref="cardEl" class="card rack-card">
+        <RackView :room="room" :dev-by-id="devById" :ports-by-dev="portsByDev" :port-by-id="portById" :editing="editing" :selected="selected" :zoom="zoom"
+          :cable-mode="editing && tool === 'cable'" :cable-from="cableFrom" :cable-view="cableView"
+          @select="(s) => (selected = s)" @drop="onDrop" @invalid="toast(t('Pas assez de place à cet endroit'), 'error')" @open="openItem"
+          @socket="onSocket" @cable="onCableClick" @hover="onHover" @unhover="onUnhover" />
+        <LinkHover v-if="hover && hoverInfo" :link="hoverInfo" :x="hover.x" :y="hover.y" :pinned="hover.pinned" @close="hover = null" />
         <div class="legend small muted">
           <span><i style="background:#22d3ee"></i>10 G+</span><span><i style="background:#22c55e"></i>1 G</span><span><i style="background:#facc15"></i>100 M</span><span><i style="background:#fb923c"></i>10 M</span>
           <span><i class="off"></i>{{ t('déconnecté') }}</span><span><i class="adm"></i>{{ t('désactivé') }}</span>
@@ -111,7 +147,15 @@
         </div>
       </div>
     </div>
-    <div v-else-if="!error" class="skeleton" style="height:70vh"></div>
+    <div v-if="room && room.cables.length" class="card mt">
+      <div class="card-title"><Cable :size="17" /> {{ t('Câbles') }} <span class="sub">{{ room.cables.length }}</span></div>
+      <DataTable :rows="cableRows" :columns="cableCols" row-key="id" :filename="`cables-${room.name}.csv`" :page-size="25"
+        :row-click="(r) => { if (editing) { tool = 'cable'; selected = { type: 'cable', id: r.id } } }">
+        <template #c-color="{ row }"><span class="cdot" :style="{ background: row.color }"></span></template>
+        <template #c-state="{ row }"><span class="badge" :class="row.stateCls">{{ row.state }}</span></template>
+      </DataTable>
+    </div>
+    <div v-else-if="!error && !room" class="skeleton" style="height:70vh"></div>
 
     <Modal v-if="settingsOpen && room" :title="t('Paramètres de la salle')" :icon="Settings" @close="settingsOpen = false">
       <div class="col" style="gap:16px">
@@ -140,16 +184,19 @@ import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ChevronLeft, Pencil, Check, Settings, Loader2, CircleCheck, CircleAlert, Plus, Server, Box, Rows3, Trash2, ExternalLink,
-  ImageUp, ZoomIn, ZoomOut, ArrowLeft, ArrowRight,
+  ImageUp, ZoomIn, ZoomOut, ArrowLeft, ArrowRight, Cable, Move,
 } from 'lucide-vue-next'
 import RackView from '../components/RackView.vue'
+import LinkHover from '../components/LinkHover.vue'
+import DataTable from '../components/DataTable.vue'
 import Modal from '../components/Modal.vue'
 import { rackApi, diagApi } from '../api'
 import { D } from '../dashboard/data'
 import { uid } from '../diagram/core'
 import { PASSIVE, KIND_LABEL, dragPayload, fits, firstFree, topUsed, physPorts } from '../rack/core'
 import { clock, useLoader } from '../refresh'
-import { devName, devStatus, timeAgo, toast, toastError, confirmAction, prefs, save } from '../utils'
+import { devName, devStatus, timeAgo, toast, toastError, confirmAction, prefs, save, fmtBits, fmtSpeed } from '../utils'
+import { linkState } from '../diagram/core'
 import { t } from '../i18n'
 
 const ACCESS = { private: t('Privé'), read: t('Partagé (lecture)'), edit: t('Partagé (écriture)') }
@@ -170,12 +217,13 @@ useLoader(async () => {
   const [d, p] = await Promise.all([D.devices(), D.ports()])
   devices.value = d; ports.value = p
 })
+const portById = computed(() => Object.fromEntries(ports.value.map((p) => [+p.port_id, p])))
 const locations = computed(() => [...new Set(devices.value.map((d) => d.location).filter(Boolean))].sort())
 
 async function load() {
   try {
     const d = await rackApi.get(route.params.id)
-    d.racks ||= []; d.items ||= []
+    d.racks ||= []; d.items ||= []; d.cables ||= []
     room.value = d
     document.title = `${d.name} · ${t('Baies')} · LibreNMS XUI`
   } catch (e) { error.value = e.message }
@@ -183,6 +231,7 @@ async function load() {
 onMounted(load)
 
 // --------------------------------------------------------------- sélection
+const selCable = computed(() => (selected.value?.type === 'cable' ? room.value.cables.find((c) => c.id === selected.value.id) : null))
 const selItem = computed(() => (selected.value?.type === 'item' ? room.value.items.find((i) => i.id === selected.value.id) : null))
 const selRack = computed(() => (selected.value?.type === 'rack' ? room.value.racks.find((r) => r.id === selected.value.id) : null))
 const rackIndex = computed(() => room.value.racks.findIndex((r) => r.id === selected.value?.id))
@@ -208,11 +257,11 @@ function changed(delay = 600) {
 async function flush() {
   clearTimeout(timer); timer = null
   try {
-    await rackApi.update(room.value.id, { racks: room.value.racks, items: room.value.items })
+    await rackApi.update(room.value.id, { racks: room.value.racks, items: room.value.items, cables: room.value.cables })
     saveState.value = 'saved'
   } catch (e) { saveState.value = 'error'; toastError(e) }
 }
-async function stopEdit() { editing.value = false; selected.value = null; if (timer) await flush() }
+async function stopEdit() { editing.value = false; selected.value = null; tool.value = 'place'; cableFrom.value = null; if (timer) await flush() }
 
 // --------------------------------------------------------------- ajout / déplacement
 function startNew(p, e) {
@@ -258,6 +307,7 @@ function setHeight(h) {
 }
 function removeItem(it) {
   room.value.items = room.value.items.filter((i) => i !== it)
+  room.value.cables = room.value.cables.filter((c) => c.a.item !== it.id && c.b.item !== it.id)
   selected.value = null; changed(200)
 }
 
@@ -284,6 +334,8 @@ function moveRack(d) {
 function removeRack(r) {
   const n = room.value.items.filter((i) => i.rack === r.id).length
   if (n && !confirmAction(t('Supprimer la baie « {r} » et ses {n} élément(s) ?', { r: r.name, n }))) return
+  const gone = new Set(room.value.items.filter((i) => i.rack === r.id).map((i) => i.id))
+  room.value.cables = room.value.cables.filter((c) => !gone.has(c.a.item) && !gone.has(c.b.item))
   room.value.items = room.value.items.filter((i) => i.rack !== r.id)
   room.value.racks = room.value.racks.filter((x) => x !== r)
   selected.value = null; changed(200)
@@ -304,6 +356,85 @@ async function uploadImage(e) {
   imgBusy.value = true
   try { const r = await diagApi.uploadImage(f); await loadImages(); if (selItem.value) setImage(r.name) } catch (err) { toastError(err) } finally { imgBusy.value = false }
 }
+
+// --------------------------------------------------------------- câbles
+const CABLE_COLORS = ['#3b82f6', '#22c55e', '#facc15', '#f97316', '#ef4444', '#a855f7', '#ec4899', '#06b6d4', '#e2e8f0', '#94a3b8', '#1f2937']
+const CABLE_TYPES = { copper: t('Cuivre (RJ45)'), fiber: t('Fibre'), dac: t('DAC / Twinax'), power: t('Alimentation'), other: t('Autre') }
+const tool = ref('place')
+const cableFrom = ref(null)
+const lastColor = ref('#3b82f6'); const lastType = ref('copper')
+const cableView = ref(prefs.cableView || 'real')
+function setCableView(v) { cableView.value = v; prefs.cableView = v; save('cableView', v) }
+function setTool(v) { tool.value = v; cableFrom.value = null; if (v === 'cable' && cableView.value === 'hidden') setCableView('real') }
+const epKey = (e) => `${e.item}:${e.port}`
+function epName(e) {
+  const it = room.value.items.find((i) => i.id === e.item)
+  if (!it) return '?'
+  const p = it.kind === 'device' ? portById.value[e.port] : null
+  return `${itemName(it)} · ${it.kind === 'device' ? (p ? p.ifName : `#${e.port}`) : t('prise {n}', { n: e.port })}`
+}
+function cableAt(e) { const k = epKey(e); return room.value.cables.find((c) => epKey(c.a) === k || epKey(c.b) === k) }
+function onSocket(e) {
+  const existing = cableAt(e)
+  if (!cableFrom.value) {
+    if (existing) { selected.value = { type: 'cable', id: existing.id }; return }
+    cableFrom.value = e; selected.value = null; return
+  }
+  if (epKey(cableFrom.value) === epKey(e)) { cableFrom.value = null; return }
+  if (existing) { toast(t('Cette prise est déjà câblée'), 'error'); return }
+  const c = { id: uid(), a: cableFrom.value, b: e, color: lastColor.value, type: lastType.value, label: '', length: '' }
+  room.value.cables.push(c)
+  cableFrom.value = null
+  selected.value = { type: 'cable', id: c.id }
+  changed(200)
+}
+function removeCable(c) { room.value.cables = room.value.cables.filter((x) => x !== c); selected.value = null; changed(200) }
+
+// infos d'un câble pour la fenêtre de trafic (même présentation que les liens des schémas)
+function cableInfo(c) {
+  const side = (e) => {
+    const it = room.value.items.find((i) => i.id === e.item)
+    const p = it?.kind === 'device' ? portById.value[e.port] : null
+    return { it, p, dev: p ? devById.value[p.device_id] : null }
+  }
+  const A = side(c.a); const B = side(c.b)
+  const st = linkState({ port_a: A.p ? +A.p.port_id : null, port_b: B.p ? +B.p.port_id : null }, portById.value, { colorMode: 'util' })
+  const rp = A.p || B.p; const rdev = rp && devById.value[rp.device_id]
+  const extra = [c.label, c.length, CABLE_TYPES[c.type]].filter(Boolean).join(' · ')
+  return {
+    titleA: epName(c.a), titleB: epName(c.b), nameA: A.it ? itemName(A.it) : 'A',
+    status: (st.known ? (st.down ? t('Lien coupé') : `${fmtSpeed(st.speed)} · ${t('charge {p} %', { p: Math.round(st.util) })} · ↓ ${fmtBits(st.rin)} ↑ ${fmtBits(st.rout)}`) : t('Câble passif : pas d\'état en direct')) + (extra ? ` — ${extra}` : ''),
+    host: rdev?.hostname || null, portId: rp ? +rp.port_id : null, flip: !A.p && !!B.p,
+    ports: [A.p, B.p].filter(Boolean).map((p) => ({ id: +p.port_id, name: p.ifName, alias: p.ifAlias && p.ifAlias !== p.ifName ? p.ifAlias : '', dev: devById.value[p.device_id] ? devName(devById.value[p.device_id]) : '' })),
+    st,
+  }
+}
+const cardEl = ref(null)
+const hover = ref(null) // { id, x, y, pinned }
+const hoverInfo = computed(() => { const c = hover.value && room.value.cables.find((x) => x.id === hover.value.id); return c ? cableInfo(c) : null })
+function popupAt(c, ev, pinned) {
+  const r = cardEl.value.getBoundingClientRect()
+  const W = 324; const H = pinned ? 260 : 200; const px = ev.clientX - r.left; const py = ev.clientY - r.top
+  hover.value = { id: c.id, x: px + 16 + W > r.width ? Math.max(4, px - 16 - W) : px + 16, y: Math.max(4, Math.min(py + 16, r.height - H - 4)), pinned }
+}
+function onHover({ cable, event }) { if (!hover.value?.pinned && !(editing.value && tool.value === 'cable')) popupAt(cable, event, false) }
+function onUnhover() { if (!hover.value?.pinned) hover.value = null }
+function onCableClick({ cable, event }) {
+  if (editing.value) { tool.value = 'cable'; selected.value = { type: 'cable', id: cable.id }; hover.value = null; return }
+  popupAt(cable, event, true)
+}
+const cableCols = [
+  { key: 'color', label: '', sortable: false, width: '28px' }, { key: 'aName', label: 'A' }, { key: 'bName', label: 'B' },
+  { key: 'typeL', label: t('Type') }, { key: 'label', label: t('Étiquette') }, { key: 'length', label: t('Longueur') }, { key: 'state', label: t('État') },
+]
+const cableRows = computed(() => room.value.cables.map((c) => {
+  const i = cableInfo(c)
+  return {
+    id: c.id, color: c.color, aName: epName(c.a), bName: epName(c.b), typeL: CABLE_TYPES[c.type], label: c.label, length: c.length,
+    state: !i.st.known ? t('passif') : i.st.down ? t('coupé') : `${fmtSpeed(i.st.speed)} · ${Math.round(i.st.util)} %`,
+    stateCls: !i.st.known ? '' : i.st.down ? 'critical' : 'ok',
+  }
+}))
 
 // --------------------------------------------------------------- consultation
 function openItem(it) {
@@ -332,9 +463,11 @@ async function removeRoom() {
 
 // --------------------------------------------------------------- clavier, sortie de page
 function onKey(e) {
+  if (e.key === 'Escape' && hover.value?.pinned) { hover.value = null; return }
   if (!editing.value || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return
-  if ((e.key === 'Delete' || e.key === 'Backspace') && selItem.value) { e.preventDefault(); removeItem(selItem.value) }
-  else if (e.key === 'Escape') selected.value = null
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selCable.value) { e.preventDefault(); removeCable(selCable.value) }
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && selItem.value) { e.preventDefault(); removeItem(selItem.value) }
+  else if (e.key === 'Escape') { if (cableFrom.value) cableFrom.value = null; else selected.value = null }
 }
 function onLeave(e) { if (timer) { e.preventDefault(); e.returnValue = '' } }
 onMounted(() => { window.addEventListener('keydown', onKey); window.addEventListener('beforeunload', onLeave) })
@@ -364,7 +497,14 @@ onBeforeUnmount(() => {
 .pico.cablemgmt { background: repeating-linear-gradient(90deg, #0f141c 0 2px, #334155 2px 4px); }
 .pico.shelf { background: transparent; border-width: 0 0 3px; border-radius: 0; }
 .pico.custom { background: color-mix(in srgb, var(--accent) 40%, #1e293b); }
-.rack-card { padding: 10px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.rack-card { position: relative; padding: 10px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.cview button { padding: 5px 10px; font-size: 12px; }
+.ends { display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); }
+.ends .faint { display: inline-block; width: 14px; font-weight: 700; }
+.cswatch { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); cursor: pointer; padding: 0; }
+.cswatch.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--accent); }
+.cpick { width: 30px; height: 24px; padding: 1px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel-2); cursor: pointer; }
+.cdot { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(0, 0, 0, .3); vertical-align: -2px; }
 .zoomctl { gap: 2px; padding: 2px 4px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel-2); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 0 6px; font-size: 11.5px; }
 .legend i { display: inline-block; width: 12px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }

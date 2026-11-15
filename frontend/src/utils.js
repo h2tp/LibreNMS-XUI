@@ -145,6 +145,7 @@ export const prefs = reactive({
   devView: load('devView', 'cards'),
   range: load('range', '-1d'),
   rackZoom: load('rackZoom', 1),
+  cableView: load('cableView', 'real'),
 })
 
 export const RANGES = [
