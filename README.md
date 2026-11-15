@@ -26,7 +26,8 @@ lecture seule) : rien à modifier ni à installer dans LibreNMS.
   plusieurs tableaux par utilisateur, partage, export / import.
 - **Graphiques interactifs** tracés à partir des RRD : zoom, survol, plages de 1 h à 1 an, statistiques.
 - **Schémas réseau en direct** : état des équipements, alertes, débits ; liens colorés selon la charge ou le
-  débit (couleurs au choix), images personnalisées, fond (plan, photo de baie), création depuis LLDP.
+  débit (couleurs au choix), graphe de trafic et accès aux ports d'un clic, images personnalisées, éléments
+  hors LibreNMS (box, caméra…), fond (plan, photo de baie), création depuis LLDP.
 - **Fiche équipement complète** : vue d'ensemble avec photos, ports, santé, inventaire, voisins CDP/LLDP,
   réseau, routage, services, alertes, journaux, disponibilité, config Oxidized, gestion.
 - **Gestion** : ajout / suppression d'équipements, acquittement d'alertes, règles d'alerte avec assistant,
@@ -115,10 +116,13 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   requêtes simultanées vers LibreNMS. Le propriétaire d'un tableau est le nom d'utilisateur de la session XUI :
   en mode « jeton », c'est le nom saisi à la connexion (rangement, pas un contrôle d'accès fort).
 - **Schémas réseau** (Visualisation › Schémas) : équipements glissés depuis une liste, liens entre deux éléments
-  avec choix des ports (pré-remplis par LLDP), nuages et textes libres, liens courbables, fond uni / grille /
+  avec choix des ports (pré-remplis par LLDP), nuages et textes libres, **éléments libres** absents de LibreNMS
+  (box opérateur, caméra, équipement non supervisé… : nom, sous-titre, image ; sans état ni alertes, le trafic
+  d'un lien vers un équipement est lu sur le port côté équipement), liens courbables, fond uni / grille /
   image (PNG, JPEG, WebP, GIF, 8 Mo max.), annuler / rétablir, export SVG. En direct : état des équipements,
   alertes, débits, couleur et épaisseur des liens selon la charge (%) ou le débit, avec paliers et couleurs
-  personnalisables par schéma. Image personnalisée par équipement (dans la carte ou à la place de la carte),
+  personnalisables par schéma. Survol d'un lien : graphe de trafic 24 h ; clic : fenêtre épinglée avec liens
+  vers les fiches des ports. Image personnalisée par équipement ou élément (dans la carte ou à la place de la carte),
   bibliothèque d'images partagée. Création depuis la topologie LLDP (disposition en arbre). Partage comme les
   tableaux de bord.
 - **Équipements** : cartes / tableau, filtres (état, OS, type, emplacement, groupe), ajout SNMP v1/v2c/v3 ou ICMP.
