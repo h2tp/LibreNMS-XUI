@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { t } from './i18n'
+import { t, lang } from './i18n'
 
 export const session = reactive({ loaded: false, authenticated: false, user: null, auth_mode: 'password', read_only: false, role: '', librenms_url: '', rrd: false })
 
@@ -8,7 +8,7 @@ export class ApiError extends Error {
 }
 
 async function request(url, opts = {}) {
-  const init = { method: opts.method || 'GET', headers: { Accept: 'application/json' }, credentials: 'same-origin' }
+  const init = { method: opts.method || 'GET', headers: { Accept: 'application/json', 'X-XUI-Lang': lang }, credentials: 'same-origin' }
   if (opts.body !== undefined) {
     init.headers['Content-Type'] = 'application/json'
     init.body = JSON.stringify(opts.body)
@@ -91,7 +91,7 @@ export const diagApi = {
   remove: (id) => request(`/xui/diagrams/${enc(id)}`, { method: 'DELETE' }),
   bgUrl: (id, v) => `/xui/diagrams/${enc(id)}/background?v=${enc(v || '')}`,
   async setBackground(id, file) {
-    const r = await fetch(`/xui/diagrams/${enc(id)}/background`, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file, credentials: 'same-origin' })
+    const r = await fetch(`/xui/diagrams/${enc(id)}/background`, { method: 'PUT', headers: { 'Content-Type': file.type, 'X-XUI-Lang': lang }, body: file, credentials: 'same-origin' })
     const j = await r.json().catch(() => ({}))
     if (!r.ok) throw new ApiError(j.detail || t('Erreur HTTP {n}', { n: r.status }), r.status)
     return j
@@ -101,7 +101,7 @@ export const diagApi = {
   images: () => request('/xui/diagram-images'),
   imgUrl: (name) => `/xui/diagram-images/${enc(name)}`,
   async uploadImage(file) {
-    const r = await fetch('/xui/diagram-images', { method: 'POST', headers: { 'Content-Type': file.type }, body: file, credentials: 'same-origin' })
+    const r = await fetch('/xui/diagram-images', { method: 'POST', headers: { 'Content-Type': file.type, 'X-XUI-Lang': lang }, body: file, credentials: 'same-origin' })
     const j = await r.json().catch(() => ({}))
     if (!r.ok) throw new ApiError(j.detail || t('Erreur HTTP {n}', { n: r.status }), r.status)
     return j
@@ -131,7 +131,7 @@ export const photoApi = {
   list: (deviceId) => request(`/xui/devices/${enc(deviceId)}/photos`),
   url: (name) => `/xui/device-photos/${enc(name)}`,
   async add(deviceId, file) {
-    const r = await fetch(`/xui/devices/${enc(deviceId)}/photos`, { method: 'POST', headers: { 'Content-Type': file.type }, body: file, credentials: 'same-origin' })
+    const r = await fetch(`/xui/devices/${enc(deviceId)}/photos`, { method: 'POST', headers: { 'Content-Type': file.type, 'X-XUI-Lang': lang }, body: file, credentials: 'same-origin' })
     const j = await r.json().catch(() => ({}))
     if (!r.ok) throw new ApiError(j.detail || t('Erreur HTTP {n}', { n: r.status }), r.status)
     return j

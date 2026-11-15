@@ -8,7 +8,8 @@ LibreNMS keeps doing what it does well (discovery, SNMP polling, alerting); XUI 
 on top of it: customizable dashboards, interactive graphs, live network diagrams, dark theme… It relies only on
 the **LibreNMS API** and its **RRD files** (mounted read-only): nothing to change or install in LibreNMS.
 
-> The interface is currently in **French**. Menu names below are given as they appear on screen.
+> The interface is available in **English and French** (FR / EN button in the top bar; defaults to the browser language).
+> Screenshots show the French version.
 
 ![Dashboard](img/tdb.png)
 
@@ -35,7 +36,7 @@ the **LibreNMS API** and its **RRD files** (mounted read-only): nothing to chang
   routing, services, alerts, logs, availability, Oxidized config, management.
 - **Management**: add / delete devices, acknowledge alerts, alert rules with a wizard, groups, locations,
   maintenance.
-- **Convenience**: global search `Ctrl+K`, light / dark theme, auto-refresh, CSV export everywhere.
+- **Convenience**: English / French interface, global search `Ctrl+K`, light / dark theme, auto-refresh, CSV export everywhere.
 
 ## Quick start
 
@@ -105,7 +106,7 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
 <details>
 <summary><b>Detailed feature list</b></summary>
 
-- **Dashboards**: several dashboards per user, drag-and-drop / resizable widgets ("Personnaliser" button),
+- **Dashboards**: several dashboards per user, drag-and-drop / resizable widgets ("Customize" button),
   private / read / write sharing, default dashboard (★), duplication, JSON export / import.
   Widgets: counters, fleet status, availability map, OS, latency, busiest ports, alerts, offline devices,
   locations, logs (events / syslog / alerts), device card, temperatures / sensors, fans, power (PSU, PoE), UPS,
@@ -117,7 +118,7 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   from a cache refreshed in the background; `AGG_CONCURRENCY` (default 6) limits concurrent requests to
   LibreNMS. A dashboard's owner is the XUI session username: in "token" mode, it is the name typed at sign-in
   (used for organization, not as strong access control).
-- **Network diagrams** (Visualisation › Schémas): devices dragged from a list, links between two elements with
+- **Network diagrams** (Visualization › Diagrams): devices dragged from a list, links between two elements with
   port selection (pre-filled from LLDP), clouds and free text, **free elements** that are not in LibreNMS
   (ISP router, camera, unmonitored device…: name, subtitle, image; no status or alerts, traffic on a link to a
   device is read from the device-side port), curved links, plain / grid / image background (PNG, JPEG, WebP,

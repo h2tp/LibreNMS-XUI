@@ -75,6 +75,90 @@ SESSIONS: dict[str, dict] = {}
 app = FastAPI(title="LibreNMS XUI", docs_url=None, redoc_url=None, openapi_url=None)
 client: httpx.AsyncClient | None = None
 
+# --------------------------------------------------------------------------- langue des messages
+# Les messages d'erreur sont écrits en français ; si l'interface est en anglais (en-tête X-XUI-Lang
+# envoyé par le frontend, à défaut Accept-Language), ils sont traduits au moment de la réponse.
+# Les clés peuvent contenir des {champs} : la partie variable est reprise dans la traduction.
+_MSG_EN = {
+    "Non authentifié": "Not authenticated",
+    "Aucun jeton LibreNMS configuré (LIBRENMS_TOKEN)": "No LibreNMS token configured (LIBRENMS_TOKEN)",
+    "Formulaire de connexion LibreNMS introuvable": "LibreNMS login form not found",
+    "LibreNMS a refusé le jeton CSRF du formulaire de connexion (vérifier LIBRENMS_URL)": "LibreNMS rejected the login form CSRF token (check LIBRENMS_URL)",
+    "Trop de tentatives : LibreNMS bloque temporairement ce compte": "Too many attempts: LibreNMS is temporarily blocking this account",
+    "Identifiants LibreNMS refusés": "LibreNMS credentials rejected",
+    "Ce compte LibreNMS utilise la double authentification, non prise en charge par XUI": "This LibreNMS account uses two-factor authentication, which XUI does not support",
+    "Compte LibreNMS désactivé ou session refusée": "LibreNMS account disabled or session refused",
+    "LibreNMS injoignable : {e}": "LibreNMS unreachable: {e}",
+    "Votre compte LibreNMS est limité à certains équipements : connectez-vous à XUI avec un compte « global-read » ou « admin »":
+        'Your LibreNMS account is limited to specific devices: sign in to XUI with a "global-read" or "admin" account',
+    "Identifiants invalides": "Invalid credentials",
+    "Identifiant et mot de passe requis": "Username and password required",
+    "Jeton requis": "Token required",
+    "Jeton refusé par LibreNMS": "Token rejected by LibreNMS",
+    "Interface en lecture seule (READ_ONLY=true)": "Read-only interface (READ_ONLY=true)",
+    "Votre rôle LibreNMS ne permet que la consultation": "Your LibreNMS role only allows read access",
+    "Chemin invalide": "Invalid path",
+    "Impossible d'enregistrer les tableaux de bord : {e}": "Unable to save dashboards: {e}",
+    "widgets doit être une liste": "widgets must be a list",
+    "Configuration de widget trop volumineuse": "Widget configuration too large",
+    "Nom requis": "Name required",
+    "Partage invalide": "Invalid sharing",
+    "Tableau de bord introuvable": "Dashboard not found",
+    "Trop de tableaux de bord (50 max.)": "Too many dashboards (50 max.)",
+    "Ce tableau de bord est en lecture seule pour vous": "This dashboard is read-only for you",
+    "Seul le propriétaire peut supprimer ce tableau de bord": "Only the owner can delete this dashboard",
+    "Impossible d'enregistrer les schémas : {e}": "Unable to save diagrams: {e}",
+    "nodes doit être une liste": "nodes must be a list",
+    "links doit être une liste": "links must be a list",
+    "Schéma introuvable": "Diagram not found",
+    "Ce schéma est en lecture seule pour vous": "This diagram is read-only for you",
+    "Trop de schémas (100 max.)": "Too many diagrams (100 max.)",
+    "Seul le propriétaire peut supprimer ce schéma": "Only the owner can delete this diagram",
+    "Nouveau schéma": "New diagram",
+    "Formats acceptés : PNG, JPEG, WebP, GIF": "Accepted formats: PNG, JPEG, WebP, GIF",
+    "Image vide ou trop volumineuse ({n} Mo max.)": "Image empty or too large ({n} MB max.)",
+    "Pas d'image de fond": "No background image",
+    "Image introuvable": "Image not found",
+    "Image utilisée dans : {names}": "Image used in: {names}",
+    "Impossible d'enregistrer les photos : {e}": "Unable to save photos: {e}",
+    "Cette photo est déjà associée à l'équipement": "This photo is already attached to the device",
+    "{n} photos maximum par équipement": "{n} photos maximum per device",
+    "Corps JSON attendu": "JSON body expected",
+    "Photo introuvable": "Photo not found",
+    "Hôte invalide": "Invalid host",
+    "Aucun RRD pour cet hôte": "No RRD for this host",
+    "Fichier invalide": "Invalid file",
+    "RRD introuvable : {name}": "RRD not found: {name}",
+    "rrdtool : {err}": "rrdtool: {err}",
+    "Temps invalide : {v}": "Invalid time: {v}",
+    "Aucune source de données": "No data source",
+    "CF invalide": "Invalid CF",
+}
+_MSG_RE = [(re.compile("^" + re.sub(r"\\\{(\w+)\\\}", r"(?P<\1>.*)", re.escape(fr)) + "$", re.S), en)
+           for fr, en in _MSG_EN.items()]
+
+
+def _lang(request: Request) -> str:
+    v = (request.headers.get("x-xui-lang") or request.headers.get("accept-language") or "fr")[:2].lower()
+    return "en" if v == "en" else "fr"
+
+
+def _tr(request: Request, msg):
+    """Traduit un message français si l'interface est en anglais (sinon le renvoie tel quel)."""
+    if not isinstance(msg, str) or _lang(request) != "en":
+        return msg
+    for rx, en in _MSG_RE:
+        m = rx.match(msg)
+        if m:
+            return en.format(**m.groupdict())
+    return msg
+
+
+@app.exception_handler(HTTPException)
+async def _http_error(request: Request, exc: HTTPException):
+    return JSONResponse({"detail": _tr(request, exc.detail)}, status_code=exc.status_code,
+                        headers=getattr(exc, "headers", None))
+
 
 @app.on_event("startup")
 async def _startup() -> None:
@@ -289,7 +373,7 @@ async def proxy(path: str, request: Request):
             content=body or None, headers=headers,
         )
     except httpx.HTTPError as e:
-        return JSONResponse({"status": "error", "message": f"LibreNMS injoignable : {e}"}, 502)
+        return JSONResponse({"status": "error", "message": _tr(request, f"LibreNMS injoignable : {e}")}, 502)
     ct = r.headers.get("content-type", "application/json")
     out_headers = {}
     content = r.content
@@ -614,7 +698,7 @@ async def diag_create(request: Request):
         data = _diag_load()
         if len([d for d in data["diagrams"] if d["owner"] == user]) >= 100:
             raise HTTPException(400, "Trop de schémas (100 max.)")
-        d = {"id": secrets.token_hex(8), "name": "Nouveau schéma", "owner": user, "access": "private",
+        d = {"id": secrets.token_hex(8), "name": _tr(request, "Nouveau schéma"), "owner": user, "access": "private",
              "nodes": [], "links": [], "view": {"background": "grid", "showRates": True, "showPorts": True},
              "bg": None, "created": int(time.time())}
         _apply_fields(d, {k: v for k, v in body.items() if k in ("name", "access")}, owner=True)
@@ -1282,7 +1366,7 @@ async def rrd_batch(request: Request):
                                 _parse_time(it.get("end"), "now"), it.get("cf", "AVERAGE"),
                                 max(20, min(int(it.get("rows", 120)), 2000)))
         except HTTPException as e:
-            return {"error": e.detail}
+            return {"error": _tr(request, e.detail)}
 
     sem = asyncio.Semaphore(8)
 

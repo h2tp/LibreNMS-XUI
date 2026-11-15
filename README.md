@@ -34,7 +34,8 @@ lecture seule) : rien à modifier ni à installer dans LibreNMS.
   réseau, routage, services, alertes, journaux, disponibilité, config Oxidized, gestion.
 - **Gestion** : ajout / suppression d'équipements, acquittement d'alertes, règles d'alerte avec assistant,
   groupes, emplacements, maintenance.
-- **Confort** : recherche globale `Ctrl+K`, thème clair / sombre, rafraîchissement automatique, export CSV partout.
+- **Confort** : interface en français ou en anglais (bouton FR / EN, langue du navigateur par défaut), recherche globale `Ctrl+K`,
+  thème clair / sombre, rafraîchissement automatique, export CSV partout.
 
 ## Démarrage rapide
 
