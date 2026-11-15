@@ -1,7 +1,8 @@
 import { api, pick, L } from './api'
+import { t } from './i18n'
 
 export const HEALTH_LABELS = {
-  device_processor: 'Processeurs', device_mempool: 'Mémoire', device_storage: 'Stockage',
+  device_processor: t('Processeurs'), device_mempool: t('Mémoire'), device_storage: t('Stockage'),
 }
 
 async function pool(items, n, fn) {

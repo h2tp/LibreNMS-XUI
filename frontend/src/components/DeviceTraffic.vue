@@ -1,13 +1,13 @@
 <template>
   <div>
     <div class="card-title">
-      <ArrowDownUp :size="17" /> Trafic global <span class="sub">Overall Traffic · {{ nPorts }} port(s)</span>
+      <ArrowDownUp :size="17" /> {{ t('Trafic global') }} <span class="sub">Overall Traffic · {{ nPorts }} port(s)</span>
       <div class="right"><RangePicker v-model="range" /></div>
     </div>
     <template v-if="session.rrd">
       <div v-if="error" class="err small">{{ error }}</div>
       <div v-else-if="!series" class="skeleton" :style="{ height }"></div>
-      <div v-else-if="!series.length" class="empty small">Aucune donnée de trafic pour cet équipement</div>
+      <div v-else-if="!series.length" class="empty small">{{ t('Aucune donnée de trafic pour cet équipement') }}</div>
       <template v-else>
         <EChart :option="option" :height="height" />
         <div class="stats-row">
@@ -35,6 +35,7 @@ import { clock } from '../refresh'
 import { timeOption } from '../charts'
 import { stats } from '../rrdmeta'
 import { fmtBits, prefs } from '../utils'
+import { t } from '../i18n'
 
 const props = defineProps({ device: Object, files: Array, height: { type: String, default: '240px' } })
 const range = ref(prefs.range)
@@ -78,8 +79,8 @@ async function load() {
     }
     const ts = [...acc.keys()].sort((a, b) => a - b)
     series.value = ts.length ? [
-      { name: 'Entrant', color: '#22c55e', data: ts.map((t) => [t * 1000, acc.get(t)[0]]) },
-      { name: 'Sortant', color: '#6366f1', negate: true, data: ts.map((t) => [t * 1000, acc.get(t)[1]]) },
+      { name: t('Entrant'), color: '#22c55e', data: ts.map((t) => [t * 1000, acc.get(t)[0]]) },
+      { name: t('Sortant'), color: '#6366f1', negate: true, data: ts.map((t) => [t * 1000, acc.get(t)[1]]) },
     ] : []
     error.value = null
   } catch (e) { error.value = e.message }

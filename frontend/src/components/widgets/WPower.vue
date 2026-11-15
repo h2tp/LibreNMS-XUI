@@ -1,12 +1,12 @@
 <template>
   <div v-if="loaded && !states.length && !poe.length && !measures.length" class="empty small">
-    <Plug /><div>Aucun capteur d'alimentation{{ config.device || config.group ? ' pour ce filtre' : '' }}</div>
+    <Plug /><div>Aucun capteur d'alimentation{{ config.device || config.group ? t(' pour ce filtre') : '' }}</div>
   </div>
   <div v-else class="col" style="gap:14px">
     <div v-if="states.length || poe.length" class="summary small">
       <span v-if="cnt.ok" class="badge ok">{{ cnt.ok }} alimentation(s) OK</span>
-      <span v-if="cnt.bad" class="badge critical">{{ cnt.bad }} en défaut</span>
-      <span v-if="cnt.unk" class="badge">{{ cnt.unk }} état(s) inconnu(s)</span>
+      <span v-if="cnt.bad" class="badge critical">{{ t('{n} en défaut', { n: cnt.bad }) }}</span>
+      <span v-if="cnt.unk" class="badge">{{ t('{n} état(s) inconnu(s)', { n: cnt.unk }) }}</span>
       <span v-if="poeTotal.budget" class="muted">PoE {{ fmtW(poeTotal.used) }} / {{ fmtW(poeTotal.budget) }}</span>
     </div>
 
@@ -25,7 +25,7 @@
       <router-link v-for="b in poe" :key="b.key" :to="link(b)" class="poe" :title="`${b.usedDescr} : ${fmtW(b.used)}\n${b.totalDescr} : ${fmtW(b.total)}`">
         <div class="row" style="gap:8px;min-width:0">
           <Zap :size="15" class="faint" style="flex:none" />
-          <b class="ellipsis">Budget PoE</b><span class="muted small ellipsis grow">{{ devName(devById[b.device_id]) }}</span>
+          <b class="ellipsis">{{ t('Budget PoE') }}</b><span class="muted small ellipsis grow">{{ devName(devById[b.device_id]) }}</span>
           <span class="small nowrap muted">{{ fmtW(b.used) }} / {{ fmtW(b.total) }}</span>
           <b class="nowrap pct" :class="b.st">{{ b.pct }} %</b>
         </div>
@@ -61,6 +61,7 @@ import { useLoader } from '../../refresh'
 import { sensorUnit } from '../../rrdmeta'
 import { devName } from '../../utils'
 import { locale } from '../../i18n'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const all = ref([]); const devById = ref({}); const loaded = ref(false)

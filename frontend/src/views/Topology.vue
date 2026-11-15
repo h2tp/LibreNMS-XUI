@@ -1,17 +1,17 @@
 <template>
   <div>
     <div class="page-head">
-      <div><h1>Topologie réseau</h1><div class="sub">{{ nodes.length }} équipements · {{ edges.length }} liens (CDP/LLDP) · couleur = charge du lien</div></div>
+      <div><h1>{{ t('Topologie réseau') }}</h1><div class="sub">{{ t('{n} équipements · {l} liens (CDP/LLDP) · couleur = charge du lien', { n: nodes.length, l: edges.length }) }}</div></div>
       <div class="right">
-        <select v-model="loc" class="input"><option value="">Tous les emplacements</option><option v-for="l in locs" :key="l">{{ l }}</option></select>
-        <label class="check"><input v-model="external" type="checkbox" /> Voisins non supervisés</label>
-        <label class="check"><input v-model="isolated" type="checkbox" /> Inclure les isolés</label>
-        <label class="check"><input v-model="labels" type="checkbox" /> Libellés</label>
+        <select v-model="loc" class="input"><option value="">{{ t('Tous les emplacements') }}</option><option v-for="l in locs" :key="l">{{ l }}</option></select>
+        <label class="check"><input v-model="external" type="checkbox" /> {{ t('Voisins non supervisés') }}</label>
+        <label class="check"><input v-model="isolated" type="checkbox" /> {{ t('Inclure les isolés') }}</label>
+        <label class="check"><input v-model="labels" type="checkbox" /> {{ t('Libellés') }}</label>
       </div>
     </div>
     <div class="card topo">
       <div v-if="loading && !links.length" class="skeleton" style="height:100%"></div>
-      <div v-else-if="!edges.length" class="empty"><Share2 /><div>Aucun lien découvert (activez CDP/LLDP sur vos équipements)</div></div>
+      <div v-else-if="!edges.length" class="empty"><Share2 /><div>{{ t('Aucun lien découvert (activez CDP/LLDP sur vos équipements)') }}</div></div>
       <EChart v-else :option="option" height="100%" @click="onClick" />
       <div class="legend small">
         <span v-for="l in legend" :key="l.t" class="row" style="gap:6px"><i :style="{ background: l.c }"></i>{{ l.t }}</span>
@@ -28,6 +28,7 @@ import { safeList, devicesCached } from '../api'
 import { useLoader } from '../refresh'
 import { devName, devStatus, fmtBits } from '../utils'
 import { css } from '../charts'
+import { t } from '../i18n'
 
 const router = useRouter()
 const devices = ref([])
@@ -62,7 +63,7 @@ const edges = computed(() => {
 const nodes = computed(() => {
   const deg = {}
   edges.value.forEach((e) => { deg[e.source] = (deg[e.source] || 0) + 1; deg[e.target] = (deg[e.target] || 0) + 1 })
-  const ext = Object.keys(deg).filter((k) => k.startsWith('x:')).map((k) => ({ id: k, name: k.slice(2), deg: deg[k], ext: true, dev: { hostname: k.slice(2), os: 'non supervisé', type: '' } }))
+  const ext = Object.keys(deg).filter((k) => k.startsWith('x:')).map((k) => ({ id: k, name: k.slice(2), deg: deg[k], ext: true, dev: { hostname: k.slice(2), os: t('non supervisé'), type: '' } }))
   return devices.value.filter((d) => (isolated.value || deg[d.device_id]) && (!loc.value || d.location === loc.value || deg[d.device_id]))
     .map((d) => ({ id: String(d.device_id), name: devName(d), dev: d, deg: deg[d.device_id] || 0 })).concat(ext)
 })

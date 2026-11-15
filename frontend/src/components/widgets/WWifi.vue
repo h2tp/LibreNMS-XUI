@@ -1,16 +1,16 @@
 <template>
-  <div v-if="loaded && !aps.length" class="empty small"><Wifi /><div>Aucun point d'accès Wi-Fi remonté par LibreNMS</div></div>
+  <div v-if="loaded && !aps.length" class="empty small"><Wifi /><div>{{ t('Aucun point d\'accès Wi-Fi remonté par LibreNMS') }}</div></div>
   <div v-else class="col" style="gap:12px;height:100%">
     <div class="summary small">
       <span><b>{{ totals.clients }}</b> client(s)</span>
-      <span class="muted">· {{ totals.aps }} point(s) d'accès · {{ totals.radios }} radio(s)</span>
-      <span v-for="s in ssids" :key="s.name" class="ssid" :title="`${s.clients} client(s) sur le SSID ${s.name}`"><Wifi :size="12" /> {{ s.name }} <b>{{ s.clients }}</b></span>
+      <span class="muted">· {{ t('{a} point(s) d\'accès · {r} radio(s)', { a: totals.aps, r: totals.radios }) }}</span>
+      <span v-for="s in ssids" :key="s.name" class="ssid" :title="t('{n} client(s) sur le SSID {s}', { n: s.clients, s: s.name })"><Wifi :size="12" /> {{ s.name }} <b>{{ s.clients }}</b></span>
     </div>
 
     <template v-if="mode === 'history'">
-      <div v-if="!session.rrd" class="empty small">L'historique nécessite l'accès aux fichiers RRD.</div>
+      <div v-if="!session.rrd" class="empty small">{{ t('L\'historique nécessite l\'accès aux fichiers RRD.') }}</div>
       <div v-else-if="!series" class="skeleton" :style="{ height: `${chartH}px` }"></div>
-      <div v-else-if="!series.length" class="empty small">Aucun historique de clients</div>
+      <div v-else-if="!series.length" class="empty small">{{ t('Aucun historique de clients') }}</div>
       <EChart v-else :option="histOpt" :height="`${chartH}px`" />
     </template>
 
@@ -30,11 +30,11 @@
             <b class="nowrap">{{ r.channel ? `canal ${r.channel}` : r.label }}</b>
             <span class="muted nowrap">{{ r.clients ?? '—' }} client(s)</span>
             <span class="grow"></span>
-            <span v-if="r.noise !== null" class="muted nowrap" :class="{ warnTxt: r.noise > -80 }" title="Bruit de fond">{{ r.noise }} dBm</span>
-            <span v-if="r.power !== null" class="muted nowrap" title="Puissance d'émission">· Tx {{ r.power }} dBm</span>
+            <span v-if="r.noise !== null" class="muted nowrap" :class="{ warnTxt: r.noise > -80 }" :title="t('Bruit de fond')">{{ r.noise }} dBm</span>
+            <span v-if="r.power !== null" class="muted nowrap" :title="t('Puissance d\'émission')">· Tx {{ r.power }} dBm</span>
           </div>
           <div v-if="r.util !== null" class="row" style="gap:8px">
-            <div class="bar grow" :title="`Occupation du canal : ${r.util} %`"><i :style="{ width: Math.max(1, r.util) + '%', background: COL[r.utilSt] }"></i></div>
+            <div class="bar grow" :title="t('Occupation du canal : {p} %', { p: r.util })"><i :style="{ width: Math.max(1, r.util) + '%', background: COL[r.utilSt] }"></i></div>
             <span class="small nowrap pct" :class="r.utilSt">{{ r.util }} %</span>
           </div>
         </div>
@@ -52,6 +52,7 @@ import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { timeOption, PALETTE } from '../../charts'
 import { devName } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const all = ref([]); const devById = ref({}); const loaded = ref(false)

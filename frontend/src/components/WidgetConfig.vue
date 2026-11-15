@@ -1,8 +1,8 @@
 <template>
-  <Modal :title="`${isNew ? 'Ajouter' : 'Configurer'} · ${def.label}`" :icon="def.icon" @close="$emit('close')">
+  <Modal :title="`${isNew ? t('Ajouter') : t('Configurer')} · ${def.label}`" :icon="def.icon" @close="$emit('close')">
     <div class="form-grid">
       <label class="field full">
-        <span>Titre</span>
+        <span>{{ t('Titre') }}</span>
         <input v-model="cfg.title" class="input" :placeholder="autoTitle || def.label" maxlength="80" />
       </label>
 
@@ -28,44 +28,44 @@
             <option v-for="r in RANGES" :key="r.v" :value="r.v">{{ r.l }}</option>
           </select>
           <select v-else-if="f.type === 'group'" v-model="cfg[f.key]" class="input">
-            <option value="">Tous les équipements</option>
+            <option value="">{{ t('Tous les équipements') }}</option>
             <option v-for="g in groups" :key="g.id || g.name" :value="g.name">{{ g.name }}</option>
           </select>
 
           <select v-else-if="f.type === 'diagram'" v-model="cfg[f.key]" class="input">
-            <option value="" disabled>— choisir un schéma —</option>
+            <option value="" disabled>{{ t('— choisir un schéma —') }}</option>
             <option v-for="d in diagrams" :key="d.id" :value="d.id">{{ d.name }}{{ d.mine ? '' : ` (${d.owner})` }}</option>
           </select>
           <template v-else-if="f.type === 'device'">
-            <input v-model="devFilter" class="input" placeholder="Filtrer les équipements…" style="margin-bottom:6px" />
+            <input v-model="devFilter" class="input" :placeholder="t('Filtrer les équipements…')" style="margin-bottom:6px" />
             <select v-model="cfg[f.key]" class="input" :size="Math.min(7, Math.max(3, devOptions.length + (f.required ? 0 : 1)))">
-              <option v-if="!f.required" value="">— Tous les équipements —</option>
+              <option v-if="!f.required" value="">{{ t('— Tous les équipements —') }}</option>
               <option v-for="d in devOptions" :key="d.device_id" :value="d.hostname">{{ devName(d) }}{{ devName(d) !== d.hostname ? ` (${d.hostname})` : '' }}</option>
             </select>
           </template>
 
           <template v-else-if="f.type === 'rrd'">
-            <div v-if="!cfg[f.depends]" class="small faint">Choisissez d'abord un équipement.</div>
+            <div v-if="!cfg[f.depends]" class="small faint">{{ t('Choisissez d\'abord un équipement.') }}</div>
             <template v-else>
-              <input v-model="rrdFilter" class="input" placeholder="Filtrer les métriques…" style="margin-bottom:6px" />
+              <input v-model="rrdFilter" class="input" :placeholder="t('Filtrer les métriques…')" style="margin-bottom:6px" />
               <select v-model="cfg[f.key]" class="input" size="8">
                 <optgroup v-for="g in rrdGroups" :key="g.id" :label="g.label">
                   <option v-for="o in g.items" :key="o.name" :value="o.name">{{ o.title }}</option>
                 </optgroup>
               </select>
-              <div v-if="lists.loading" class="small faint">Chargement…</div>
+              <div v-if="lists.loading" class="small faint">{{ t('Chargement…') }}</div>
             </template>
           </template>
 
           <template v-else-if="f.type === 'port'">
-            <div v-if="!cfg[f.depends]" class="small faint">Choisissez d'abord un équipement.</div>
+            <div v-if="!cfg[f.depends]" class="small faint">{{ t('Choisissez d\'abord un équipement.') }}</div>
             <select v-else v-model="cfg[f.key]" class="input" size="8" @change="setPortName">
               <option v-for="p in lists.ports" :key="p.port_id" :value="+p.port_id">{{ p.ifOperStatus === 'up' ? '●' : '○' }} {{ p.ifName }}{{ p.ifAlias && p.ifAlias !== p.ifName ? ` — ${p.ifAlias}` : '' }}</option>
             </select>
           </template>
 
           <template v-else-if="f.type === 'graph'">
-            <div v-if="!cfg[f.depends]" class="small faint">Choisissez d'abord un équipement.</div>
+            <div v-if="!cfg[f.depends]" class="small faint">{{ t('Choisissez d\'abord un équipement.') }}</div>
             <select v-else v-model="cfg[f.key]" class="input" size="8">
               <option v-for="g in lists.graphs" :key="g.name" :value="g.name">{{ g.desc || g.name }}</option>
             </select>
@@ -77,8 +77,8 @@
       </template>
     </div>
     <template #foot>
-      <button class="btn" @click="$emit('close')">Annuler</button>
-      <button class="btn primary" :disabled="missing" @click="save"><Check /> {{ isNew ? 'Ajouter' : 'Enregistrer' }}</button>
+      <button class="btn" @click="$emit('close')">{{ t('Annuler') }}</button>
+      <button class="btn primary" :disabled="missing" @click="save"><Check /> {{ isNew ? t('Ajouter') : t('Enregistrer') }}</button>
     </template>
   </Modal>
 </template>
@@ -92,6 +92,7 @@ import { D } from '../dashboard/data'
 import { api, pick, safeList, rrd, diagApi } from '../api'
 import { describe, CATEGORIES, SENSOR_LABELS } from '../rrdmeta'
 import { RANGES, devName } from '../utils'
+import { t } from '../i18n'
 
 const props = defineProps({ type: String, config: Object, isNew: Boolean })
 const emit = defineEmits(['save', 'close'])

@@ -33,6 +33,7 @@ import { safeList, devicesCached, L } from '../../api'
 import { devName, devStatus } from '../../utils'
 import { css } from '../../charts'
 import { useRouter } from 'vue-router'
+import { t } from '../../i18n'
 
 const props = defineProps({ device: Object })
 const router = useRouter()
@@ -47,27 +48,27 @@ const fmtMac = (m) => (m && m.length === 12 ? m.match(/../g).join(':') : m)
 const addPort = (rows) => rows.map((r) => ({ ...r, port: ports.value[r.port_id] }))
 
 const subs = [
-  { id: 'links', label: 'Voisins', icon: Share2 },
-  { id: 'ip', label: 'Adresses IP', icon: Globe },
-  { id: 'vlans', label: 'VLANs', icon: Tag },
-  { id: 'fdb', label: 'Table FDB', icon: Table2 },
+  { id: 'links', label: t('Voisins'), icon: Share2 },
+  { id: 'ip', label: t('Adresses IP'), icon: Globe },
+  { id: 'vlans', label: t('VLANs'), icon: Tag },
+  { id: 'fdb', label: t('Table FDB'), icon: Table2 },
   { id: 'arp', label: 'ARP', icon: Waypoints },
-  { id: 'stack', label: 'Pile de ports', icon: Layers },
-  { id: 'transceivers', label: 'Transceivers', icon: Radio },
+  { id: 'stack', label: t('Pile de ports'), icon: Layers },
+  { id: 'transceivers', label: t('Transceivers'), icon: Radio },
 ]
 const defs = {
-  ip: { path: `devices/${h}/ip`, key: 'addresses', cols: [{ key: 'ipv4_address', label: 'IPv4' }, { key: 'ipv6_address', label: 'IPv6' }, { key: 'ipv4_prefixlen', label: 'Préfixe' }, { key: 'ipv6_prefixlen', label: 'Préfixe v6' }, { key: 'port_id', label: 'Port' }, { key: 'context_name', label: 'Contexte' }] },
-  vlans: { path: `devices/${h}/vlans`, key: 'vlans', cols: [{ key: 'vlan_vlan', label: 'VLAN' }, { key: 'vlan_name', label: 'Nom' }, { key: 'vlan_type', label: 'Type' }, { key: 'vlan_state', label: 'État' }, { key: 'vlan_domain', label: 'Domaine' }] },
-  fdb: { path: `devices/${h}/fdb`, key: 'ports_fdb', cols: [{ key: 'mac_address', label: 'MAC' }, { key: 'port_id', label: 'Port' }, { key: 'vlan_id', label: 'VLAN' }, { key: 'updated_at', label: 'Vu', format: (v) => timeAgo(v) }] },
-  arp: { path: 'resources/ip/arp/all', params: { device: props.device.hostname }, key: 'arp', cols: [{ key: 'ipv4_address', label: 'IP' }, { key: 'mac_address', label: 'MAC' }, { key: 'port_id', label: 'Port' }, { key: 'context_name', label: 'Contexte' }] },
-  stack: { path: `devices/${h}/port_stack`, key: 'mappings', cols: [{ key: 'port_id_high', label: 'Port parent' }, { key: 'port_id_low', label: 'Port enfant' }, { key: 'ifStackStatus', label: 'État' }],
+  ip: { path: `devices/${h}/ip`, key: 'addresses', cols: [{ key: 'ipv4_address', label: t('IPv4') }, { key: 'ipv6_address', label: t('IPv6') }, { key: 'ipv4_prefixlen', label: t('Préfixe') }, { key: 'ipv6_prefixlen', label: t('Préfixe v6') }, { key: 'port_id', label: t('Port') }, { key: 'context_name', label: t('Contexte') }] },
+  vlans: { path: `devices/${h}/vlans`, key: 'vlans', cols: [{ key: 'vlan_vlan', label: 'VLAN' }, { key: 'vlan_name', label: t('Nom') }, { key: 'vlan_type', label: t('Type') }, { key: 'vlan_state', label: t('État') }, { key: 'vlan_domain', label: t('Domaine') }] },
+  fdb: { path: `devices/${h}/fdb`, key: 'ports_fdb', cols: [{ key: 'mac_address', label: 'MAC' }, { key: 'port_id', label: t('Port') }, { key: 'vlan_id', label: 'VLAN' }, { key: 'updated_at', label: t('Vu'), format: (v) => timeAgo(v) }] },
+  arp: { path: 'resources/ip/arp/all', params: { device: props.device.hostname }, key: 'arp', cols: [{ key: 'ipv4_address', label: 'IP' }, { key: 'mac_address', label: 'MAC' }, { key: 'port_id', label: t('Port') }, { key: 'context_name', label: t('Contexte') }] },
+  stack: { path: `devices/${h}/port_stack`, key: 'mappings', cols: [{ key: 'port_id_high', label: t('Port parent') }, { key: 'port_id_low', label: t('Port enfant') }, { key: 'ifStackStatus', label: t('État') }],
     transform: (r) => r.map((x) => ({ ...x, port_id_high: ports.value[x.port_id_high] || x.port_id_high, port_id_low: ports.value[x.port_id_low] || x.port_id_low })) },
-  transceivers: { path: `devices/${h}/transceivers`, key: 'transceivers', cols: [{ key: 'port_id', label: 'Port' }, { key: 'type', label: 'Type' }, { key: 'vendor', label: 'Fabricant' }, { key: 'model', label: 'Modèle' }, { key: 'serial', label: 'N° série' }, { key: 'distance', label: 'Distance' }, { key: 'wavelength', label: 'λ (nm)' }, { key: 'connector', label: 'Connecteur' }] },
+  transceivers: { path: `devices/${h}/transceivers`, key: 'transceivers', cols: [{ key: 'port_id', label: t('Port') }, { key: 'type', label: t('Type') }, { key: 'vendor', label: t('Fabricant') }, { key: 'model', label: t('Modèle') }, { key: 'serial', label: t('N° série') }, { key: 'distance', label: t('Distance') }, { key: 'wavelength', label: t('λ (nm)') }, { key: 'connector', label: t('Connecteur') }] },
 }
 const cur = computed(() => defs[sub.value] || defs.ip)
 const linkCols = [
-  { key: 'local_port_id', label: 'Port local' }, { key: 'remote_hostname', label: 'Voisin' }, { key: 'remote_port', label: 'Port distant' },
-  { key: 'remote_platform', label: 'Plateforme' }, { key: 'protocol', label: 'Protocole' }, { key: 'remote_version', label: 'Version' },
+  { key: 'local_port_id', label: t('Port local') }, { key: 'remote_hostname', label: t('Voisin') }, { key: 'remote_port', label: t('Port distant') },
+  { key: 'remote_platform', label: t('Plateforme') }, { key: 'protocol', label: t('Protocole') }, { key: 'remote_version', label: t('Version') },
 ]
 
 const graph = computed(() => {

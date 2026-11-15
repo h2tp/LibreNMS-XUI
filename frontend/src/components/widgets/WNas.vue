@@ -1,6 +1,6 @@
 <template>
   <div v-if="!loaded" class="col" style="gap:10px"><div class="skeleton" style="height:220px"></div></div>
-  <div v-else-if="!nasList.length" class="empty small"><HardDriveDownload /><div>Aucun NAS{{ config.device || config.group ? ' pour ce filtre' : ' (équipement de type « stockage »)' }}</div></div>
+  <div v-else-if="!nasList.length" class="empty small"><HardDriveDownload /><div>Aucun NAS{{ config.device || config.group ? t(' pour ce filtre') : t(' (équipement de type « stockage »)') }}</div></div>
   <div v-else class="col" style="gap:14px">
     <div v-for="n in nasList" :key="n.device_id" class="nas" :class="n.st">
       <router-link :to="`/device/${encodeURIComponent(n.hostname)}`" class="head">
@@ -10,13 +10,13 @@
           <b class="ellipsis" style="display:block">{{ n.name }}</b>
           <span class="small muted ellipsis" style="display:block">{{ n.model }}</span>
         </div>
-        <span v-if="n.upgrade" class="badge info" title="Une mise à jour du système est disponible"><ArrowUpCircle :size="11" /> MAJ dispo</span>
+        <span v-if="n.upgrade" class="badge info" :title="t('Une mise à jour du système est disponible')"><ArrowUpCircle :size="11" /> {{ t('MAJ dispo') }}</span>
         <span class="badge" :class="BADGE[n.st]">{{ n.headline }}</span>
       </router-link>
 
       <!-- volumes et RAID -->
       <div v-if="n.volumes.length || n.raids.length" class="col" style="gap:8px">
-        <div v-for="v in n.volumes" :key="v.key" class="vol" :title="`${v.descr}\n${fmtBytes(v.used)} utilisés sur ${fmtBytes(v.size)}`">
+        <div v-for="v in n.volumes" :key="v.key" class="vol" :title="`${v.descr}\n${t('{u} utilisés sur {s}', { u: fmtBytes(v.used), s: fmtBytes(v.size) })}`">
           <div class="row small" style="gap:8px;min-width:0">
             <Database :size="14" class="faint" style="flex:none" />
             <b class="ellipsis">{{ v.name }}</b>
@@ -34,7 +34,7 @@
 
       <!-- disques -->
       <table v-if="config.disks !== false && n.disks.length" class="dsk">
-        <thead><tr><th>Disque</th><th>État</th><th>Santé</th><th>Temp.</th><th title="Secteurs défectueux">Secteurs déf.</th></tr></thead>
+        <thead><tr><th>{{ t('Disque') }}</th><th>{{ t('État') }}</th><th>{{ t('Santé') }}</th><th>{{ t('Temp.') }}</th><th :title="t('Secteurs défectueux')">{{ t('Secteurs déf.') }}</th></tr></thead>
         <tbody>
           <tr v-for="d in n.disks" :key="d.key" :class="d.st">
             <td><div class="dn"><HardDrive :size="13" class="faint" /><b>{{ d.id }}</b><span class="muted small ellipsis">{{ d.model }}</span></div></td>
@@ -66,6 +66,7 @@ import { interpretState } from '../../dashboard/states'
 import { usefulVolumes, volumeName } from '../../dashboard/volumes'
 import { useLoader } from '../../refresh'
 import { devName, fmtBytes, fmtUptime, osIcon } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const devices = ref([]); const sensors = ref([]); const storage = ref([]); const cpu = ref([]); const mem = ref([]); const loaded = ref(false)
@@ -94,8 +95,8 @@ const nasList = computed(() => {
       const k = s.sensor_descr
       const e = (dm[k] ||= { key: k, status: null, health: null, temp: null, bad: null, limit: null })
       if (s.sensor_class === 'state') {
-        const t = states.find((x) => x.sensor_id === s.sensor_id)
-        if (/health/i.test(s.sensor_type)) e.health = t; else e.status = t
+        const st = states.find((x) => x.sensor_id === s.sensor_id)
+        if (/health/i.test(s.sensor_type)) e.health = st; else e.status = st
       } else if (s.sensor_class === 'temperature') { e.temp = Math.round(n0(s.sensor_current)); e.limit = s.sensor_limit != null ? +s.sensor_limit : null }
       else if (s.sensor_class === 'count' && /bad|sector|secteur|realloc/i.test(`${s.group || ''} ${s.sensor_descr} ${s.sensor_type}`)) e.bad = n0(s.sensor_current)
     }
@@ -121,7 +122,7 @@ const nasList = computed(() => {
 
     const upgradeS = states.find((s) => /upgrade/i.test(s.sensor_type))
     const sysStates = states.filter((s) => !isDisk(s) && !isRaid(s) && s !== upgradeS)
-      .map((s) => ({ ...s, st: st3(s.st), short: s.sensor_descr.replace(/^FAN\s*-\s*/i, 'Ventil. ').replace(/^System$/i, 'Système').replace(/^Power$/i, 'Alimentation') }))
+      .map((s) => ({ ...s, st: st3(s.st), short: s.sensor_descr.replace(/^FAN\s*-\s*/i, t('Ventil. ')).replace(/^System$/i, t('Système')).replace(/^Power$/i, t('Alimentation')) }))
     const sysT = sens.find((s) => s.sensor_class === 'temperature' && !isDisk(s))
     const procs = cpu.value.filter((c) => +c.device_id === id && c.usage != null)
     const sys = mem.value.find((m) => +m.device_id === id && m.cls === 'system')
@@ -132,12 +133,12 @@ const nasList = computed(() => {
     if (down) st = 'crit'
     const firstBad = [...volumes.filter((v) => v.raid && v.raid.st !== 'ok').map((v) => `${v.name} : ${v.raid.label}`),
       ...otherRaids.filter((r) => r.st !== 'ok').map((r) => `${r.sensor_descr} : ${r.label}`),
-      ...disks.filter((x) => x.st !== 'ok').map((x) => `${x.id} : ${x.health?.st !== 'ok' && x.health ? x.health.label : x.status?.st !== 'ok' && x.status ? x.status.label : x.bad > 0 ? 'secteurs défectueux' : 'chaud'}`),
-      ...volumes.filter((v) => v.st !== 'ok').map((v) => `${v.name} plein à ${v.perc} %`)][0]
+      ...disks.filter((x) => x.st !== 'ok').map((x) => `${x.id} : ${x.health?.st !== 'ok' && x.health ? x.health.label : x.status?.st !== 'ok' && x.status ? x.status.label : x.bad > 0 ? t('secteurs défectueux') : 'chaud'}`),
+      ...volumes.filter((v) => v.st !== 'ok').map((v) => t('{n} plein à {p} %', { n: v.name, p: v.perc }))][0]
     return {
       device_id: id, hostname: d.hostname, name: devName(d), icon: osIcon(d), down, st,
       model: [d.hardware, d.version].filter(Boolean).join(' · '), uptime: n0(d.uptime),
-      headline: down ? 'Injoignable' : firstBad || (st === 'ok' ? 'Tout va bien' : 'À surveiller'),
+      headline: down ? t('Injoignable') : firstBad || (st === 'ok' ? t('Tout va bien') : t('À surveiller')),
       upgrade: upgradeS && upgradeS.st === 'warn', volumes, otherRaids, disks, sysStates,
       cpu: !down && procs.length ? Math.round(procs.reduce((s, c) => s + n0(c.usage), 0) / procs.length) : null,
       mem: !down && sys ? Math.round(n0(sys.perc)) : null, sysTemp, sysTempSt,

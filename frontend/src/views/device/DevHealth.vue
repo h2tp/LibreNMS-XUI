@@ -1,11 +1,11 @@
 <template>
   <div>
     <div v-if="loading && !types.length" class="grid gauto"><div v-for="i in 6" :key="i" class="skeleton" style="height:120px"></div></div>
-    <div v-else-if="!types.length" class="card empty"><HeartPulse /><div>Aucune donnée de santé pour cet équipement</div></div>
+    <div v-else-if="!types.length" class="card empty"><HeartPulse /><div>{{ t('Aucune donnée de santé pour cet équipement') }}</div></div>
 
     <div v-if="procs.length || mempools.length || storage.length" class="grid g2 mb usage-grid" :class="{ compact }">
       <div v-if="procs.length" class="card procs">
-        <div class="card-title"><Cpu :size="17" /> Processeurs <span class="sub">{{ procs.length }}</span></div>
+        <div class="card-title"><Cpu :size="17" /> {{ t('Processeurs') }} <span class="sub">{{ procs.length }}</span></div>
         <div class="proc-grid">
           <div v-for="p in procs" :key="p._id" class="proc" :class="{ sel: open === 'p' + p._id }" @click="toggle('p' + p._id)">
             <Ring :value="+p.processor_usage || 0" :size="76" :stroke="8" />
@@ -16,7 +16,7 @@
       </div>
 
       <div v-if="mempools.length" class="card">
-        <div class="card-title"><MemoryStick :size="17" /> Mémoire</div>
+        <div class="card-title"><MemoryStick :size="17" /> {{ t('Mémoire') }}</div>
         <div v-for="m in mempools" :key="m._id" class="usage" @click="toggle('m' + m._id)">
           <div class="row small"><b>{{ m.mempool_descr || m.desc }}</b><span class="grow"></span><span class="muted">{{ fmtBytes(m.mempool_used) }} / {{ fmtBytes(m.mempool_total) }}</span><b>{{ fmtPct(m.mempool_perc) }}</b></div>
           <div class="bar big"><i :style="{ width: (+m.mempool_perc || 0) + '%', background: utilColor(+m.mempool_perc) }"></i></div>
@@ -24,7 +24,7 @@
         </div>
       </div>
       <div v-if="storage.length" class="card">
-        <div class="card-title"><HardDrive :size="17" /> Stockage</div>
+        <div class="card-title"><HardDrive :size="17" /> {{ t('Stockage') }}</div>
         <div v-for="s in storage" :key="s._id" class="usage" @click="toggle('s' + s._id)">
           <div class="row small"><b class="ellipsis">{{ s.storage_descr || s.desc }}</b><span class="grow"></span><span class="muted nowrap">{{ fmtBytes(s.storage_used) }} / {{ fmtBytes(s.storage_size) }}</span><b>{{ fmtPct(s.storage_perc) }}</b></div>
           <div class="bar big"><i :style="{ width: (+s.storage_perc || 0) + '%', background: utilColor(+s.storage_perc) }"></i></div>
@@ -59,6 +59,7 @@ import { useLoader } from '../../refresh'
 import { loadHealth, sensorClassOf } from '../../health'
 import { SENSOR_LABELS, sensorUnit } from '../../rrdmeta'
 import { fmtBytes, utilColor } from '../../utils'
+import { t } from '../../i18n'
 
 // compact (vue d'ensemble) : processeurs et mémoire côte à côte
 const props = defineProps({ device: Object, files: Array, compact: Boolean })
@@ -71,7 +72,7 @@ const toggle = (k) => (open.value = open.value === k ? null : k)
 // on les numérote alors dans l'ordre de leur index SNMP (« CPU 1 », « CPU 2 »…)
 const procs = computed(() => {
   const list = [...(data.value.device_processor || [])].sort((a, b) => (+a.processor_index || 0) - (+b.processor_index || 0) || a._id - b._id)
-  const descr = (p) => String(p.processor_descr || p.desc || 'Processeur').trim()
+  const descr = (p) => String(p.processor_descr || p.desc || t('Processeur')).trim()
   const count = {}; for (const p of list) count[descr(p)] = (count[descr(p)] || 0) + 1
   const rank = {}
   return list.map((p) => {

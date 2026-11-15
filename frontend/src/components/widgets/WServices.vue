@@ -2,8 +2,8 @@
   <div v-if="error" class="err small">{{ error }}</div>
   <div v-else-if="!loaded" class="col" style="gap:10px"><div v-for="i in 3" :key="i" class="skeleton" style="height:40px"></div></div>
   <div v-else-if="!all.length" class="empty small">
-    <HeartPulse /><div>Aucun service configuré dans LibreNMS.</div>
-    <router-link to="/services" class="btn sm mt">Ajouter des services</router-link>
+    <HeartPulse /><div>{{ t('Aucun service configuré dans LibreNMS.') }}</div>
+    <router-link to="/services" class="btn sm mt">{{ t('Ajouter des services') }}</router-link>
   </div>
   <div v-else class="col" style="gap:12px">
     <div class="summary small">
@@ -11,10 +11,10 @@
       <span v-if="c.warn" class="badge warning">{{ c.warn }} avertissement(s)</span>
       <span v-if="c.crit" class="badge critical">{{ c.crit }} critique(s)</span>
       <span v-if="c.unk" class="badge">{{ c.unk }} inconnu(s)</span>
-      <span v-if="c.ign" class="faint">{{ c.ign }} ignoré(s)</span>
+      <span v-if="c.ign" class="faint">{{ t('{n} ignoré(s)', { n: c.ign }) }}</span>
     </div>
 
-    <div v-if="!list.length" class="empty small"><CircleCheck color="var(--green)" style="opacity:1" /><div>{{ config.onlyProblems ? 'Aucun service en défaut' : 'Aucun service ne correspond aux filtres' }}</div></div>
+    <div v-if="!list.length" class="empty small"><CircleCheck color="var(--green)" style="opacity:1" /><div>{{ config.onlyProblems ? t('Aucun service en défaut') : t('Aucun service ne correspond aux filtres') }}</div></div>
 
     <div v-else-if="mode === 'list'" class="col" style="gap:6px">
       <router-link v-for="s in list" :key="s.service_id" :to="link(s)" class="svc" :class="s.st" :title="s.service_message">
@@ -52,6 +52,7 @@ import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { donutOption } from '../../charts'
 import { devName, fmtDate, timeAgo } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const all = ref([]); const devById = ref({}); const loaded = ref(false); const error = ref(null)
@@ -61,10 +62,10 @@ const DOT = { ok: 'up', warn: 'warning', crit: 'down', unk: 'disabled', ign: 'di
 const RANK = { crit: 0, warn: 1, unk: 2, ok: 3, ign: 4 }
 
 const scoped = computed(() => {
-  const t = String(props.config.type || '').trim().toLowerCase()
+  const ty = String(props.config.type || '').trim().toLowerCase()
   return all.value.filter((s) => devById.value[s.device_id]
     && (!props.config.device || devById.value[s.device_id].hostname === props.config.device)
-    && (!t || String(s.service_type).toLowerCase().includes(t)))
+    && (!ty || String(s.service_type).toLowerCase().includes(ty)))
     .map((s) => ({
       ...s, label: s.service_name || s.service_desc || s.service_type,
       st: +s.service_ignore || +s.service_disabled ? 'ign' : ST[+s.service_status] || 'unk',
@@ -82,11 +83,11 @@ const list = computed(() => filtered.value.slice(0, props.config.limit || 15))
 const more = computed(() => (mode.value === 'summary' ? 0 : filtered.value.length - list.value.length))
 const donut = computed(() => {
   const items = [
-    { name: 'OK', value: c.value.ok, color: '#22c55e' }, { name: 'Avertissement', value: c.value.warn, color: '#fb923c' },
-    { name: 'Critique', value: c.value.crit, color: '#f43f5e' }, { name: 'Inconnu', value: c.value.unk, color: '#64748b' },
+    { name: 'OK', value: c.value.ok, color: '#22c55e' }, { name: t('Avertissement'), value: c.value.warn, color: '#fb923c' },
+    { name: t('Critique'), value: c.value.crit, color: '#f43f5e' }, { name: t('Inconnu'), value: c.value.unk, color: '#64748b' },
   ].filter((x) => x.value)
   const n = c.value.ok + c.value.warn + c.value.crit + c.value.unk
-  return donutOption(items, { title: n ? `${Math.round((c.value.ok / n) * 100)}%` : '—', sub: 'services OK' })
+  return donutOption(items, { title: n ? `${Math.round((c.value.ok / n) * 100)}%` : '—', sub: t('services OK') })
 })
 const link = (s) => { const d = devById.value[s.device_id]; return d ? `/device/${encodeURIComponent(d.hostname)}/services` : '/services' }
 

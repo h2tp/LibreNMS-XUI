@@ -5,12 +5,13 @@ import EChart from '../EChart.vue'
 import { devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { barOption } from '../../charts'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const devices = ref([])
 const option = computed(() => {
   const m = {}
-  devices.value.forEach((d) => { const l = (d.location || 'Non défini').replace(/\s*\[[-\d.,\s]+\]\s*$/, ''); m[l] = (m[l] || 0) + 1 })
+  devices.value.forEach((d) => { const l = (d.location || t('Non défini')).replace(/\s*\[[-\d.,\s]+\]\s*$/, ''); m[l] = (m[l] || 0) + 1 })
   const e = Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, props.config.limit || 12)
   return barOption(e.map((x) => x[0]), e.map((x) => x[1]), { color: '#34d399' })
 })

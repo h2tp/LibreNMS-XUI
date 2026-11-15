@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!down.length" class="empty small"><CircleCheck color="var(--green)" style="opacity:1" /><div>Tous les équipements répondent</div></div>
+  <div v-if="!down.length" class="empty small"><CircleCheck color="var(--green)" style="opacity:1" /><div>{{ t('Tous les équipements répondent') }}</div></div>
   <div v-else class="col" style="gap:10px">
     <div v-for="d in down.slice(0, config.limit || 10)" :key="d.device_id" class="row">
       <DeviceCell :device="d" class="grow" />
@@ -16,6 +16,7 @@ import DeviceCell from '../DeviceCell.vue'
 import { devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devStatus, timeAgo } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const devices = ref([])

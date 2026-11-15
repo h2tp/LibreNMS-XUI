@@ -1,17 +1,17 @@
 <template>
-  <div v-if="!dev" class="empty small">{{ loaded ? `Équipement « ${config.device} » introuvable` : 'Chargement…' }}</div>
+  <div v-if="!dev" class="empty small">{{ loaded ? t('Équipement « {h} » introuvable', { h: config.device }) : t('Chargement…') }}</div>
   <div v-else class="col" style="gap:12px">
     <div class="row">
       <DeviceCell :device="dev" class="grow" />
       <span class="badge" :class="devStatus(dev) === 'up' ? 'ok' : devStatus(dev) === 'down' ? 'critical' : ''">{{ statusLabel[devStatus(dev)] }}</span>
     </div>
     <div class="kvs">
-      <div><span>Uptime</span><b>{{ dev.uptime ? fmtUptime(dev.uptime) : '—' }}</b></div>
-      <div><span>Latence</span><b>{{ +dev.last_ping_timetaken ? `${(+dev.last_ping_timetaken).toFixed(1)} ms` : '—' }}</b></div>
-      <div><span>Alertes</span><b :style="{ color: nAlerts ? 'var(--orange)' : '' }">{{ nAlerts }}</b></div>
-      <div><span>Matériel</span><b class="ellipsis">{{ dev.hardware || '—' }}</b></div>
+      <div><span>{{ t('Uptime') }}</span><b>{{ dev.uptime ? fmtUptime(dev.uptime) : '—' }}</b></div>
+      <div><span>{{ t('Latence') }}</span><b>{{ +dev.last_ping_timetaken ? `${(+dev.last_ping_timetaken).toFixed(1)} ms` : '—' }}</b></div>
+      <div><span>{{ t('Alertes') }}</span><b :style="{ color: nAlerts ? 'var(--orange)' : '' }">{{ nAlerts }}</b></div>
+      <div><span>{{ t('Matériel') }}</span><b class="ellipsis">{{ dev.hardware || '—' }}</b></div>
       <div><span>OS</span><b class="ellipsis">{{ [dev.os, dev.version].filter(Boolean).join(' ') || '—' }}</b></div>
-      <div><span>Emplacement</span><b class="ellipsis">{{ (dev.location || '—').replace(/\s*\[[-\d.,\s]+\]\s*$/, '') }}</b></div>
+      <div><span>{{ t('Emplacement') }}</span><b class="ellipsis">{{ (dev.location || '—').replace(/\s*\[[-\d.,\s]+\]\s*$/, '') }}</b></div>
     </div>
     <RrdChart v-if="session.rrd && size.h > 230" :host="dev.hostname" file="icmp-perf.rrd" range="-1d" hide-range compact axes :show-stats="false" :zoom="false" :height="`${size.h - 150}px`" />
   </div>
@@ -24,6 +24,7 @@ import { session } from '../../api'
 import { D } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devStatus, statusLabel, fmtUptime } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const dev = ref(null); const alerts = ref([]); const loaded = ref(false)

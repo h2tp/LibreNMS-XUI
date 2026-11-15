@@ -6,6 +6,7 @@
 import { ref, onMounted, onBeforeUnmount, watch, shallowRef } from 'vue'
 import * as echarts from 'echarts'
 import { prefs, reducedMotion } from '../utils'
+import { t } from '../i18n'
 
 const props = defineProps({ option: Object, height: { type: String, default: '280px' } })
 const emit = defineEmits(['click', 'ready'])

@@ -6,6 +6,7 @@ import Lf from 'leaflet'
 import { devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName, devStatus } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const router = useRouter()

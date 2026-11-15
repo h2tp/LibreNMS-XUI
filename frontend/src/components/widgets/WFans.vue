@@ -1,5 +1,5 @@
 <template>
-  <div v-if="loaded && !states.length && !speeds" class="empty small"><Fan /><div>Aucun capteur de ventilateur{{ config.device || config.group ? ' pour ce filtre' : '' }}</div></div>
+  <div v-if="loaded && !states.length && !speeds" class="empty small"><Fan /><div>Aucun capteur de ventilateur{{ config.device || config.group ? t(' pour ce filtre') : '' }}</div></div>
   <div v-else class="col" style="gap:14px">
     <div v-if="states.length" class="fans">
       <router-link v-for="s in states" :key="s.sensor_id" :to="link(s)" class="fan" :class="s.st" :title="`${devName(devById[s.device_id])} · ${s.sensor_descr}\nValeur brute : ${s.sensor_current} (${s.sensor_type})`">
@@ -12,7 +12,7 @@
       </router-link>
     </div>
     <div v-if="speeds" :style="{ height: `${speedH}px` }">
-      <div v-if="states.length" class="small muted" style="margin-bottom:8px">Vitesses</div>
+      <div v-if="states.length" class="small muted" style="margin-bottom:8px">{{ t('Vitesses') }}</div>
       <WSensors :config="speedCfg" :size="{ w: size.w, h: speedH - (states.length ? 26 : 0) }" />
     </div>
   </div>
@@ -26,6 +26,7 @@ import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName, reducedMotion as reduced } from '../../utils'
 import { interpretState } from '../../dashboard/states'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const all = ref([]); const devById = ref({}); const loaded = ref(false)

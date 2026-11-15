@@ -6,18 +6,18 @@
       <span class="ellipsis wtitle">{{ title }}</span>
       <div class="grow"></div>
       <template v-if="editing">
-        <button class="btn ghost sm icon w-nodrag" title="Configurer" @click="$emit('configure')"><Settings2 /></button>
-        <button class="btn ghost sm icon w-nodrag" title="Dupliquer" @click="$emit('duplicate')"><Copy /></button>
-        <button class="btn ghost sm icon w-nodrag danger" title="Retirer" @click="$emit('remove')"><Trash2 /></button>
+        <button class="btn ghost sm icon w-nodrag" :title="t('Configurer')" @click="$emit('configure')"><Settings2 /></button>
+        <button class="btn ghost sm icon w-nodrag" :title="t('Dupliquer')" @click="$emit('duplicate')"><Copy /></button>
+        <button class="btn ghost sm icon w-nodrag danger" :title="t('Retirer')" @click="$emit('remove')"><Trash2 /></button>
       </template>
-      <button v-else-if="def?.fields?.length && canEdit" class="btn ghost sm icon hover-only" title="Configurer" @click="$emit('configure')"><Settings2 /></button>
+      <button v-else-if="def?.fields?.length && canEdit" class="btn ghost sm icon hover-only" :title="t('Configurer')" @click="$emit('configure')"><Settings2 /></button>
     </div>
     <div ref="body" class="wbody" :class="{ 'w-nodrag': editing }">
       <div v-if="!def" class="empty small"><Puzzle /><div>Widget inconnu « {{ widget.type }} »</div></div>
-      <div v-else-if="!ok" class="empty small"><Puzzle /><div>Widget indisponible : les fichiers RRD ne sont pas montés.</div></div>
+      <div v-else-if="!ok" class="empty small"><Puzzle /><div>{{ t('Widget indisponible : les fichiers RRD ne sont pas montés.') }}</div></div>
       <div v-else-if="incomplete" class="empty small">
-        <Settings2 /><div>Ce widget doit être configuré.</div>
-        <button v-if="canEdit" class="btn sm primary mt" @click="$emit('configure')">Configurer</button>
+        <Settings2 /><div>{{ t('Ce widget doit être configuré.') }}</div>
+        <button v-if="canEdit" class="btn sm primary mt" @click="$emit('configure')">{{ t('Configurer') }}</button>
       </div>
       <component :is="def.component" v-else-if="size.w" :key="cfgKey" :config="widget.config || {}" :size="size" />
     </div>
@@ -28,6 +28,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { GripVertical, Settings2, Copy, Trash2, Puzzle } from 'lucide-vue-next'
 import { WIDGETS, available, missingConfig } from '../dashboard/widgets'
+import { t } from '../i18n'
 
 const props = defineProps({ widget: Object, editing: Boolean, canEdit: Boolean })
 defineEmits(['configure', 'duplicate', 'remove'])

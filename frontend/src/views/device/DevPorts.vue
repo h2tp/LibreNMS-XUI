@@ -1,6 +1,6 @@
 <template>
   <div class="card">
-    <DataTable :rows="rows" :columns="cols" :loading="loading" :error="error" row-key="port_id" :row-click="(p) => $router.push(`/port/${p.port_id}`)" :filename="`ports-${device.hostname}.csv`" :page-size="100" placeholder="Filtrer les ports…" :filter="filterFn">
+    <DataTable :rows="rows" :columns="cols" :loading="loading" :error="error" row-key="port_id" :row-click="(p) => $router.push(`/port/${p.port_id}`)" :filename="`ports-${device.hostname}.csv`" :page-size="100" :placeholder="t('Filtrer les ports…')" :filter="filterFn">
       <template #tools>
         <div class="seg">
           <button v-for="f in filters" :key="f.v" :class="{ on: flt === f.v }" @click="flt = f.v">{{ f.l }} <span class="faint">{{ count(f.v) }}</span></button>
@@ -34,12 +34,13 @@ import Spark from '../../components/Spark.vue'
 import { session, safeList, rrd, L } from '../../api'
 import { useLoader } from '../../refresh'
 import { portStatus, portUtil, utilColor, fmtBits, fmtSpeed, fmtNum, fmtUptime } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ device: Object, files: Array })
 const ports = ref([])
 const sparks = ref({})
 const flt = ref('active')
-const filters = [{ v: 'active', l: 'Actifs' }, { v: 'up', l: 'Up' }, { v: 'down', l: 'Down' }, { v: 'all', l: 'Tous' }]
+const filters = [{ v: 'active', l: t('Actifs') }, { v: 'up', l: t('Up') }, { v: 'down', l: t('Down') }, { v: 'all', l: t('Tous') }]
 function match(p, f) {
   if (f === 'all') return true
   if (+p.deleted) return false
@@ -56,17 +57,17 @@ const rows = computed(() => ports.value.map((p) => ({
   pkts: (+p.ifInUcastPkts_rate || 0) + (+p.ifOutUcastPkts_rate || 0), errors: (+p.ifInErrors_rate || 0) + (+p.ifOutErrors_rate || 0),
 })))
 const cols = [
-  { key: 'ifName', label: 'Port', sortValue: (r) => r.ifIndex },
-  { key: 'ifSpeed', label: 'Vitesse' },
-  { key: 'traffic', label: 'Trafic' },
+  { key: 'ifName', label: t('Port'), sortValue: (r) => r.ifIndex },
+  { key: 'ifSpeed', label: t('Vitesse') },
+  { key: 'traffic', label: t('Trafic') },
   { key: 'spark', label: '6 h', sortable: false },
-  { key: 'pkts', label: 'Paquets/s' },
-  { key: 'errors', label: 'Erreurs/s' },
+  { key: 'pkts', label: t('Paquets/s') },
+  { key: 'errors', label: t('Erreurs/s') },
   { key: 'ifVlan', label: 'VLAN' },
-  { key: 'ifType', label: 'Type' },
+  { key: 'ifType', label: t('Type') },
   { key: 'ifMtu', label: 'MTU' },
   { key: 'ifPhysAddress', label: 'MAC' },
-  { key: 'ifLastChange', label: 'Dernier changement' },
+  { key: 'ifLastChange', label: t('Dernier changement') },
 ]
 
 const { loading, error } = useLoader(async () => {

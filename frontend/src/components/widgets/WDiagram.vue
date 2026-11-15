@@ -3,7 +3,7 @@
   <div v-else-if="!diag" class="skeleton" :style="{ height: `${size.h}px` }"></div>
   <div v-else class="wd" :style="{ height: `${size.h}px` }">
     <DiagramCanvas :diagram="shown" :live="live" :bg-url="diag.bg ? diagApi.bgUrl(diag.id, diag.bg) : ''" wheel="ctrl" />
-    <router-link :to="`/diagrams/${diag.id}`" class="btn ghost sm icon open" title="Ouvrir le schéma"><Maximize2 :size="14" /></router-link>
+    <router-link :to="`/diagrams/${diag.id}`" class="btn ghost sm icon open" :title="t('Ouvrir le schéma')"><Maximize2 :size="14" /></router-link>
   </div>
 </template>
 
@@ -13,13 +13,14 @@ import { Workflow, Maximize2 } from 'lucide-vue-next'
 import DiagramCanvas from '../DiagramCanvas.vue'
 import { diagApi } from '../../api'
 import { useDiagramLive } from '../../diagram/core'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const live = useDiagramLive()
 const diag = ref(null); const error = ref(null)
 const shown = computed(() => diag.value && { ...diag.value, view: { ...diag.value.view, showRates: props.config.rates !== false && diag.value.view?.showRates !== false } })
 onMounted(async () => {
-  try { diag.value = await diagApi.get(props.config.diagram) } catch (e) { error.value = e.status === 404 ? 'Schéma introuvable (supprimé ou non partagé)' : e.message }
+  try { diag.value = await diagApi.get(props.config.diagram) } catch (e) { error.value = e.status === 404 ? t('Schéma introuvable (supprimé ou non partagé)') : e.message }
 })
 </script>
 

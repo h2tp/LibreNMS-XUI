@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!top.length" class="empty small">Aucune mesure de latence</div>
+  <div v-if="!top.length" class="empty small">{{ t('Aucune mesure de latence') }}</div>
   <EChart v-else :option="option" :height="`${Math.max(120, size.h)}px`" @click="(p) => go(top[p.dataIndex])" />
 </template>
 <script setup>
@@ -10,6 +10,7 @@ import { devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName } from '../../utils'
 import { barOption } from '../../charts'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const router = useRouter()

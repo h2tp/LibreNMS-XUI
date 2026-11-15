@@ -1,5 +1,5 @@
 <template>
-  <div v-if="loaded && !list.length" class="empty small"><Thermometer /><div>{{ all.length ? 'Aucun capteur ne correspond aux filtres' : 'Aucun capteur de ce type' }}</div></div>
+  <div v-if="loaded && !list.length" class="empty small"><Thermometer /><div>{{ all.length ? t('Aucun capteur ne correspond aux filtres') : t('Aucun capteur de ce type') }}</div></div>
 
   <div v-else-if="mode === 'tiles'" class="tiles">
     <router-link v-for="s in list" :key="s.sensor_id" :to="link(s)" class="tile" :class="s.state" :title="tip(s)">
@@ -21,7 +21,7 @@
   <EChart v-else-if="mode === 'bars'" :option="barsOpt" :height="`${Math.max(120, size.h)}px`" @click="(p) => go(list[p.dataIndex])" />
 
   <template v-else>
-    <div v-if="!session.rrd" class="empty small">L'historique nécessite l'accès aux fichiers RRD.</div>
+    <div v-if="!session.rrd" class="empty small">{{ t('L\'historique nécessite l\'accès aux fichiers RRD.') }}</div>
     <div v-else-if="!histOpt" class="skeleton" :style="{ height: `${size.h}px` }"></div>
     <EChart v-else :option="histOpt" :height="`${Math.max(120, size.h)}px`" />
   </template>
@@ -40,6 +40,7 @@ import { rrdNameFor } from '../../health'
 import { barOption, timeOption, PALETTE } from '../../charts'
 import { devName } from '../../utils'
 import { locale } from '../../i18n'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const router = useRouter()

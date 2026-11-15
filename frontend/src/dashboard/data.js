@@ -1,6 +1,7 @@
 // Données partagées entre les widgets d'un tableau de bord : un même jeu de données n'est
 // demandé qu'une fois par période, même si plusieurs widgets l'utilisent.
 import { api, pick, safeList, devicesCached, storageApi } from '../api'
+import { t } from '../i18n'
 
 const cache = new Map()
 export function cached(key, fn, maxAge = 10000) {

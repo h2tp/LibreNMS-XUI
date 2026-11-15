@@ -3,19 +3,19 @@
   <div v-else class="col" style="gap:12px;height:100%">
     <div class="summary small">
       <span v-if="counts.err" class="badge critical">{{ counts.err }} port(s) en erreur</span>
-      <span v-else class="badge ok">aucune erreur au dernier relevé</span>
-      <span v-if="counts.cum" class="muted">{{ counts.cum }} avec un cumul d'erreurs</span>
-      <span v-if="config.down && counts.down" class="badge warning">{{ counts.down }} déconnecté(s)</span>
+      <span v-else class="badge ok">{{ t('aucune erreur au dernier relevé') }}</span>
+      <span v-if="counts.cum" class="muted">{{ t('{n} avec un cumul d\'erreurs', { n: counts.cum }) }}</span>
+      <span v-if="config.down && counts.down" class="badge warning">{{ t('{n} déconnecté(s)', { n: counts.down }) }}</span>
     </div>
 
     <template v-if="mode === 'history'">
-      <div v-if="!session.rrd" class="empty small">L'historique nécessite l'accès aux fichiers RRD.</div>
-      <div v-else-if="!errPorts.length" class="empty small"><CircleCheck color="var(--green)" style="opacity:1" /><div>Aucun port en erreur à tracer</div></div>
+      <div v-if="!session.rrd" class="empty small">{{ t('L\'historique nécessite l\'accès aux fichiers RRD.') }}</div>
+      <div v-else-if="!errPorts.length" class="empty small"><CircleCheck color="var(--green)" style="opacity:1" /><div>{{ t('Aucun port en erreur à tracer') }}</div></div>
       <div v-else-if="!series" class="skeleton" :style="{ height: `${chartH}px` }"></div>
       <EChart v-else :option="histOpt" :height="`${chartH}px`" />
     </template>
 
-    <div v-else-if="!list.length" class="empty small"><CircleCheck color="var(--green)" style="opacity:1" /><div>{{ mode === 'total' ? 'Aucun compteur d\'erreur non nul' : 'Aucun port ne produit d\'erreurs actuellement' }}</div></div>
+    <div v-else-if="!list.length" class="empty small"><CircleCheck color="var(--green)" style="opacity:1" /><div>{{ mode === 'total' ? t('Aucun compteur d\'erreur non nul') : t('Aucun port ne produit d\'erreurs actuellement') }}</div></div>
 
     <div v-else class="col" style="gap:6px">
       <router-link v-for="r in list" :key="r.port_id" :to="`/port/${r.port_id}`" class="perr" :class="r.st">
@@ -26,12 +26,12 @@
             <span class="muted small ellipsis">{{ r.ifAlias && r.ifAlias !== r.ifName ? r.ifAlias + ' · ' : '' }}{{ devName(devById[r.device_id]) }}</span>
           </div>
           <div class="small muted">
-            <template v-if="r.st === 'down'">Activé mais déconnecté{{ r.since ? ` · ${r.since}` : '' }}</template>
-            <template v-else-if="mode === 'total'">entrée {{ fmtNum(+r.ifInErrors || 0, 0) }} · sortie {{ fmtNum(+r.ifOutErrors || 0, 0) }} erreurs cumulées</template>
-            <template v-else>entrée {{ fmtRate(r.inRate) }} · sortie {{ fmtRate(r.outRate) }}</template>
+            <template v-if="r.st === 'down'">{{ t('Activé mais déconnecté') }}{{ r.since ? ` · ${r.since}` : '' }}</template>
+            <template v-else-if="mode === 'total'">{{ t('entrée {i} · sortie {o} erreurs cumulées', { i: fmtNum(+r.ifInErrors || 0, 0), o: fmtNum(+r.ifOutErrors || 0, 0) }) }}</template>
+            <template v-else>{{ t('entrée {i} · sortie {o}', { i: fmtRate(r.inRate), o: fmtRate(r.outRate) }) }}</template>
           </div>
         </div>
-        <b v-if="r.st !== 'down' && mode !== 'total'" class="ratio nowrap" :class="r.st" :title="'Erreurs / paquets au dernier relevé'">{{ r.ratio === null ? '—' : fmtPct(r.ratio) }}</b>
+        <b v-if="r.st !== 'down' && mode !== 'total'" class="ratio nowrap" :class="r.st" :title="t('Erreurs / paquets au dernier relevé')">{{ r.ratio === null ? '—' : fmtPct(r.ratio) }}</b>
         <b v-else-if="mode === 'total' && r.st !== 'down'" class="nowrap">{{ fmtNum(r.total, 0) }}</b>
       </router-link>
     </div>
@@ -49,6 +49,7 @@ import { D, devicesFor, isPhysical } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { timeOption, PALETTE } from '../../charts'
 import { devName, fmtNum, fmtUptime } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const all = ref([]); const devById = ref({}); const loaded = ref(false)

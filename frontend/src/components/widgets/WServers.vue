@@ -1,11 +1,11 @@
 <template>
   <div v-if="!loaded" class="col" style="gap:10px"><div v-for="i in 2" :key="i" class="skeleton" style="height:120px"></div></div>
   <div v-else-if="!list.length" class="empty small">
-    <ServerCog /><div>{{ servers.length ? 'Aucun serveur au-delà des seuils ✨' : 'Aucun serveur trouvé' }}</div>
+    <ServerCog /><div>{{ servers.length ? t('Aucun serveur au-delà des seuils ✨') : t('Aucun serveur trouvé') }}</div>
   </div>
 
   <table v-else-if="mode === 'table'" class="srv-tbl">
-    <thead><tr><th>Serveur</th><th>CPU</th><th>RAM</th><th>Disque le + plein</th><th>Trafic</th><th>Uptime</th><th></th></tr></thead>
+    <thead><tr><th>{{ t('Serveur') }}</th><th>CPU</th><th>RAM</th><th>{{ t('Disque le + plein') }}</th><th>{{ t('Trafic') }}</th><th>{{ t('Uptime') }}</th><th></th></tr></thead>
     <tbody>
       <tr v-for="s in list" :key="s.device_id" @click="go(s)">
         <td><div class="nm"><span class="dot" :class="s.down ? 'down' : 'up'"></span><img v-if="s.icon" :src="s.icon" class="osi" /><b class="ellipsis">{{ s.name }}</b></div></td>
@@ -13,7 +13,7 @@
         <td><Meter :v="s.mem" :st="s.memSt" /></td>
         <td><Meter :v="s.disks[0]?.perc ?? null" :st="s.disks[0]?.st" :label="s.disks[0]?.name" /></td>
         <td class="nowrap small">↓ {{ fmtBits(s.rin) }} · ↑ {{ fmtBits(s.rout) }}</td>
-        <td class="nowrap small muted">{{ s.down ? 'hors ligne' : s.uptime ? fmtUptime(s.uptime) : '—' }}</td>
+        <td class="nowrap small muted">{{ s.down ? t('hors ligne') : s.uptime ? fmtUptime(s.uptime) : '—' }}</td>
         <td><span v-if="s.alerts" class="badge critical">{{ s.alerts }}</span></td>
       </tr>
     </tbody>
@@ -31,12 +31,12 @@
         <span v-if="s.alerts" class="badge critical" :title="`${s.alerts} alerte(s) active(s)`"><Bell :size="11" /> {{ s.alerts }}</span>
       </div>
 
-      <div v-if="s.down" class="small" style="color:var(--red)">Hors ligne{{ s.lastSeen ? ` · dernier relevé ${s.lastSeen}` : '' }}<span v-if="s.disks.length" class="faint"> — disques : dernières valeurs connues</span></div>
+      <div v-if="s.down" class="small" style="color:var(--red)">{{ t('Hors ligne') }}{{ s.lastSeen ? ` · ${t('dernier relevé {d}', { d: s.lastSeen })}` : '' }}<span v-if="s.disks.length" class="faint"> {{ t('— disques : dernières valeurs connues') }}</span></div>
 
       <div class="meters" :class="{ stale: s.down }">
-        <div v-if="!s.down" class="m"><span>CPU <i v-if="s.cores > 1" class="faint">{{ s.cores }} cœurs</i></span><Meter :v="s.cpu" :st="s.cpuSt" /></div>
+        <div v-if="!s.down" class="m"><span>CPU <i v-if="s.cores > 1" class="faint">{{ t('{n} cœurs', { n: s.cores }) }}</i></span><Meter :v="s.cpu" :st="s.cpuSt" /></div>
         <div v-if="!s.down" class="m"><span>RAM <i v-if="s.memTotal" class="faint">{{ fmtBytes(s.memTotal) }}</i></span><Meter :v="s.mem" :st="s.memSt" /></div>
-        <div v-if="s.swap !== null" class="m"><span>Swap</span><Meter :v="s.swap" :st="s.swap >= 90 ? 'crit' : s.swap >= 50 ? 'warn' : 'ok'" /></div>
+        <div v-if="s.swap !== null" class="m"><span>{{ t('Swap') }}</span><Meter :v="s.swap" :st="s.swap >= 90 ? 'crit' : s.swap >= 50 ? 'warn' : 'ok'" /></div>
         <div v-for="d in s.disks" :key="d.key" class="m"><span class="ellipsis" :title="d.descr">{{ d.name }} <i class="faint">{{ fmtBytes(d.free) }} libres</i></span><Meter :v="d.perc" :st="d.st" /></div>
       </div>
 
@@ -57,6 +57,7 @@ import { D, devicesFor, isPhysical } from '../../dashboard/data'
 import { usefulVolumes, volumeName } from '../../dashboard/volumes'
 import { useLoader } from '../../refresh'
 import { devName, fmtBits, fmtBytes, fmtUptime, osIcon, timeAgo } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const router = useRouter()

@@ -1,19 +1,19 @@
 <template>
   <div v-if="error" class="err small">{{ error }}</div>
   <div v-else-if="!loaded" class="col" style="gap:10px"><div v-for="i in 4" :key="i" class="skeleton" style="height:34px"></div></div>
-  <div v-else-if="!rows.length" class="empty small"><ShieldCheck /><div>Aucune donnée de disponibilité</div></div>
+  <div v-else-if="!rows.length" class="empty small"><ShieldCheck /><div>{{ t('Aucune donnée de disponibilité') }}</div></div>
   <div v-else class="col" style="gap:12px">
     <div class="summary">
       <div class="big" :class="cls(fleet)">{{ fmtPct(fleet) }}</div>
       <div class="small muted">
-        disponibilité moyenne sur {{ PERIODS[period] }}<br />
+        {{ t('disponibilité moyenne sur {p}', { p: PERIODS[period] }) }}<br />
         <b :style="{ color: below ? 'var(--red)' : 'var(--green)' }">{{ below }}</b> / {{ rows.length }} sous l'objectif de {{ String(target).replace('.', ',') }} %
-        <template v-if="ongoing"> · <b style="color:var(--red)">{{ ongoing }}</b> coupure(s) en cours</template>
+        <template v-if="ongoing"> · <b style="color:var(--red)">{{ ongoing }}</b> {{ t('coupure(s) en cours') }}</template>
       </div>
     </div>
 
     <table v-if="mode === 'table'" class="sla">
-      <thead><tr><th>Équipement</th><th v-for="(l, p) in PERIODS" :key="p" :class="{ cur: p === period }">{{ l }}</th><th title="Coupures sur la période de référence">Coup.</th></tr></thead>
+      <thead><tr><th>{{ t('Équipement') }}</th><th v-for="(l, p) in PERIODS" :key="p" :class="{ cur: p === period }">{{ l }}</th><th :title="t('Coupures sur la période de référence')">{{ t('Coup.') }}</th></tr></thead>
       <tbody>
         <tr v-for="r in list" :key="r.device_id" @click="go(r)">
           <td class="dev"><div class="devin"><span class="dot" :class="r.ongoing ? 'down' : 'up'"></span><span class="ellipsis">{{ r.name }}</span></div></td>
@@ -24,13 +24,13 @@
     </table>
 
     <div v-else class="col" style="gap:6px">
-      <div v-if="!outages.length" class="empty small"><ShieldCheck color="var(--green)" style="opacity:1" /><div>Aucune coupure sur {{ PERIODS[period] }}</div></div>
+      <div v-if="!outages.length" class="empty small"><ShieldCheck color="var(--green)" style="opacity:1" /><div>{{ t('Aucune coupure sur {p}', { p: PERIODS[period] }) }}</div></div>
       <router-link v-for="(o, i) in outages" :key="i" :to="`/device/${encodeURIComponent(o.hostname)}/availability`" class="out" :class="{ live: !o.end }">
         <span class="dot" :class="o.end ? 'warning' : 'down'"></span>
         <b class="ellipsis" style="min-width:0">{{ o.name }}</b>
         <span class="grow"></span>
         <span class="small muted nowrap mono">{{ fmtDate(o.start * 1000) }}</span>
-        <span class="small nowrap dur">{{ o.end ? fmtUptime(o.end - o.start) : 'en cours · ' + fmtUptime(nowS - o.start) }}</span>
+        <span class="small nowrap dur">{{ o.end ? fmtUptime(o.end - o.start) : t('en cours · ') + fmtUptime(nowS - o.start) }}</span>
       </router-link>
     </div>
 
@@ -45,6 +45,7 @@ import { ShieldCheck } from 'lucide-vue-next'
 import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName, fmtDate, fmtUptime } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const router = useRouter()

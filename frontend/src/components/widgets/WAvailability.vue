@@ -5,7 +5,7 @@
       <span class="row"><span class="dot down"></span>{{ c.down }}</span>
       <span v-if="c.disabled + c.ignored" class="row"><span class="dot disabled"></span>{{ c.disabled + c.ignored }}</span>
     </div>
-    <div v-if="!shown.length" class="empty small"><CircleCheck color="var(--green)" style="opacity:1" /><div>{{ devices.length ? 'Tous les équipements sont en ligne' : 'Aucun équipement' }}</div></div>
+    <div v-if="!shown.length" class="empty small"><CircleCheck color="var(--green)" style="opacity:1" /><div>{{ devices.length ? t('Tous les équipements sont en ligne') : t('Aucun équipement') }}</div></div>
     <div v-else class="avail" :class="config.mode">
       <router-link v-for="d in shown" :key="d.device_id" :to="`/device/${encodeURIComponent(d.hostname)}`" class="tile" :class="devStatus(d)"
         :title="`${devName(d)} — ${statusLabel[devStatus(d)]}${d.location ? ' · ' + d.location : ''}`">
@@ -20,6 +20,7 @@ import { CircleCheck } from 'lucide-vue-next'
 import { devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName, devStatus, statusLabel } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const devices = ref([])

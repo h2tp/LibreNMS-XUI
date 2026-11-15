@@ -13,6 +13,7 @@ import { devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devStatus } from '../../utils'
 import { donutOption } from '../../charts'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const devices = ref([])
@@ -22,10 +23,10 @@ const counts = computed(() => {
   return c
 })
 const items = computed(() => [
-  { key: 'up', name: 'En ligne', value: counts.value.up, color: '#22c55e' },
-  { key: 'down', name: 'Hors ligne', value: counts.value.down, color: '#f43f5e' },
-  { key: 'disabled', name: 'Désactivés', value: counts.value.disabled, color: '#64748b' },
-  { key: 'ignored', name: 'Ignorés', value: counts.value.ignored, color: '#facc15' },
+  { key: 'up', name: t('En ligne'), value: counts.value.up, color: '#22c55e' },
+  { key: 'down', name: t('Hors ligne'), value: counts.value.down, color: '#f43f5e' },
+  { key: 'disabled', name: t('Désactivés'), value: counts.value.disabled, color: '#64748b' },
+  { key: 'ignored', name: t('Ignorés'), value: counts.value.ignored, color: '#facc15' },
 ])
 const option = computed(() => donutOption(items.value, {
   title: devices.value.length ? `${Math.round((counts.value.up / Math.max(1, devices.value.length - counts.value.disabled)) * 100)}%` : '—', sub: 'disponibles',

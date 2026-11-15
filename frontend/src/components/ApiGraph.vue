@@ -1,7 +1,7 @@
 <template>
   <div class="api-graph">
     <div v-if="title" class="small muted" style="margin-bottom:6px">{{ title }}</div>
-    <div v-if="failed" class="empty small" style="padding:20px">Graphique indisponible</div>
+    <div v-if="failed" class="empty small" style="padding:20px">{{ t('Graphique indisponible') }}</div>
     <img v-else :src="src" class="graph" :class="{ loading: !loaded }" loading="lazy" @load="loaded = true" @error="failed = true" />
   </div>
 </template>
@@ -9,6 +9,7 @@
 import { ref, computed, watch } from 'vue'
 import { api } from '../api'
 import { clock } from '../refresh'
+import { t } from '../i18n'
 const props = defineProps({ path: String, range: { type: String, default: '-1d' }, title: String, width: { type: Number, default: 1000 }, height: { type: Number, default: 260 }, params: Object })
 const loaded = ref(false)
 const failed = ref(false)

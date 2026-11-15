@@ -1,9 +1,10 @@
 <template>
-  <div v-if="!config.text" class="empty small">Note vide — modifiez le widget pour écrire du texte.</div>
+  <div v-if="!config.text" class="empty small">{{ t('Note vide — modifiez le widget pour écrire du texte.') }}</div>
   <div v-else class="notes" v-html="html"></div>
 </template>
 <script setup>
 import { computed } from 'vue'
+import { t } from '../../i18n'
 const props = defineProps({ config: Object, size: Object })
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 function inline(s) {

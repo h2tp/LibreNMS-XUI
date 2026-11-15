@@ -2,16 +2,16 @@
   <div>
     <div class="row wrap mb">
       <div class="seg">
-        <button :class="{ on: mode === 'rrd' }" :disabled="!session.rrd" @click="mode = 'rrd'"><Sparkles /> Interactifs</button>
-        <button :class="{ on: mode === 'png' }" @click="mode = 'png'"><Image /> Graphiques LibreNMS</button>
+        <button :class="{ on: mode === 'rrd' }" :disabled="!session.rrd" @click="mode = 'rrd'"><Sparkles /> {{ t('Interactifs') }}</button>
+        <button :class="{ on: mode === 'png' }" @click="mode = 'png'"><Image /> {{ t('Graphiques LibreNMS') }}</button>
       </div>
       <RangePicker v-model="range" />
       <div class="grow"></div>
-      <div v-if="mode === 'rrd'" class="row search-in"><Search :size="15" class="faint" /><input v-model="q" class="input" placeholder="Filtrer les graphiques…" /></div>
+      <div v-if="mode === 'rrd'" class="row search-in"><Search :size="15" class="faint" /><input v-model="q" class="input" :placeholder="t('Filtrer les graphiques…')" /></div>
     </div>
 
     <template v-if="mode === 'rrd'">
-      <div v-if="!files.length" class="card empty"><LineChart /><div>Aucun fichier RRD trouvé pour cet équipement</div></div>
+      <div v-if="!files.length" class="card empty"><LineChart /><div>{{ t('Aucun fichier RRD trouvé pour cet équipement') }}</div></div>
       <div class="cat-nav row wrap mb">
         <button v-for="c in cats" :key="c.id" class="btn sm" :class="{ primary: cat === c.id }" @click="cat = c.id">{{ c.label }} <span class="faint">{{ c.n }}</span></button>
       </div>
@@ -44,6 +44,7 @@ import RangePicker from '../../components/RangePicker.vue'
 import { session, safeList, L } from '../../api'
 import { describe, CATEGORIES } from '../../rrdmeta'
 import { prefs } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ device: Object, files: Array })
 const enc = L.enc

@@ -1,12 +1,12 @@
 <template>
   <div v-if="error" class="err small">{{ error }}</div>
   <div v-else-if="!loaded" class="col" style="gap:10px"><div v-for="i in 4" :key="i" class="skeleton" style="height:38px"></div></div>
-  <div v-else-if="!list.length" class="empty small"><MemoryStick /><div>{{ rows.length ? 'Aucun équipement ne correspond aux filtres' : 'Aucune donnée mémoire remontée' }}</div></div>
+  <div v-else-if="!list.length" class="empty small"><MemoryStick /><div>{{ rows.length ? t('Aucun équipement ne correspond aux filtres') : t('Aucune donnée mémoire remontée') }}</div></div>
   <div v-else class="col" style="gap:12px">
     <div class="summary small">
-      <span><b>{{ fmtBytes(total.used) }}</b> utilisés sur <b>{{ fmtBytes(total.size) }}</b> · {{ total.n }} équipement(s)</span>
+      <span><b>{{ fmtBytes(total.used) }}</b> {{ t('utilisés sur') }} <b>{{ fmtBytes(total.size) }}</b> · {{ t('{n} équipement(s)', { n: total.n }) }}</span>
       <span v-if="total.crit" class="badge critical">{{ total.crit }} critique(s)</span>
-      <span v-if="total.warn" class="badge warning">{{ total.warn }} à surveiller</span>
+      <span v-if="total.warn" class="badge warning">{{ t('{n} à surveiller', { n: total.warn }) }}</span>
     </div>
 
     <div v-if="mode === 'list'" class="col" style="gap:6px">
@@ -25,7 +25,7 @@
         </div>
         <div v-if="(config.swap !== false && r.swap) || r.cache" class="small muted swap">
           <template v-if="config.swap !== false && r.swap">Swap {{ r.swap.perc }} % <span class="faint">({{ fmtBytes(r.swap.used) }} / {{ fmtBytes(r.swap.total) }})</span></template>
-          <span v-if="r.cache" class="faint"><template v-if="config.swap !== false && r.swap"> · </template>cache et tampons {{ fmtBytes(r.cache) }}</span>
+          <span v-if="r.cache" class="faint"><template v-if="config.swap !== false && r.swap"> · </template>{{ t('cache et tampons {v}', { v: fmtBytes(r.cache) }) }}</span>
         </div>
       </router-link>
     </div>
@@ -41,8 +41,8 @@
     </div>
 
     <div class="legend small muted">
-      <span><i :style="{ background: 'var(--green)' }"></i>utilisée</span>
-      <span v-if="mode === 'list'"><i class="cache"></i>cache et tampons (récupérable)</span>
+      <span><i :style="{ background: 'var(--green)' }"></i>{{ t('utilisée') }}</span>
+      <span v-if="mode === 'list'"><i class="cache"></i>{{ t('cache et tampons (récupérable)') }}</span>
       <span v-if="more" style="margin-left:auto">+ {{ more }} autre(s)</span>
     </div>
   </div>
@@ -55,6 +55,7 @@ import Ring from '../Ring.vue'
 import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName, fmtBytes } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const all = ref([]); const devById = ref({}); const loaded = ref(false); const error = ref(null)
@@ -115,8 +116,8 @@ const total = computed(() => ({
 const link = (r) => `/device/${encodeURIComponent(r.hostname)}/health`
 const tip = (r) => [
   `${r.name}${r.sub ? ' · ' + r.sub : ''}`,
-  `Utilisée : ${fmtBytes(r.used)} (${r.perc} %) sur ${fmtBytes(r.total)}`,
-  r.cache ? `Cache et tampons : ${fmtBytes(r.cache)}` : '',
+  t('Utilisée : {u} ({p} %) sur {t}', { u: fmtBytes(r.used), p: r.perc, t: fmtBytes(r.total) }),
+  r.cache ? t('Cache et tampons : {v}', { v: fmtBytes(r.cache) }) : '',
   r.swap ? `Swap : ${fmtBytes(r.swap.used)} / ${fmtBytes(r.swap.total)} (${r.swap.perc} %)` : '',
 ].filter(Boolean).join('\n')
 

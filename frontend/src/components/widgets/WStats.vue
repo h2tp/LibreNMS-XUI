@@ -1,14 +1,14 @@
 <template>
   <div class="stats" :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }">
     <template v-for="k in items" :key="k">
-      <StatCard v-if="k === 'devices'" :icon="Server" label="Équipements" :value="devices.length" color="#22d3ee" to="/devices" />
-      <StatCard v-else-if="k === 'up'" :icon="CircleCheck" label="En ligne" :value="counts.up" color="#22c55e" to="/devices?status=up" />
-      <StatCard v-else-if="k === 'down'" :icon="CircleX" label="Hors ligne" :value="counts.down" color="#f43f5e" to="/devices?status=down">
+      <StatCard v-if="k === 'devices'" :icon="Server" :label="t('Équipements')" :value="devices.length" color="#22d3ee" to="/devices" />
+      <StatCard v-else-if="k === 'up'" :icon="CircleCheck" :label="t('En ligne')" :value="counts.up" color="#22c55e" to="/devices?status=up" />
+      <StatCard v-else-if="k === 'down'" :icon="CircleX" :label="t('Hors ligne')" :value="counts.down" color="#f43f5e" to="/devices?status=down">
         <template #badge><span v-if="counts.down" class="dot down"></span></template>
       </StatCard>
-      <StatCard v-else-if="k === 'ports'" :icon="Network" label="Ports actifs" :value="portCounts.up" :suffix="`/ ${portCounts.total}`" color="#a78bfa" to="/ports" />
-      <StatCard v-else-if="k === 'alerts'" :icon="Bell" label="Alertes actives" :value="alerts.length" color="#fb923c" to="/alerts" />
-      <StatCard v-else-if="k === 'traffic'" :icon="ArrowDownUp" label="Trafic total" :value="traffic.v" :suffix="traffic.u" color="#34d399" to="/ports" />
+      <StatCard v-else-if="k === 'ports'" :icon="Network" :label="t('Ports actifs')" :value="portCounts.up" :suffix="`/ ${portCounts.total}`" color="#a78bfa" to="/ports" />
+      <StatCard v-else-if="k === 'alerts'" :icon="Bell" :label="t('Alertes actives')" :value="alerts.length" color="#fb923c" to="/alerts" />
+      <StatCard v-else-if="k === 'traffic'" :icon="ArrowDownUp" :label="t('Trafic total')" :value="traffic.v" :suffix="traffic.u" color="#34d399" to="/ports" />
     </template>
   </div>
 </template>
@@ -19,6 +19,7 @@ import StatCard from '../StatCard.vue'
 import { D, devicesFor, isPhysical } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devStatus, fmtBits } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const devices = ref([]); const ports = ref([]); const alerts = ref([])

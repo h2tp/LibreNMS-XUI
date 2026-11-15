@@ -1,16 +1,16 @@
 <template>
   <div>
     <div class="page-head">
-      <div><h1>Carte géographique</h1><div class="sub">{{ sites.length }} sites localisés · {{ unlocated }} équipements sans coordonnées</div></div>
-      <div class="right"><label class="check"><input v-model="onlyDown" type="checkbox" /> Sites en défaut uniquement</label></div>
+      <div><h1>{{ t('Carte géographique') }}</h1><div class="sub">{{ t('{s} sites localisés · {u} équipements sans coordonnées', { s: sites.length, u: unlocated }) }}</div></div>
+      <div class="right"><label class="check"><input v-model="onlyDown" type="checkbox" /> {{ t('Sites en défaut uniquement') }}</label></div>
     </div>
     <div class="map-layout">
       <div class="card" style="padding:8px"><div ref="el" class="map"></div></div>
       <div class="card sites">
-        <div class="card-title"><MapPin :size="17" /> Sites</div>
+        <div class="card-title"><MapPin :size="17" /> {{ t('Sites') }}</div>
         <div v-for="s in shownSites" :key="s.name" class="site" @click="focus(s)">
           <span class="dot" :class="s.down ? (s.down === s.devices.length ? 'down' : 'warning') : 'up'"></span>
-          <div class="grow" style="min-width:0"><b class="ellipsis" style="display:block">{{ s.name }}</b><span class="small muted">{{ s.devices.length }} équipement(s){{ s.down ? ` · ${s.down} hors ligne` : '' }}</span></div>
+          <div class="grow" style="min-width:0"><b class="ellipsis" style="display:block">{{ s.name }}</b><span class="small muted">{{ t('{n} équipement(s)', { n: s.devices.length }) }}{{ s.down ? ` · ${t('{n} hors ligne', { n: s.down })}` : '' }}</span></div>
         </div>
       </div>
     </div>
@@ -24,6 +24,7 @@ import { MapPin } from 'lucide-vue-next'
 import { devicesCached, invalidateDevices } from '../api'
 import { clock } from '../refresh'
 import { devName, devStatus } from '../utils'
+import { t } from '../i18n'
 
 const router = useRouter()
 const el = ref(null)

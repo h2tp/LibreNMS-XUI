@@ -1,13 +1,13 @@
 <template>
-  <div v-if="!safeUrl" class="empty small"><AppWindow /><div>Adresse invalide : elle doit commencer par http:// ou https://</div></div>
+  <div v-if="!safeUrl" class="empty small"><AppWindow /><div>{{ t('Adresse invalide : elle doit commencer par http:// ou https://') }}</div></div>
   <div v-else class="wrap" :style="{ height: `${size.h}px` }">
     <iframe :key="reloadKey" :src="safeUrl" :title="config.title || host"
       :sandbox="sandbox" referrerpolicy="no-referrer" loading="lazy" allow="fullscreen"
       :style="frameStyle" @load="loading = false"></iframe>
-    <div v-if="loading" class="loading small muted"><Loader2 class="spin" :size="16" /> Chargement de {{ host }}…</div>
+    <div v-if="loading" class="loading small muted"><Loader2 class="spin" :size="16" /> {{ t('Chargement de {h}…', { h: host }) }}</div>
     <div class="tools">
-      <button class="btn ghost sm icon" title="Recharger" @click="reload"><RefreshCw :size="14" /></button>
-      <a class="btn ghost sm icon" :href="safeUrl" target="_blank" rel="noopener noreferrer" title="Ouvrir dans un nouvel onglet"><ExternalLink :size="14" /></a>
+      <button class="btn ghost sm icon" :title="t('Recharger')" @click="reload"><RefreshCw :size="14" /></button>
+      <a class="btn ghost sm icon" :href="safeUrl" target="_blank" rel="noopener noreferrer" :title="t('Ouvrir dans un nouvel onglet')"><ExternalLink :size="14" /></a>
     </div>
   </div>
 </template>
@@ -15,6 +15,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { AppWindow, Loader2, RefreshCw, ExternalLink } from 'lucide-vue-next'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const reloadKey = ref(0)

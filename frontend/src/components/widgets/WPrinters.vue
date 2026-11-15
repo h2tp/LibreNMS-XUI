@@ -1,6 +1,6 @@
 <template>
   <div v-if="loaded && !cards.length" class="empty small">
-    <Printer /><div>{{ anyPrinter ? 'Aucune imprimante en défaut ✨' : 'Aucune imprimante dans LibreNMS' }}</div>
+    <Printer /><div>{{ anyPrinter ? t('Aucune imprimante en défaut ✨') : t('Aucune imprimante dans LibreNMS') }}</div>
   </div>
   <div v-else class="cards">
     <router-link v-for="c in cards" :key="c.device_id" :to="link(c)" class="prn" :class="c.st">
@@ -23,12 +23,12 @@
           <div class="bar"><i :style="{ width: Math.max(1, s.value ?? 0) + '%', background: s.st === 'crit' ? 'var(--red)' : s.st === 'warn' ? 'var(--orange)' : s.color }"></i></div>
         </div>
       </div>
-      <div v-else class="small faint">Niveaux des consommables non remontés</div>
+      <div v-else class="small faint">{{ t('Niveaux des consommables non remontés') }}</div>
 
       <div v-if="c.life !== null" class="pages small">
         <Files :size="14" class="faint" />
-        <span><b>{{ fmtN(c.life) }}</b> pages au total</span>
-        <span v-if="c.month !== null" class="muted">· {{ fmtN(c.month) }} sur 30 j</span>
+        <span><b>{{ fmtN(c.life) }}</b> {{ t('pages au total') }}</span>
+        <span v-if="c.month !== null" class="muted">· {{ t('{n} sur 30 j', { n: fmtN(c.month) }) }}</span>
       </div>
     </router-link>
   </div>
@@ -43,6 +43,7 @@ import { interpretState } from '../../dashboard/states'
 import { useLoader } from '../../refresh'
 import { devName } from '../../utils'
 import { locale } from '../../i18n'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const printers = ref([]); const sensors = ref([]); const devById = ref({}); const loaded = ref(false)
@@ -52,11 +53,11 @@ const RANK = { crit: 0, warn: 1, ok: 2 }
 
 // Types de consommables de la Printer-MIB (prtMarkerSuppliesType) ; « input » = bac papier
 const TYPES = {
-  toner: ['Toner', '#1e293b'], tonerCartridge: ['Cartouche de toner', '#1e293b'], ink: ['Encre', '#1e293b'], inkCartridge: ['Cartouche d\'encre', '#1e293b'],
-  opc: ['Tambour', '#8b5cf6'], developer: ['Développeur', '#0ea5e9'], fuser: ['Unité de fusion', '#f97316'], fuserOil: ['Huile de fusion', '#f97316'],
-  transferUnit: ['Unité de transfert', '#14b8a6'], wasteToner: ['Bac de toner usagé', '#64748b'], wasteInk: ['Bac d\'encre usagée', '#64748b'],
-  cleanerUnit: ['Unité de nettoyage', '#64748b'], staples: ['Agrafes', '#94a3b8'], ribbonWax: ['Ruban', '#1e293b'], markerSupply: ['Consommable', '#64748b'],
-  input: ['Bac papier', '#22c55e'],
+  toner: [t('Toner'), '#1e293b'], tonerCartridge: [t('Cartouche de toner'), '#1e293b'], ink: [t('Encre'), '#1e293b'], inkCartridge: [t('Cartouche d\'encre'), '#1e293b'],
+  opc: [t('Tambour'), '#8b5cf6'], developer: [t('Développeur'), '#0ea5e9'], fuser: [t('Unité de fusion'), '#f97316'], fuserOil: [t('Huile de fusion'), '#f97316'],
+  transferUnit: [t('Unité de transfert'), '#14b8a6'], wasteToner: [t('Bac de toner usagé'), '#64748b'], wasteInk: [t('Bac d\'encre usagée'), '#64748b'],
+  cleanerUnit: [t('Unité de nettoyage'), '#64748b'], staples: [t('Agrafes'), '#94a3b8'], ribbonWax: [t('Ruban'), '#1e293b'], markerSupply: [t('Consommable'), '#64748b'],
+  input: [t('Bac papier'), '#22c55e'],
 }
 const ORDER = ['toner', 'tonerCartridge', 'ink', 'inkCartridge', 'opc', 'developer', 'fuser', 'transferUnit', 'wasteToner', 'wasteInk', 'input']
 
@@ -78,8 +79,8 @@ const cards = computed(() => {
         // un bac de récupération est « plein » quand le niveau restant est bas, comme les autres consommables
         const st = v === null ? 'ok' : v <= Math.max(1, low / 3) ? 'crit' : v <= low ? 'warn' : 'ok'
         const approx = v === 50 && (x.type === 'input' || d.os === 'brother')
-        const text = v === null ? '—' : x.type === 'input' && v === 50 ? 'papier présent' : `${approx ? '≈ ' : ''}${Math.round(v)} %`
-        const tip = approx ? `${label} : l'imprimante indique seulement qu'il en reste (LibreNMS affiche alors 50 %).` : `${label} : ${text}${waste ? ' de capacité restante' : ''}`
+        const text = v === null ? '—' : x.type === 'input' && v === 50 ? t('papier présent') : `${approx ? '≈ ' : ''}${Math.round(v)} %`
+        const tip = approx ? `${label} : l'imprimante indique seulement qu'il en reste (LibreNMS affiche alors 50 %).` : `${label} : ${text}${waste ? t(' de capacité restante') : ''}`
         return { key: `${x.type}-${x.index}`, label, color: color === '#1e293b' ? 'var(--text)' : color, value: v, st: x.type === 'input' ? (v === 0 ? 'crit' : 'ok') : st, text, tip }
       })
     // compteur total de pages : « LifeCount » (Printer-MIB) ou libellé constructeur (« Total pages »…), hors compteur depuis la mise sous tension
@@ -89,8 +90,8 @@ const cards = computed(() => {
     if (+d.status === 0) st = 'crit'
     const err = states.find((s) => s.sensor_type === 'hrPrinterDetectedErrorState' && s.st !== 'ok')
     const lowSup = supplies.find((s) => s.st !== 'ok')
-    const headline = +d.status === 0 ? 'Injoignable' : err ? err.label : states.find((s) => s.st === 'crit')?.label
-      || (lowSup ? (lowSup.st === 'crit' ? `${lowSup.label} vide` : `${lowSup.label} bas`) : 'Prête')
+    const headline = +d.status === 0 ? t('Injoignable') : err ? err.label : states.find((s) => s.st === 'crit')?.label
+      || (lowSup ? (lowSup.st === 'crit' ? `${lowSup.label} vide` : `${lowSup.label} bas`) : t('Prête'))
     return {
       device_id: p.device_id, hostname: p.hostname, name: devName(d), model: [d.hardware, d.serial ? `n° ${d.serial}` : ''].filter(Boolean).join(' · '),
       supplies, st, headline, life: life ? +life.sensor_current : null, lifeSensor: life, month: months.value[p.device_id] ?? null,

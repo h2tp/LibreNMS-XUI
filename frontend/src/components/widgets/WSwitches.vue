@@ -1,11 +1,11 @@
 <template>
   <div v-if="error" class="err small">{{ error }}</div>
   <div v-else-if="!loaded" class="col" style="gap:10px"><div v-for="i in 2" :key="i" class="skeleton" style="height:120px"></div></div>
-  <div v-else-if="!switches.length && !config.embedded" class="empty small"><Network /><div>Aucun switch{{ config.device || config.group ? ' pour ce filtre' : ' détecté' }}</div></div>
+  <div v-else-if="!switches.length && !config.embedded" class="empty small"><Network /><div>Aucun switch{{ config.device || config.group ? t(' pour ce filtre') : t(' détecté') }}</div></div>
   <div v-else-if="switches.length" class="col" style="gap:14px">
     <div v-for="sw in switches" :key="sw.device_id" class="sw" :class="{ down: sw.down, embedded: config.embedded }">
       <div v-if="config.embedded" class="head">
-        <Network :size="17" /><b>Façade</b><span class="grow small muted mono ellipsis" style="min-width:0">{{ sw.ip }}</span>
+        <Network :size="17" /><b>{{ t('Façade') }}</b><span class="grow small muted mono ellipsis" style="min-width:0">{{ sw.ip }}</span>
         <span class="small muted nowrap"><b style="color:var(--text)">{{ sw.up }}</b> / {{ sw.ports.length }} ports actifs</span>
       </div>
       <div v-else class="head">
@@ -28,14 +28,14 @@
       </div>
 
       <div v-if="config.kpis !== false" class="kpis">
-        <div><span>Trafic</span><b class="tr"><span><ArrowDown :size="12" color="var(--accent)" />{{ fmtBits(sw.rin) }}</span><span><ArrowUp :size="12" color="#a78bfa" />{{ fmtBits(sw.rout) }}</span></b></div>
+        <div><span>{{ t('Trafic') }}</span><b class="tr"><span><ArrowDown :size="12" color="var(--accent)" />{{ fmtBits(sw.rin) }}</span><span><ArrowUp :size="12" color="#a78bfa" />{{ fmtBits(sw.rout) }}</span></b></div>
         <div v-if="sw.cpu !== null" :class="lvl(sw.cpu)"><span>CPU</span><b>{{ sw.cpu }} %</b></div>
         <div v-if="sw.mem !== null" :class="lvl(sw.mem)"><span>RAM</span><b>{{ sw.mem }} %</b></div>
-        <div v-if="sw.temp !== null"><span>Température</span><b>{{ sw.temp }} °C</b></div>
-        <div v-if="sw.poe"><span>PoE</span><b>{{ sw.poe.used }} / {{ sw.poe.total }} W</b></div>
-        <div v-if="sw.uptime"><span>Uptime</span><b>{{ fmtUptime(sw.uptime) }}</b></div>
-        <div v-if="sw.slow" class="warn"><span>Ports lents</span><b>{{ sw.slow }}</b></div>
-        <div v-if="sw.errs" class="crit"><span>Ports en erreur</span><b>{{ sw.errs }}</b></div>
+        <div v-if="sw.temp !== null"><span>{{ t('Température') }}</span><b>{{ sw.temp }} °C</b></div>
+        <div v-if="sw.poe"><span>{{ t('PoE') }}</span><b>{{ sw.poe.used }} / {{ sw.poe.total }} W</b></div>
+        <div v-if="sw.uptime"><span>{{ t('Uptime') }}</span><b>{{ fmtUptime(sw.uptime) }}</b></div>
+        <div v-if="sw.slow" class="warn"><span>{{ t('Ports lents') }}</span><b>{{ sw.slow }}</b></div>
+        <div v-if="sw.errs" class="crit"><span>{{ t('Ports en erreur') }}</span><b>{{ sw.errs }}</b></div>
       </div>
     </div>
 
@@ -47,7 +47,7 @@
       <template v-else>
         <span><i style="background:#22d3ee"></i>10 G+</span><span><i style="background:#22c55e"></i>1 G</span><span><i style="background:#facc15"></i>100 M</span><span><i style="background:#fb923c"></i>10 M</span>
       </template>
-      <span><i class="lg-down"></i>déconnecté</span><span><i class="lg-admin"></i>désactivé</span><span><i class="lg-err"></i>erreurs</span>
+      <span><i class="lg-down"></i>{{ t('déconnecté') }}</span><span><i class="lg-admin"></i>{{ t('désactivé') }}</span><span><i class="lg-err"></i>erreurs</span>
     </div>
   </div>
 </template>
@@ -58,6 +58,7 @@ import { Network, ArrowDown, ArrowUp } from 'lucide-vue-next'
 import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName, fmtBits, fmtSpeed, fmtUptime, portUtil, utilColor } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const emit = defineEmits(['count'])
@@ -98,9 +99,9 @@ const switches = computed(() => {
         row: two ? (i % 2) + 1 : 1, col: two ? Math.floor(i / 2) + 1 : i + 1,
         cls: [admin ? 'admin' : up ? 'up' : 'off', errs ? 'err' : ''],
         tip: [`${p.ifName}${p.ifAlias && p.ifAlias !== p.ifName ? ' — ' + p.ifAlias : ''}`,
-          admin ? 'Désactivé' : up ? `Connecté à ${fmtSpeed(n(p.ifSpeed))}` : 'Déconnecté',
+          admin ? t('Désactivé') : up ? t('Connecté à {s}', { s: fmtSpeed(n(p.ifSpeed)) }) : t('Déconnecté'),
           up ? `↓ ${fmtBits(n(p.ifInOctets_rate) * 8)} · ↑ ${fmtBits(n(p.ifOutOctets_rate) * 8)} · ${util} %` : '',
-          errs ? 'Erreurs au dernier relevé' : ''].filter(Boolean).join('\n'),
+          errs ? t('Erreurs au dernier relevé') : ''].filter(Boolean).join('\n'),
       }
     })
     const upList = layout.filter((p) => p.cls[0] === 'up')

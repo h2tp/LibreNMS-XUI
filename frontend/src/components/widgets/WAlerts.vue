@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!shown.length" class="empty"><ShieldCheck color="var(--green)" style="opacity:1" /><div>Aucune alerte active ✨</div></div>
+  <div v-if="!shown.length" class="empty"><ShieldCheck color="var(--green)" style="opacity:1" /><div>{{ t('Aucune alerte active ✨') }}</div></div>
   <div v-else class="col" style="gap:8px">
     <router-link v-for="a in shown" :key="a.id" class="alert-row" :class="severityClass(a.sev)" :to="devById[a.device_id] ? `/device/${encodeURIComponent(devById[a.device_id].hostname)}/alerts` : '/alerts'">
       <span class="dot" :class="severityClass(a.sev)"></span>
@@ -18,13 +18,14 @@ import { ShieldCheck } from 'lucide-vue-next'
 import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName, timeAgo, severityClass } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const devices = ref([]); const alerts = ref([]); const rules = ref({})
 const devById = computed(() => Object.fromEntries(devices.value.map((d) => [d.device_id, d])))
 const filtered = computed(() => alerts.value
   .filter((a) => !props.config.group || devById.value[a.device_id])
-  .map((a) => ({ ...a, rule: a.name || a.rule_name || rules.value[a.rule_id]?.name || `Règle #${a.rule_id}`, sev: a.severity || rules.value[a.rule_id]?.severity }))
+  .map((a) => ({ ...a, rule: a.name || a.rule_name || rules.value[a.rule_id]?.name || t('Règle #{id}', { id: a.rule_id }), sev: a.severity || rules.value[a.rule_id]?.severity }))
   .filter((a) => !props.config.severity || severityClass(a.sev) === props.config.severity))
 const shown = computed(() => filtered.value.slice(0, props.config.limit || 10))
 useLoader(async () => {

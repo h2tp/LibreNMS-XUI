@@ -1,19 +1,19 @@
 <template>
   <div v-if="error" class="err small">{{ error }}</div>
   <div v-else-if="!loaded" class="col" style="gap:10px"><div v-for="i in 4" :key="i" class="skeleton" style="height:38px"></div></div>
-  <div v-else-if="!list.length" class="empty small"><Cpu /><div>{{ rows.length ? 'Aucun équipement ne correspond aux filtres' : 'Aucune donnée processeur remontée' }}</div></div>
+  <div v-else-if="!list.length" class="empty small"><Cpu /><div>{{ rows.length ? t('Aucun équipement ne correspond aux filtres') : t('Aucune donnée processeur remontée') }}</div></div>
 
   <template v-else-if="mode === 'history'">
-    <div v-if="!session.rrd" class="empty small">L'historique nécessite l'accès aux fichiers RRD.</div>
+    <div v-if="!session.rrd" class="empty small">{{ t('L\'historique nécessite l\'accès aux fichiers RRD.') }}</div>
     <div v-else-if="!histOpt" class="skeleton" :style="{ height: `${size.h}px` }"></div>
     <EChart v-else :option="histOpt" :height="`${Math.max(120, size.h)}px`" />
   </template>
 
   <div v-else class="col" style="gap:12px">
     <div class="summary small">
-      <span>Moyenne du parc <b>{{ total.avg }} %</b> · {{ total.cores }} cœurs sur {{ total.n }} équipement(s)</span>
+      <span>{{ t('Moyenne du parc') }} <b>{{ total.avg }} %</b> · {{ t('{c} cœurs sur {n} équipement(s)', { c: total.cores, n: total.n }) }}</span>
       <span v-if="total.crit" class="badge critical">{{ total.crit }} critique(s)</span>
-      <span v-if="total.warn" class="badge warning">{{ total.warn }} à surveiller</span>
+      <span v-if="total.warn" class="badge warning">{{ t('{n} à surveiller', { n: total.warn }) }}</span>
     </div>
 
     <div v-if="mode === 'list'" class="col" style="gap:6px">
@@ -21,14 +21,14 @@
         <div class="row" style="gap:8px;min-width:0">
           <Cpu :size="15" class="faint" style="flex:none" />
           <b class="ellipsis">{{ r.name }}</b>
-          <span class="muted small nowrap">{{ r.cores }} cœur{{ r.cores > 1 ? 's' : '' }}</span>
+          <span class="muted small nowrap">{{ r.cores > 1 ? t('{n} cœurs', { n: r.cores }) : t('{n} cœur', { n: r.cores }) }}</span>
           <span class="grow"></span>
           <span v-if="r.cores > 1" class="small nowrap muted">max {{ r.max }} %</span>
           <b class="pct nowrap" :class="r.st">{{ r.avg }} %</b>
         </div>
         <div class="bar"><i :style="{ width: Math.max(1, r.avg) + '%', background: COL[r.st] }"></i></div>
         <div v-if="r.cores > 1" class="cores">
-          <i v-for="(c, k) in r.usages.slice(0, 128)" :key="k" :style="{ background: heat(c) }" :title="`Cœur ${k + 1} : ${c} %`"></i>
+          <i v-for="(c, k) in r.usages.slice(0, 128)" :key="k" :style="{ background: heat(c) }" :title="t('Cœur {k} : {v} %', { k: k + 1, v: c })"></i>
         </div>
       </router-link>
     </div>
@@ -37,11 +37,11 @@
       <router-link v-for="r in list" :key="r.device_id" :to="link(r)" class="rcard" :title="tip(r)">
         <Ring :value="r.avg" :size="86" :stroke="9" :colors="RING[r.st]" />
         <b class="ellipsis" style="max-width:100%">{{ r.name }}</b>
-        <span class="small muted nowrap">{{ r.cores }} cœur{{ r.cores > 1 ? 's' : '' }}<template v-if="r.cores > 1"> · max {{ r.max }} %</template></span>
+        <span class="small muted nowrap">{{ r.cores > 1 ? t('{n} cœurs', { n: r.cores }) : t('{n} cœur', { n: r.cores }) }}<template v-if="r.cores > 1"> · max {{ r.max }} %</template></span>
       </router-link>
     </div>
 
-    <div v-if="more" class="small muted" style="text-align:center">+ {{ more }} autre(s) équipement(s)</div>
+    <div v-if="more" class="small muted" style="text-align:center">{{ t('+ {n} autre(s) équipement(s)', { n: more }) }}</div>
   </div>
 </template>
 
@@ -55,6 +55,7 @@ import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { timeOption, PALETTE } from '../../charts'
 import { devName } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const all = ref([]); const devById = ref({}); const loaded = ref(false); const error = ref(null)
@@ -105,7 +106,7 @@ const total = computed(() => {
   }
 })
 const link = (r) => `/device/${encodeURIComponent(r.hostname)}/health`
-const tip = (r) => `${r.name}\n${r.procs[0]?.descr || ''}\nMoyenne : ${r.avg} % · cœur le plus chargé : ${r.max} %\n${r.cores} cœur(s)`
+const tip = (r) => `${r.name}\n${r.procs[0]?.descr || ''}\n${t('Moyenne : {a} % · cœur le plus chargé : {m} %', { a: r.avg, m: r.max })}\n${t('{n} cœur(s)', { n: r.cores })}`
 
 // Historique : charge moyenne (tous cœurs) par équipement, 8 équipements au plus
 const hist = ref(null)

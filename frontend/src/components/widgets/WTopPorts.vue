@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!top.length" class="empty small">Aucune donnée de trafic</div>
+  <div v-if="!top.length" class="empty small">{{ t('Aucune donnée de trafic') }}</div>
   <div v-else class="col" style="gap:10px">
     <router-link v-for="p in top" :key="p.port_id" :to="`/port/${p.port_id}`" class="tp">
       <div class="row">
@@ -15,6 +15,7 @@ import { ref, computed } from 'vue'
 import { D, devicesFor, isPhysical } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName, fmtBits, portUtil, utilColor } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const devices = ref([]); const ports = ref([])

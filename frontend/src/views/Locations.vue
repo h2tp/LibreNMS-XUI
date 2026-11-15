@@ -1,7 +1,7 @@
 <template>
   <div>
-    <div class="page-head"><div><h1>Emplacements</h1><div class="sub">{{ locations.length }} emplacements · cliquez sur la carte pour placer l'emplacement sélectionné</div></div>
-      <div class="right"><button v-if="!session.read_only" class="btn primary" @click="edit = { location: '', lat: '', lng: '' }"><Plus /> Nouvel emplacement</button></div></div>
+    <div class="page-head"><div><h1>{{ t('Emplacements') }}</h1><div class="sub">{{ t('{n} emplacements · cliquez sur la carte pour placer l\'emplacement sélectionné', { n: locations.length }) }}</div></div>
+      <div class="right"><button v-if="!session.read_only" class="btn primary" @click="edit = { location: '', lat: '', lng: '' }"><Plus /> {{ t('Nouvel emplacement') }}</button></div></div>
     <div class="loc-layout">
       <div class="card">
         <DataTable :rows="rows" :columns="cols" :loading="loading" :error="error" row-key="id" filename="emplacements.csv" :row-click="select">
@@ -18,13 +18,13 @@
       </div>
       <div class="card" style="padding:8px"><div ref="el" class="map"></div></div>
     </div>
-    <Modal v-if="edit" :title="edit.id ? 'Modifier l\'emplacement' : 'Nouvel emplacement'" :icon="MapPin" @close="edit = null">
+    <Modal v-if="edit" :title="edit.id ? t('Modifier l\'emplacement') : t('Nouvel emplacement')" :icon="MapPin" @close="edit = null">
       <div class="form-grid">
-        <label class="field full"><span>Nom</span><input v-model="edit.location" class="input" :disabled="!!edit.id" /></label>
-        <label class="field"><span>Latitude</span><input v-model="edit.lat" class="input mono" /></label>
-        <label class="field"><span>Longitude</span><input v-model="edit.lng" class="input mono" /></label>
+        <label class="field full"><span>{{ t('Nom') }}</span><input v-model="edit.location" class="input" :disabled="!!edit.id" /></label>
+        <label class="field"><span>{{ t('Latitude') }}</span><input v-model="edit.lat" class="input mono" /></label>
+        <label class="field"><span>{{ t('Longitude') }}</span><input v-model="edit.lng" class="input mono" /></label>
       </div>
-      <template #foot><button class="btn" @click="edit = null">Annuler</button><button class="btn primary" @click="save(edit)"><Save /> Enregistrer</button></template>
+      <template #foot><button class="btn" @click="edit = null">{{ t('Annuler') }}</button><button class="btn primary" @click="save(edit)"><Save /> {{ t('Enregistrer') }}</button></template>
     </Modal>
   </div>
 </template>
@@ -37,6 +37,7 @@ import Modal from '../components/Modal.vue'
 import { session, api, pick, devicesCached, invalidateDevices } from '../api'
 import { useLoader } from '../refresh'
 import { devStatus, toast, toastError, confirmAction } from '../utils'
+import { t } from '../i18n'
 
 const el = ref(null)
 const locations = ref([])
@@ -49,7 +50,7 @@ const rows = computed(() => locations.value.map((l) => {
   const ds = devices.value.filter((d) => d.location === l.location)
   return { ...l, coords: l.lat, count: ds.length, down: ds.filter((d) => devStatus(d) === 'down').length }
 }))
-const cols = [{ key: 'location', label: 'Emplacement' }, { key: 'coords', label: 'Coordonnées' }, { key: 'count', label: 'Équipements' }, { key: 'actions', label: '', sortable: false }]
+const cols = [{ key: 'location', label: t('Emplacement') }, { key: 'coords', label: t('Coordonnées') }, { key: 'count', label: t('Équipements') }, { key: 'actions', label: '', sortable: false }]
 
 function draw() {
   if (!map) return
@@ -77,12 +78,12 @@ async function save(l) {
     const body = { lat: l.lat === '' ? null : +l.lat, lng: l.lng === '' ? null : +l.lng }
     if (l.id) await api.patch(`locations/${encodeURIComponent(l.orig || l.location)}`, body)
     else await api.post('locations', { location: l.location, ...body })
-    toast('Emplacement enregistré', 'success'); edit.value = null; invalidateDevices(); reload()
+    toast(t('Emplacement enregistré'), 'success'); edit.value = null; invalidateDevices(); reload()
   } catch (e) { toastError(e) }
 }
 async function remove(l) {
-  if (!confirmAction(`Supprimer l'emplacement « ${l.location} » ?`)) return
-  try { await api.del(`locations/${encodeURIComponent(l.location)}`); toast('Emplacement supprimé', 'success'); reload() } catch (e) { toastError(e) }
+  if (!confirmAction(t('Supprimer l\'emplacement « {n} » ?', { n: l.location }))) return
+  try { await api.del(`locations/${encodeURIComponent(l.location)}`); toast(t('Emplacement supprimé'), 'success'); reload() } catch (e) { toastError(e) }
 }
 onMounted(() => {
   map = Lf.map(el.value).setView([46.6, 2.4], 6)

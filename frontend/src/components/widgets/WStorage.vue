@@ -1,12 +1,12 @@
 <template>
   <div v-if="error" class="err small">{{ error }}</div>
-  <div v-else-if="loaded && !list.length" class="empty small"><HardDrive /><div>{{ all.length ? 'Aucun volume ne correspond aux filtres' : 'Aucun volume de stockage remonté' }}</div></div>
+  <div v-else-if="loaded && !list.length" class="empty small"><HardDrive /><div>{{ all.length ? t('Aucun volume ne correspond aux filtres') : t('Aucun volume de stockage remonté') }}</div></div>
   <div v-else-if="!loaded" class="col" style="gap:10px"><div v-for="i in 4" :key="i" class="skeleton" style="height:38px"></div></div>
   <div v-else class="col" style="gap:12px">
     <div class="summary small">
-      <span><b>{{ fmtBytes(total.used) }}</b> utilisés sur <b>{{ fmtBytes(total.size) }}</b> · {{ total.n }} volume(s)</span>
+      <span><b>{{ fmtBytes(total.used) }}</b> {{ t('utilisés sur') }} <b>{{ fmtBytes(total.size) }}</b> · {{ total.n }} volume(s)</span>
       <span v-if="total.crit" class="badge critical">{{ total.crit }} critique(s)</span>
-      <span v-if="total.warn" class="badge warning">{{ total.warn }} à surveiller</span>
+      <span v-if="total.warn" class="badge warning">{{ t('{n} à surveiller', { n: total.warn }) }}</span>
     </div>
 
     <div v-if="mode === 'list'" class="col" style="gap:6px">
@@ -32,7 +32,7 @@
       </router-link>
     </div>
 
-    <div v-if="more" class="small muted" style="text-align:center">+ {{ more }} autre(s) volume(s) — augmentez le nombre d'éléments ou filtrez</div>
+    <div v-if="more" class="small muted" style="text-align:center">{{ t('+ {n} autre(s) volume(s) — augmentez le nombre d\'éléments ou filtrez', { n: more }) }}</div>
   </div>
 </template>
 
@@ -44,6 +44,7 @@ import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { devName, fmtBytes } from '../../utils'
 import { volumeName, usefulVolumes } from '../../dashboard/volumes'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const all = ref([]); const devById = ref({}); const loaded = ref(false); const error = ref(null)
@@ -86,7 +87,7 @@ const total = computed(() => ({
   crit: volumes.value.filter((v) => v.st === 'crit').length,
 }))
 const link = (v) => `/device/${encodeURIComponent(v.hostname)}/health`
-const tip = (v) => `${devName(devById.value[v.device_id])} · ${v.descr}\nUtilisé : ${fmtBytes(v.used)} (${v.perc} %)\nLibre : ${fmtBytes(v.free)}\nTaille : ${fmtBytes(v.size)}`
+const tip = (v) => `${devName(devById.value[v.device_id])} · ${v.descr}\n${t('Utilisé : {u} ({p} %)', { u: fmtBytes(v.used), p: v.perc })}\n${t('Libre : {v}', { v: fmtBytes(v.free) })}\n${t('Taille : {v}', { v: fmtBytes(v.size) })}`
 
 useLoader(async () => {
   try {

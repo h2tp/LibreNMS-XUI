@@ -1,7 +1,7 @@
 <template>
   <div v-if="loaded && !upsList.length" class="empty small">
-    <BatteryCharging /><div>Aucun onduleur détecté{{ config.device || config.group ? ' pour ce filtre' : '' }}.</div>
-    <div class="faint" style="max-width:340px">Un onduleur apparaît ici dès que LibreNMS remonte sa charge batterie ou son autonomie (onduleur réseau, ou NUT / USB via un serveur ou un NAS).</div>
+    <BatteryCharging /><div>{{ t('Aucun onduleur détecté') }}{{ config.device || config.group ? t(' pour ce filtre') : '' }}.</div>
+    <div class="faint" style="max-width:340px">{{ t('Un onduleur apparaît ici dès que LibreNMS remonte sa charge batterie ou son autonomie (onduleur réseau, ou NUT / USB via un serveur ou un NAS).') }}</div>
   </div>
   <div v-else class="cards">
     <router-link v-for="u in upsList" :key="u.device_id" :to="link(u)" class="ups" :class="u.st">
@@ -20,13 +20,13 @@
           <span class="small muted">batterie</span>
         </div>
         <div class="kpis">
-          <div v-if="u.runtime !== null" :class="u.runtimeSt"><span>Autonomie</span><b>{{ fmtRuntime(u.runtime) }}</b></div>
-          <div v-if="u.load !== null" :class="u.loadSt"><span>Charge</span><b>{{ fmt(u.load) }} %</b></div>
-          <div v-if="u.vin !== null"><span>Entrée</span><b>{{ fmt(u.vin) }} V</b></div>
-          <div v-if="u.vout !== null"><span>Sortie</span><b>{{ fmt(u.vout) }} V</b></div>
-          <div v-if="u.power !== null"><span>Puissance</span><b>{{ fmt(u.power) }} W</b></div>
-          <div v-if="u.freq !== null"><span>Fréquence</span><b>{{ fmt(u.freq) }} Hz</b></div>
-          <div v-if="u.temp !== null"><span>Temp. batterie</span><b>{{ fmt(u.temp) }} °C</b></div>
+          <div v-if="u.runtime !== null" :class="u.runtimeSt"><span>{{ t('Autonomie') }}</span><b>{{ fmtRuntime(u.runtime) }}</b></div>
+          <div v-if="u.load !== null" :class="u.loadSt"><span>{{ t('Charge') }}</span><b>{{ fmt(u.load) }} %</b></div>
+          <div v-if="u.vin !== null"><span>{{ t('Entrée') }}</span><b>{{ fmt(u.vin) }} V</b></div>
+          <div v-if="u.vout !== null"><span>{{ t('Sortie') }}</span><b>{{ fmt(u.vout) }} V</b></div>
+          <div v-if="u.power !== null"><span>{{ t('Puissance') }}</span><b>{{ fmt(u.power) }} W</b></div>
+          <div v-if="u.freq !== null"><span>{{ t('Fréquence') }}</span><b>{{ fmt(u.freq) }} Hz</b></div>
+          <div v-if="u.temp !== null"><span>{{ t('Temp. batterie') }}</span><b>{{ fmt(u.temp) }} °C</b></div>
         </div>
       </div>
 
@@ -46,6 +46,7 @@ import { interpretState } from '../../dashboard/states'
 import { useLoader } from '../../refresh'
 import { devName } from '../../utils'
 import { locale } from '../../i18n'
+import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const all = ref([]); const devById = ref({}); const loaded = ref(false)
@@ -84,8 +85,8 @@ const upsList = computed(() => {
     let st = [chargeSt, runtimeSt, loadSt, ...states.map((s) => s.st).filter((x) => x !== 'unk')].reduce(worst, 'ok')
     if (+d.status === 0) st = 'crit'
     const bad = states.find((s) => s.st === st && st !== 'ok')
-    const headline = +d.status === 0 ? 'Injoignable' : onBattery ? 'Sur batterie' : bad ? bad.label
-      : st === 'ok' ? (onMains ? 'Sur secteur' : 'OK') : chargeSt !== 'ok' ? 'Batterie faible' : runtimeSt !== 'ok' ? 'Autonomie faible' : 'Surcharge'
+    const headline = +d.status === 0 ? t('Injoignable') : onBattery ? t('Sur batterie') : bad ? bad.label
+      : st === 'ok' ? (onMains ? t('Sur secteur') : 'OK') : chargeSt !== 'ok' ? t('Batterie faible') : runtimeSt !== 'ok' ? t('Autonomie faible') : t('Surcharge')
     out.push({
       device_id: d.device_id, hostname: d.hostname, name: devName(d), model: [d.hardware, d.version].filter(Boolean).join(' · '),
       charge, runtime, load, chargeSt, runtimeSt, loadSt, st, headline,
