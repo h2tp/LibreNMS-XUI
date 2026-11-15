@@ -11,3 +11,6 @@ __pycache__/
 # divers
 .shot/
 .DS_Store
+
+# captures non floutées
+img-originaux/
