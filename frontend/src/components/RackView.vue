@@ -97,12 +97,20 @@ function curve(a, b) {
 }
 const devPortId = (e) => {
   const it = props.room.items.find((i) => i.id === e.item)
-  return it?.kind === 'device' ? e.port : null
+  return it?.kind === 'device' && e.port > 0 ? e.port : null
+}
+// port virtuel (équipement en ping) : l'état du câble suit la joignabilité de l'équipement
+function virtState(c, st) {
+  const devs = [c.a, c.b].filter((e) => String(e.port).startsWith('v'))
+    .map((e) => props.devById[props.room.items.find((i) => i.id === e.item)?.device_id]).filter(Boolean)
+  if (!devs.length) return st
+  const down = st.down || devs.some((d) => +d.status !== 1)
+  return { ...st, known: true, down, color: down ? '#f43f5e' : st.known ? st.color : '#22c55e' }
 }
 const drawn = computed(() => (props.room.cables || []).map((c) => {
   const a = pos.value[key(c.a)]; const b = pos.value[key(c.b)]
   if (!a || !b) return null
-  const st = linkState({ port_a: devPortId(c.a), port_b: devPortId(c.b) }, props.portById, { colorMode: 'util' })
+  const st = virtState(c, linkState({ port_a: devPortId(c.a), port_b: devPortId(c.b) }, props.portById, { colorMode: 'util' }))
   const color = props.cableView === 'state' ? (st.known ? st.color : '#64748b') : c.color
   return { id: c.id, raw: c, a, b, d: curve(a, b), color, down: st.known && st.down }
 }).filter(Boolean))

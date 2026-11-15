@@ -3,6 +3,8 @@
     <!-- image choisie par l'utilisateur (photo de façade…) -->
     <template v-if="showImage">
       <img :src="diagApi.imgUrl(item.image)" alt="" draggable="false" />
+      <!-- points d'accroche des câbles (les prises ne sont pas dessinées sur une photo) -->
+      <span v-for="(k, i) in anchors" :key="k" class="anchor" :data-ep="k" :style="{ left: `${((i + 1) / (anchors.length + 1)) * 100}%` }"></span>
       <span class="img-name"><i v-if="item.kind === 'device'" class="dot" :class="status"></i>{{ name }}</span>
     </template>
 
@@ -32,14 +34,30 @@
       <div v-else-if="item.kind === 'cablemgmt'" class="brush"></div>
       <div v-else-if="item.kind === 'shelf'" class="tray"></div>
       <div v-else class="grow"></div>
+
+      <!-- ports virtuels : équipement sans port physique (ping…), état = joignabilité de l'équipement -->
+      <div v-if="vcount" class="vports">
+        <span v-for="i in vcount" :key="i" class="sock virt" :class="[status === 'up' ? 'up' : 'vdown', sockCls(`v${i}`)]" style="--fill:#22c55e"
+          :data-ep="`${item.id}:v${i}`" :title="t('{n} · port virtuel {i} (joignabilité : {s})', { n: name, i, s: statusLabel[status] || status })" @click="onSock($event, `v${i}`)">
+          <span v-if="hpx >= 30" class="num">{{ vcount > 1 ? `v${i}` : 'LAN' }}</span>
+        </span>
+      </div>
+
+      <!-- entrées d'alimentation -->
+      <div v-if="psu" class="inlets" :class="{ col: psu > 1 && hpx >= 60 }">
+        <span v-for="i in psu" :key="i" class="sock inlet" :class="sockCls(-i)" :data-ep="`${item.id}:${-i}`" :title="t('{n} · alimentation {i}', { n: name, i })" @click="onSock($event, -i)">
+          <Zap :size="9" />
+        </span>
+      </div>
     </template>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { Zap } from 'lucide-vue-next'
 import { diagApi } from '../api'
-import { devName, devStatus, fmtBits, fmtSpeed, portUtil } from '../utils'
+import { devName, devStatus, fmtBits, fmtSpeed, portUtil, statusLabel } from '../utils'
 import { faceGrid, shortName, speedColor, UH, FACE_W, KIND_LABEL } from '../rack/core'
 import { t } from '../i18n'
 
@@ -60,13 +78,17 @@ function onSock(e, port) {
 }
 const n = (v) => +v || 0
 const hpx = computed(() => props.item.h * UH)
-const showImage = computed(() => props.item.display === 'image' && !!props.item.image)
+// en mode câblage, la façade dessinée remplace la photo pour pouvoir choisir les prises
+const showImage = computed(() => props.item.display === 'image' && !!props.item.image && !props.cableMode)
 const status = computed(() => (props.item.kind !== 'device' ? 'none' : props.dev ? devStatus(props.dev) : 'unknown'))
 const name = computed(() => props.item.label || (props.dev ? devName(props.dev) : props.item.kind === 'device' ? `#${props.item.device_id}` : KIND_LABEL[props.item.kind]))
 const sub = computed(() => (props.item.kind === 'device' ? (props.dev ? props.dev.hardware || props.dev.os || '' : t('équipement inconnu')) : ''))
 
 const count = computed(() => (props.item.kind === 'device' ? props.ports.length : props.item.ports))
-const grid = computed(() => faceGrid(count.value, FACE_W - LABEL_W - 34, hpx.value - 10))
+const psu = computed(() => (['device', 'custom', 'pdu'].includes(props.item.kind) ? props.item.psu ?? (props.item.kind === 'device' ? 1 : 0) : 0))
+const grid = computed(() => faceGrid(count.value, FACE_W - LABEL_W - 34 - (psu.value ? (psu.value > 1 && hpx.value >= 60 ? 22 : psu.value * 19) : 0), hpx.value - 10))
+const vcount = computed(() => (props.item.kind === 'device' ? props.item.vports ?? (props.ports.length ? 0 : 1) : 0))
+const anchors = computed(() => [...props.cabled].filter((k) => k.startsWith(`${props.item.id}:`)))
 
 const devPorts = computed(() => props.ports.map((p) => {
   const admin = p.ifAdminStatus === 'down'
@@ -112,6 +134,13 @@ a.sock:hover { border-color: #e2e8f0; text-decoration: none; }
 .sock.pick { cursor: crosshair; }
 .sock.pick:hover { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); z-index: 2; }
 .sock.hl { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); z-index: 2; }
+.vports { flex: none; display: flex; gap: 3px; margin-left: 6px; }
+.sock.virt { width: 26px; height: 15px; border-style: dashed; font-size: 7.5px; }
+.sock.virt.vdown { border-color: #f43f5e; color: #f43f5e; }
+.inlets { flex: none; display: flex; gap: 4px; margin-left: 6px; }
+.inlets.col { flex-direction: column; }
+.sock.inlet { width: 15px; height: 13px; border-radius: 3px 3px 5px 5px; background: #0b0d10; border-color: #4b5563; color: #facc15; }
+.anchor { position: absolute; bottom: 2px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: #e2e8f0; box-shadow: 0 0 0 1px #0b1018; }
 .brush { flex: 1; align-self: stretch; margin: 2px 0; border-radius: 3px; background: repeating-linear-gradient(90deg, #0f141c 0 2px, #1e2633 2px 5px); }
 .tray { flex: 1; align-self: flex-end; height: 5px; border-radius: 2px; background: #475569; }
 .ri.img { padding: 0; background: #111827; }

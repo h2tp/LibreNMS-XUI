@@ -50,13 +50,13 @@
           </div>
           <div class="field"><span>{{ t('Couleur') }}</span>
             <div class="row wrap" style="gap:5px">
-              <button v-for="c in CABLE_COLORS" :key="c" class="cswatch" :class="{ on: selCable.color === c }" :style="{ background: c }" :title="c" @click="selCable.color = c; lastColor = c; changed()"></button>
-              <input v-model="selCable.color" type="color" class="cpick" @change="lastColor = selCable.color; changed()" />
+              <button v-for="c in CABLE_COLORS" :key="c" class="cswatch" :class="{ on: selCable.color === c }" :style="{ background: c }" :title="c" @click="selCable.color = c; rememberColor(c); changed()"></button>
+              <input v-model="selCable.color" type="color" class="cpick" @change="rememberColor(selCable.color); changed()" />
             </div>
           </div>
           <div class="row" style="gap:10px">
             <label class="field grow"><span>{{ t('Type') }}</span>
-              <select v-model="selCable.type" class="input" @change="lastType = selCable.type; changed()"><option v-for="(l, v) in CABLE_TYPES" :key="v" :value="v">{{ l }}</option></select></label>
+              <select v-model="selCable.type" class="input" @change="onTypeChange"><option v-for="(l, v) in CABLE_TYPES" :key="v" :value="v">{{ l }}</option></select></label>
             <label class="field grow"><span>{{ t('Longueur') }}</span><input v-model="selCable.length" class="input" maxlength="20" placeholder="1 m" @input="changed()" /></label>
           </div>
           <label class="field"><span>{{ t('Étiquette') }}</span><input v-model="selCable.label" class="input" maxlength="40" :placeholder="t('Ex. C-042, bureau 3…')" @input="changed()" /></label>
@@ -76,6 +76,13 @@
             <label v-if="selItem.kind !== 'device' && !['shelf', 'blank', 'cablemgmt'].includes(selItem.kind)" class="field grow"><span>{{ t('Prises / ports') }}</span>
               <input v-model.number="selItem.ports" class="input" type="number" min="0" max="96" @change="selItem.ports = Math.max(0, Math.min(96, selItem.ports || 0)); changed()" /></label>
           </div>
+          <label v-if="selItem.kind === 'device'" class="field"><span>{{ t('Ports réseau virtuels') }}</span>
+            <select :value="selItem.vports ?? ''" class="input" @change="setVports($event.target.value)">
+              <option value="">{{ t('Automatique ({n})', { n: autoV(selItem) }) }}</option><option v-for="n in 9" :key="n" :value="n - 1">{{ n - 1 }}</option>
+            </select>
+            <span class="small faint">{{ t('Pour câbler un équipement sans port physique (supervisé par ping) : l\'état suit sa joignabilité.') }}</span></label>
+          <label v-if="['device', 'custom', 'pdu'].includes(selItem.kind)" class="field"><span>{{ t('Prises d\'alimentation (entrées secteur)') }}</span>
+            <select :value="psuOf(selItem)" class="input" @change="setPsu(+$event.target.value)"><option v-for="n in 5" :key="n" :value="n - 1">{{ n - 1 }}</option></select></label>
           <div class="field"><span>{{ t('Apparence') }}</span>
             <div class="seg" style="width:100%">
               <button :class="{ on: selItem.display !== 'image' || !selItem.image }" @click="selItem.display = 'face'; changed()">{{ t('Façade dessinée') }}</button>
@@ -271,7 +278,7 @@ function startNew(p, e) {
 }
 function clearDrag() { dragPayload.value = null }
 function newItem(p, rack, u) {
-  return { id: uid(), rack, u, h: p.h || 1, kind: p.kind, device_id: p.device_id || null, label: '', ports: p.ports || 0, image: null, display: 'face' }
+  return { id: uid(), rack, u, h: p.h || 1, kind: p.kind, device_id: p.device_id || null, label: '', ports: p.ports || 0, psu: p.kind === 'device' ? 1 : 0, image: null, display: 'face' }
 }
 function onDrop({ rack, u, payload }) {
   if (payload.move) {
@@ -362,7 +369,27 @@ const CABLE_COLORS = ['#3b82f6', '#22c55e', '#facc15', '#f97316', '#ef4444', '#a
 const CABLE_TYPES = { copper: t('Cuivre (RJ45)'), fiber: t('Fibre'), dac: t('DAC / Twinax'), power: t('Alimentation'), other: t('Autre') }
 const tool = ref('place')
 const cableFrom = ref(null)
-const lastColor = ref('#3b82f6'); const lastType = ref('copper')
+const lastColor = ref('#3b82f6'); const lastType = ref('copper'); const lastPowerColor = ref('#94a3b8')
+const autoV = (it) => ((portsByDev.value[it.device_id] || []).length ? 0 : 1)
+function setVports(v) {
+  const it = selItem.value
+  const n = v === '' ? autoV(it) : +v
+  room.value.cables = room.value.cables.filter((c) => ![c.a, c.b].some((e) => e.item === it.id && String(e.port).startsWith('v') && +String(e.port).slice(1) > n))
+  it.vports = v === '' ? null : +v; changed()
+}
+const psuOf = (it) => it.psu ?? (it.kind === 'device' ? 1 : 0)
+function setPsu(n) {
+  const it = selItem.value
+  // les câbles branchés sur des entrées supprimées disparaissent
+  room.value.cables = room.value.cables.filter((c) => ![c.a, c.b].some((e) => e.item === it.id && e.port < 0 && -e.port > n))
+  it.psu = n; changed()
+}
+// nature d'une extrémité : entrée d'alimentation, prise électrique (PDU…), ou port réseau
+function epKind(e) {
+  if (e.port < 0) return 'inlet'
+  const it = room.value.items.find((i) => i.id === e.item)
+  return it?.kind === 'pdu' ? 'outlet' : it?.kind === 'device' || it?.kind === 'patch' ? 'net' : 'any'
+}
 const cableView = ref(prefs.cableView || 'real')
 function setCableView(v) { cableView.value = v; prefs.cableView = v; save('cableView', v) }
 function setTool(v) { tool.value = v; cableFrom.value = null; if (v === 'cable' && cableView.value === 'hidden') setCableView('real') }
@@ -371,6 +398,8 @@ function epName(e) {
   const it = room.value.items.find((i) => i.id === e.item)
   if (!it) return '?'
   const p = it.kind === 'device' ? portById.value[e.port] : null
+  if (e.port < 0) return `${itemName(it)} · ${t('alimentation {n}', { n: -e.port })}`
+  if (String(e.port).startsWith('v')) return `${itemName(it)} · ${t('port virtuel {n}', { n: String(e.port).slice(1) })}`
   return `${itemName(it)} · ${it.kind === 'device' ? (p ? p.ifName : `#${e.port}`) : t('prise {n}', { n: e.port })}`
 }
 function cableAt(e) { const k = epKey(e); return room.value.cables.find((c) => epKey(c.a) === k || epKey(c.b) === k) }
@@ -382,28 +411,37 @@ function onSocket(e) {
   }
   if (epKey(cableFrom.value) === epKey(e)) { cableFrom.value = null; return }
   if (existing) { toast(t('Cette prise est déjà câblée'), 'error'); return }
-  const c = { id: uid(), a: cableFrom.value, b: e, color: lastColor.value, type: lastType.value, label: '', length: '' }
+  const kinds = [epKind(cableFrom.value), epKind(e)]
+  if (kinds.includes('inlet') && kinds.includes('net')) { toast(t('Une entrée d\'alimentation se relie à une prise électrique (PDU, élément libre), pas à un port réseau'), 'error'); return }
+  const power = kinds.includes('inlet') || kinds.includes('outlet')
+  const c = { id: uid(), a: cableFrom.value, b: e, color: power ? lastPowerColor.value : lastColor.value, type: power ? 'power' : lastType.value, label: '', length: '' }
   room.value.cables.push(c)
   cableFrom.value = null
   selected.value = { type: 'cable', id: c.id }
   changed(200)
 }
+function onTypeChange() { if (selCable.value.type !== 'power') lastType.value = selCable.value.type; changed() }
+function rememberColor(c) { if (selCable.value?.type === 'power') lastPowerColor.value = c; else lastColor.value = c }
 function removeCable(c) { room.value.cables = room.value.cables.filter((x) => x !== c); selected.value = null; changed(200) }
 
 // infos d'un câble pour la fenêtre de trafic (même présentation que les liens des schémas)
 function cableInfo(c) {
   const side = (e) => {
     const it = room.value.items.find((i) => i.id === e.item)
-    const p = it?.kind === 'device' ? portById.value[e.port] : null
+    const p = it?.kind === 'device' && e.port > 0 ? portById.value[e.port] : null
     return { it, p, dev: p ? devById.value[p.device_id] : null }
   }
   const A = side(c.a); const B = side(c.b)
-  const st = linkState({ port_a: A.p ? +A.p.port_id : null, port_b: B.p ? +B.p.port_id : null }, portById.value, { colorMode: 'util' })
+  let st = linkState({ port_a: A.p ? +A.p.port_id : null, port_b: B.p ? +B.p.port_id : null }, portById.value, { colorMode: 'util' })
+  // port virtuel : état = joignabilité (ping) de l'équipement
+  const vdev = [c.a, c.b].filter((e) => String(e.port).startsWith('v')).map((e) => devById.value[room.value.items.find((i) => i.id === e.item)?.device_id]).filter(Boolean)
+  const vtxt = vdev.map((d) => `${devName(d)} : ${+d.status === 1 ? t('joignable') : t('injoignable')}${d.last_ping_timetaken ? ` (${(+d.last_ping_timetaken).toFixed(1)} ms)` : ''}`).join(' · ')
+  if (vdev.length && !st.known) st = { ...st, known: true, virtual: true, down: vdev.some((d) => +d.status !== 1) }
   const rp = A.p || B.p; const rdev = rp && devById.value[rp.device_id]
   const extra = [c.label, c.length, CABLE_TYPES[c.type]].filter(Boolean).join(' · ')
   return {
     titleA: epName(c.a), titleB: epName(c.b), nameA: A.it ? itemName(A.it) : 'A',
-    status: (st.known ? (st.down ? t('Lien coupé') : `${fmtSpeed(st.speed)} · ${t('charge {p} %', { p: Math.round(st.util) })} · ↓ ${fmtBits(st.rin)} ↑ ${fmtBits(st.rout)}`) : t('Câble passif : pas d\'état en direct')) + (extra ? ` — ${extra}` : ''),
+    status: st.virtual ? (st.down ? `${t('Lien coupé')} — ${vtxt}` : vtxt) : (st.known ? (st.down ? t('Lien coupé') : `${fmtSpeed(st.speed)} · ${t('charge {p} %', { p: Math.round(st.util) })} · ↓ ${fmtBits(st.rin)} ↑ ${fmtBits(st.rout)}`) : t('Câble passif : pas d\'état en direct')) + (extra ? ` — ${extra}` : ''),
     host: rdev?.hostname || null, portId: rp ? +rp.port_id : null, flip: !A.p && !!B.p,
     ports: [A.p, B.p].filter(Boolean).map((p) => ({ id: +p.port_id, name: p.ifName, alias: p.ifAlias && p.ifAlias !== p.ifName ? p.ifAlias : '', dev: devById.value[p.device_id] ? devName(devById.value[p.device_id]) : '' })),
     st,
@@ -431,7 +469,7 @@ const cableRows = computed(() => room.value.cables.map((c) => {
   const i = cableInfo(c)
   return {
     id: c.id, color: c.color, aName: epName(c.a), bName: epName(c.b), typeL: CABLE_TYPES[c.type], label: c.label, length: c.length,
-    state: !i.st.known ? t('passif') : i.st.down ? t('coupé') : `${fmtSpeed(i.st.speed)} · ${Math.round(i.st.util)} %`,
+    state: !i.st.known ? t('passif') : i.st.down ? t('coupé') : i.st.virtual ? t('joignable') : `${fmtSpeed(i.st.speed)} · ${Math.round(i.st.util)} %`,
     stateCls: !i.st.known ? '' : i.st.down ? 'critical' : 'ok',
   }
 }))

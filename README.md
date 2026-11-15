@@ -31,8 +31,9 @@ lecture seule) : rien à modifier ni à installer dans LibreNMS.
   débit (couleurs au choix), graphe de trafic et accès aux ports d'un clic, images personnalisées, éléments
   hors LibreNMS (box, caméra…), fond (plan, photo de baie), création depuis LLDP.
 - **Baies de brassage** : une ou plusieurs baies par salle, équipements LibreNMS et éléments passifs (panneaux de
-  brassage, PDU, étagères…) placés en U par glisser-déposer, façades avec l'état réel des ports, câblage port à port
-  (y compris entre baies) avec état et trafic en direct, liste des câbles exportable.
+  brassage, PDU, étagères…) placés en U par glisser-déposer, façades avec l'état réel des ports, câblage réseau et
+  électrique port à port (y compris entre baies et vers les équipements en ping) avec état et trafic en direct, liste
+  des câbles exportable.
 - **Fiche équipement complète** : vue d'ensemble avec photos, ports, santé, inventaire, voisins CDP/LLDP,
   réseau, routage, services, alertes, journaux, disponibilité, config Oxidized, gestion.
 - **Gestion** : ajout / suppression d'équipements, acquittement d'alertes, règles d'alerte avec assistant,
@@ -135,7 +136,9 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
 - **Baies** (Visualisation › Baies) : salles contenant une ou plusieurs baies (4 à 48 U) affichées côte à côte ;
   équipements LibreNMS et éléments passifs (panneaux de brassage 12/24/48 ports, PDU, étagère, passe-câbles, obturateur,
   élément libre) glissés en U, déplacement entre baies, hauteur et nombre de prises réglables, façade dessinée à partir
-  des ports réels (vitesse, état, erreurs, trafic au survol) ou photo de façade. Câblage port à port en deux clics,
+  des ports réels (vitesse, état, erreurs, trafic au survol) ou photo de façade. Prises d'alimentation sur les
+  équipements (0 à 4) pour câbler les PDU ; ports réseau virtuels pour les équipements sans port physique (supervisés
+  par ping), dont l'état suit la joignabilité. Câblage port à port en deux clics,
   y compris entre baies et vers les panneaux de brassage : couleur, type (cuivre, fibre, DAC, alimentation), longueur,
   étiquette ; câbles affichés selon leur couleur ou leur état / charge, fenêtre de trafic au survol, liste des câbles
   exportable en CSV. Partage comme les schémas. Stockage : `./data/racks.json`.
