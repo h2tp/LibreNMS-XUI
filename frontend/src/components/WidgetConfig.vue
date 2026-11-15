@@ -136,7 +136,8 @@ const autoTitle = computed(() => {
     const [rid, kid] = cfg.rack.split(':'); const r = rooms.value.find((x) => x.id === rid)
     return r ? (kid ? r.racks.find((k) => k.id === kid)?.name || r.name : r.name) : ''
   }
-  if (props.type === 'port' && cfg.portName) return `Trafic ${cfg.portName}`
+  if (props.type === 'port' && cfg.portName) return t('Trafic {p}', { p: cfg.portName })
+  if (props.type === 'port-counter' && cfg.portName) return cfg.portName
   if (props.type === 'graph' && cfg.graph) return lists.graphs.find((g) => g.name === cfg.graph)?.desc
   return ''
 })

@@ -122,7 +122,7 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   températures / capteurs, ventilateurs, alimentation (PSU, PoE), onduleurs, serveurs, NAS (RAID, santé des
   disques), switchs (façade des ports), points d'accès Wi-Fi, imprimantes (consommables lus dans les RRD),
   services LibreNMS, ports en erreur, disponibilité / SLA (24 h à 1 an, coupures), trafic réseau cumulé,
-  stockage des disques, mémoire RAM et CPU, graphique RRD interactif, trafic d'un port, graphique LibreNMS,
+  stockage des disques, mémoire RAM et CPU, graphique RRD interactif, trafic d'un port, compteur de port (débit entrant / sortant actuel, utilisation, tendance), graphique LibreNMS,
   carte géographique, schéma, baie (une baie ou toute une salle, ajustée à la taille du widget, fenêtre de trafic
   au survol des câbles, légende des couleurs, clic sur le nom d'une baie pour ouvrir sa salle), notes,
   page web (iframe sandboxée).

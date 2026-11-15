@@ -122,7 +122,7 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   locations, logs (events / syslog / alerts), device card, temperatures / sensors, fans, power (PSU, PoE), UPS,
   servers, NAS (RAID, disk health), switches (front-panel ports), Wi-Fi access points, printers (supplies read
   from RRD), LibreNMS services, ports with errors, availability / SLA (24 h to 1 year, outages), aggregated
-  network traffic, disk storage, RAM and CPU, interactive RRD graph, port traffic, LibreNMS graph, geographic
+  network traffic, disk storage, RAM and CPU, interactive RRD graph, port traffic, port counter (current in / out throughput, utilization, trend), LibreNMS graph, geographic
   map, diagram, rack (one rack or a whole room, scaled to the widget size, traffic popup when
   hovering cables, color legend, click a rack name to open its room), notes, web page (sandboxed iframe).
   Aggregated data (CPU, RAM, storage, availability, Wi-Fi, printers) is warmed up at startup and then served

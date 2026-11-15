@@ -4,7 +4,7 @@
 import { defineAsyncComponent } from 'vue'
 import {
   LayoutGrid, PieChart, Cpu, Timer, ArrowDownUp, Bell, CircleX, MapPin, ScrollText,
-  Grid3x3, LineChart, Cable, Image, Map, StickyNote, Server, Thermometer, Fan, HardDrive, MemoryStick, Activity, ShieldCheck, AppWindow, HeartPulse, TriangleAlert, Plug, BatteryCharging, Printer, Wifi, Network, ServerCog, HardDriveDownload, Workflow, Rows3,
+  Grid3x3, LineChart, Cable, Image, Map, StickyNote, Server, Thermometer, Fan, HardDrive, MemoryStick, Activity, ShieldCheck, AppWindow, HeartPulse, TriangleAlert, Plug, BatteryCharging, Printer, Wifi, Network, ServerCog, HardDriveDownload, Workflow, Rows3, Gauge,
 } from 'lucide-vue-next'
 import { session } from '../api'
 import { SENSOR_LABELS } from '../rrdmeta'
@@ -342,6 +342,24 @@ export const WIDGETS = {
       RANGE_FIELD,
       { key: 'stats', label: t('Afficher actuel / moyenne / max'), type: 'bool', default: true },
       { key: 'scale', label: t('Afficher l\'échelle (axes)'), type: 'bool', default: true },
+    ],
+  },
+  'port-counter': {
+    label: t('Compteur de port'), icon: Gauge, desc: t('Tuile du débit actuel d\'un port : entrant / sortant (ou descendant / montant), utilisation et tendance.'),
+    w: 4, h: 6, minH: 4, component: W('WPortCounter'),
+    fields: [
+      { key: 'device', label: t('Équipement'), type: 'device', required: true },
+      { key: 'port', label: t('Port'), type: 'port', required: true, depends: 'device' },
+      { key: 'mode', label: t('Affichage'), type: 'select', default: 'tiles', options: [
+        { v: 'tiles', l: t('Tuiles avec tendance') }, { v: 'line', l: t('Ligne compacte') }, { v: 'rings', l: t('Jauges d\'utilisation') },
+      ] },
+      { key: 'labels', label: t('Libellés'), type: 'select', default: 'inout', options: [
+        { v: 'inout', l: t('Entrant / sortant') }, { v: 'dlul', l: t('Descendant / montant') },
+      ] },
+      { key: 'swap', label: t('Inverser le sens'), type: 'bool', default: false, help: t('Utile pour un port côté LAN d\'une box : son sortant est votre descendant.') },
+      { key: 'unit', label: t('Unité'), type: 'select', default: 'bits', options: [{ v: 'bits', l: t('bits/s') }, { v: 'bytes', l: t('octets/s') }] },
+      { key: 'spark', label: t('Courbe de tendance (tuiles)'), type: 'bool', default: true },
+      { ...RANGE_FIELD, label: t('Période de la tendance'), default: '-6h' },
     ],
   },
   graph: {
