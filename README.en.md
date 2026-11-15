@@ -118,7 +118,7 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   from RRD), LibreNMS services, ports with errors, availability / SLA (24 h to 1 year, outages), aggregated
   network traffic, disk storage, RAM and CPU, interactive RRD graph, port traffic, LibreNMS graph, geographic
   map, diagram, rack (one rack or a whole room, scaled to the widget size, traffic popup when
-  hovering cables), notes, web page (sandboxed iframe).
+  hovering cables, color legend), notes, web page (sandboxed iframe).
   Aggregated data (CPU, RAM, storage, availability, Wi-Fi, printers) is warmed up at startup and then served
   from a cache refreshed in the background; `AGG_CONCURRENCY` (default 6) limits concurrent requests to
   LibreNMS. A dashboard's owner is the XUI session username: in "token" mode, it is the name typed at sign-in
@@ -138,7 +138,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   virtual network ports for devices without physical ports (ping-monitored), whose status follows reachability.
   Port-to-port cabling in two clicks, including
   between racks and to patch panels: color, type (copper, fiber, DAC, power), length, label; cables shown by their
-  color or by status / load, traffic popup on hover, cable list exportable to CSV. Undo / redo (Ctrl+Z / Ctrl+Y).
+  color or by status / load (per-room custom thresholds and colors, as for diagrams, with a legend), traffic popup
+  on hover, cable list exportable to CSV. Undo / redo (Ctrl+Z / Ctrl+Y).
   Shared like diagrams. Storage:
   `./data/racks.json`.
 - **Devices**: cards / table, filters (status, OS, type, location, group), SNMP v1/v2c/v3 or ICMP onboarding.

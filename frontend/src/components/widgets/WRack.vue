@@ -2,12 +2,15 @@
   <div v-if="error" class="empty small"><Rows3 /><div>{{ error }}</div></div>
   <div v-else-if="!room" class="skeleton" :style="{ height: `${size.h}px` }"></div>
   <div v-else class="wr" :style="{ height: `${size.h}px` }">
+    <div class="wr-racks" :style="{ height: `${size.h - (legendOn ? LEGEND_H : 0)}px` }">
     <RackView :room="shown" :dev-by-id="devById" :ports-by-dev="portsByDev" :port-by-id="portById" :zoom="zoom"
       :cable-view="config.cables || 'real'" @open="openItem" @hover="onHover" @unhover="onUnhover" @cable="onCable" @select="hover = null" />
     <!-- hors du cadre du widget (sinon la fenêtre serait coupée) : positionnée par rapport à la fenêtre du navigateur -->
     <Teleport to="body">
       <div v-if="hover && hoverInfo" class="wr-pop"><LinkHover :link="hoverInfo" :x="hover.x" :y="hover.y" :pinned="hover.pinned" @close="hover = null" /></div>
     </Teleport>
+    </div>
+    <ScaleLegend v-if="legendOn" class="wr-legend" :view="room.view" />
     <router-link :to="`/racks/${room.id}`" class="btn ghost sm icon open" :title="t('Ouvrir la salle')"><Maximize2 :size="14" /></router-link>
   </div>
 </template>
@@ -18,6 +21,7 @@ import { useRouter } from 'vue-router'
 import { Rows3, Maximize2 } from 'lucide-vue-next'
 import RackView from '../RackView.vue'
 import LinkHover from '../LinkHover.vue'
+import ScaleLegend from '../ScaleLegend.vue'
 import { rackApi } from '../../api'
 import { D } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
@@ -59,13 +63,16 @@ const portsByDev = computed(() => {
   return Object.fromEntries([...ids].map((id) => [id, physPorts(ports.value, id)]))
 })
 
+// légende des couleurs de câbles (échelle réglée dans les paramètres de la salle), en affichage « État »
+const LEGEND_H = 24
+const legendOn = computed(() => props.config.cables === 'state' && (shown.value?.cables.length || 0) > 0)
 // mise à l'échelle pour tenir dans le widget (dimensions d'une baie : cadre, montants, façade 19")
 const zoom = computed(() => {
   const racks = shown.value?.racks || []
   if (!racks.length) return 1
   const w = racks.length * (FACE_W + 76) + (racks.length - 1) * 26 + 8
   const h = Math.max(...racks.map((r) => r.units)) * UH + 70
-  return Math.max(0.25, Math.min(1.5, (props.size.w - 8) / w, (props.size.h - 8) / h))
+  return Math.max(0.25, Math.min(1.5, (props.size.w - 8) / w, (props.size.h - 8 - (legendOn.value ? LEGEND_H : 0)) / h))
 })
 // fenêtre de trafic d'un câble : survol = graphe, clic = fenêtre épinglée avec liens vers les ports
 const { cableInfo } = cableHelpers(shown, devById, portById)
@@ -94,7 +101,9 @@ function openItem(it) {
 </script>
 
 <style scoped>
-.wr { position: relative; display: flex; justify-content: center; }
+.wr { position: relative; display: flex; flex-direction: column; }
+.wr-racks { display: flex; justify-content: center; overflow: hidden; }
+.wr-legend { justify-content: center; padding-top: 6px; font-size: 10.5px; }
 .wr :deep(.rv-scroll) { padding: 0; overflow: hidden; }
 .wr-pop { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
 .wr :deep(.rack) { box-shadow: none; }

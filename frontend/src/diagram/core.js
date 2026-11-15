@@ -162,3 +162,18 @@ export function lldpLinksBetween(links, nodes) {
 
 let n = 0
 export const uid = () => `${Date.now().toString(36)}${(n++).toString(36)}${Math.random().toString(36).slice(2, 5)}`
+
+// --- formulaire d'échelle de couleurs (schémas, baies) : copie modifiable <-> champs enregistrés
+const copySteps = (l) => l.map((s) => ({ ...s }))
+export function scaleForm(view = {}) {
+  const sc = colorScale(view)
+  return {
+    colorMode: sc.mode, downColor: sc.down,
+    utilSteps: copySteps(colorScale({ ...view, colorMode: 'util' }).steps), rateSteps: copySteps(colorScale({ ...view, colorMode: 'rate' }).steps),
+  }
+}
+export function scaleFields(f) {
+  const clean = (l) => l.map((s, i) => ({ min: i === 0 ? 0 : Math.max(0, +s.min || 0), color: s.color })).sort((a, b) => a.min - b.min)
+  return { colorMode: f.colorMode, utilSteps: clean(f.utilSteps), rateSteps: clean(f.rateSteps), downColor: f.downColor }
+}
+export const defaultSteps = (mode) => copySteps(mode === 'rate' ? DEFAULT_RATE_STEPS : DEFAULT_UTIL_STEPS)

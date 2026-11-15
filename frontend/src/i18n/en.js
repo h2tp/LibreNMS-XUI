@@ -1186,4 +1186,8 @@ export default {
   "{n} — toutes les baies": "{n} — all racks",
   "Ouvrir la salle": "Open room",
   "Baie introuvable (supprimée ou non partagée)": "Rack not found (deleted or not shared)",
+  "Couleur des câbles (affichage « État ») selon": "Cable color (\"Status\" view) by",
+  "Câbles :": "Cables:",
+  "gris : câble passif": "grey: passive cable",
+  "Modifier la légende": "Edit legend",
 }

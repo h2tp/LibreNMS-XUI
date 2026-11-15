@@ -154,6 +154,10 @@
           <span><i class="off"></i>{{ t('déconnecté') }}</span><span><i class="adm"></i>{{ t('désactivé') }}</span>
           <span v-if="!editing" class="faint">{{ t('Clic sur un équipement : sa fiche · clic sur un port : sa page') }}</span>
         </div>
+        <ScaleLegend v-if="cableView === 'state' && room.cables.length" :view="room.view" :label="t('Câbles :')">
+          <span class="faint">{{ t('gris : câble passif') }}</span>
+          <button v-if="room.can_edit" class="btn ghost sm lg-edit" @click="openSettings"><Settings :size="12" /> {{ t('Modifier la légende') }}</button>
+        </ScaleLegend>
       </div>
     </div>
     <div v-if="room && room.cables.length" class="card mt">
@@ -177,6 +181,8 @@
             <option value="read">{{ t('Partagé en lecture — visible par tous') }}</option>
             <option value="edit">{{ t('Partagé en écriture — modifiable par tous') }}</option>
           </select></div>
+        <div class="hr"></div>
+        <ColorScaleEditor :form="sform" :disabled="!room.can_edit" :title="t('Couleur des câbles (affichage « État ») selon')" />
         <div v-if="room.mine" class="hr"></div>
         <div v-if="room.mine" class="row wrap"><button class="btn sm danger" @click="removeRoom"><Trash2 :size="13" /> {{ t('Supprimer cette salle') }}</button></div>
       </div>
@@ -205,7 +211,9 @@ import { uid } from '../diagram/core'
 import { PASSIVE, KIND_LABEL, CABLE_TYPES, cableHelpers, dragPayload, fits, firstFree, topUsed, physPorts } from '../rack/core'
 import { clock, useLoader } from '../refresh'
 import { devName, devStatus, timeAgo, toast, toastError, confirmAction, prefs, save, fmtBits, fmtSpeed } from '../utils'
-import { linkState } from '../diagram/core'
+import { scaleForm, scaleFields } from '../diagram/core'
+import ColorScaleEditor from '../components/ColorScaleEditor.vue'
+import ScaleLegend from '../components/ScaleLegend.vue'
 import { t } from '../i18n'
 
 const ACCESS = { private: t('Privé'), read: t('Partagé (lecture)'), edit: t('Partagé (écriture)') }
@@ -487,14 +495,17 @@ function openItem(it) {
 
 // --------------------------------------------------------------- paramètres
 const settingsOpen = ref(false)
-const sform = reactive({ name: '', location: '', access: 'private' })
-function openSettings() { Object.assign(sform, { name: room.value.name, location: room.value.location || '', access: room.value.access }); settingsOpen.value = true }
+const sform = reactive({ name: '', location: '', access: 'private', colorMode: 'util', utilSteps: [], rateSteps: [], downColor: '' })
+function openSettings() {
+  Object.assign(sform, { name: room.value.name, location: room.value.location || '', access: room.value.access, ...scaleForm(room.value.view || {}) })
+  settingsOpen.value = true
+}
 async function saveSettings() {
   try {
-    const body = { name: sform.name.trim(), location: sform.location.trim() }
+    const body = { name: sform.name.trim(), location: sform.location.trim(), view: scaleFields(sform) }
     if (room.value.mine) body.access = sform.access
     const d = await rackApi.update(room.value.id, body)
-    Object.assign(room.value, { name: d.name, location: d.location, access: d.access })
+    Object.assign(room.value, { name: d.name, location: d.location, access: d.access, view: d.view })
     settingsOpen.value = false
     toast(t('Paramètres enregistrés'), 'success')
   } catch (e) { toastError(e) }
@@ -543,6 +554,7 @@ onBeforeUnmount(() => {
 .pico.shelf { background: transparent; border-width: 0 0 3px; border-radius: 0; }
 .pico.custom { background: color-mix(in srgb, var(--accent) 40%, #1e293b); }
 .rack-card { position: relative; padding: 10px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.lg-edit { padding: 2px 8px; font-size: 11px; }
 .cview button { padding: 5px 10px; font-size: 12px; }
 .ends { display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); }
 .ends .faint { display: inline-block; width: 14px; font-weight: 700; }

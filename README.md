@@ -119,7 +119,7 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   services LibreNMS, ports en erreur, disponibilité / SLA (24 h à 1 an, coupures), trafic réseau cumulé,
   stockage des disques, mémoire RAM et CPU, graphique RRD interactif, trafic d'un port, graphique LibreNMS,
   carte géographique, schéma, baie (une baie ou toute une salle, ajustée à la taille du widget, fenêtre de trafic
-  au survol des câbles), notes,
+  au survol des câbles, légende des couleurs), notes,
   page web (iframe sandboxée).
   Les données agrégées (CPU, RAM, stockage, disponibilité, Wi-Fi, imprimantes) sont préchauffées au démarrage
   puis servies depuis un cache rafraîchi en arrière-plan ; `AGG_CONCURRENCY` (6 par défaut) limite les
@@ -142,7 +142,8 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   équipements (0 à 4) pour câbler les PDU ; ports réseau virtuels pour les équipements sans port physique (supervisés
   par ping), dont l'état suit la joignabilité. Câblage port à port en deux clics,
   y compris entre baies et vers les panneaux de brassage : couleur, type (cuivre, fibre, DAC, alimentation), longueur,
-  étiquette ; câbles affichés selon leur couleur ou leur état / charge, fenêtre de trafic au survol, liste des câbles
+  étiquette ; câbles affichés selon leur couleur ou leur état / charge (paliers et couleurs réglables par salle, comme
+  pour les schémas, avec légende), fenêtre de trafic au survol, liste des câbles
   exportable en CSV. Annuler / rétablir (Ctrl+Z / Ctrl+Y). Partage comme les schémas. Stockage : `./data/racks.json`.
 - **Équipements** : cartes / tableau, filtres (état, OS, type, emplacement, groupe), ajout SNMP v1/v2c/v3 ou ICMP.
 - **Fiche équipement** : vue d'ensemble (jauges CPU / RAM / disque / dispo, photos avec légendes et plein écran),

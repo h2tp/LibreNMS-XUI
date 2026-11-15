@@ -646,10 +646,17 @@ def _clean_diagram(body: dict, d: dict) -> None:
             "showRates": bool(v.get("showRates", True)), "showPorts": bool(v.get("showPorts", True)),
             "bgOpacity": _num(v.get("bgOpacity"), 0.05, 1, 0.6),
             "bgW": _num(v.get("bgW"), 0, 20000, 0), "bgH": _num(v.get("bgH"), 0, 20000, 0),
-            "colorMode": "rate" if v.get("colorMode") == "rate" else "util",
-            "utilSteps": _color_steps(v.get("utilSteps"), 100), "rateSteps": _color_steps(v.get("rateSteps"), 1e7),
-            "downColor": _hex(v.get("downColor")) or None,
+            **_color_view(v),
         }
+
+
+def _color_view(v: dict) -> dict:
+    """Échelle de couleurs des liens (schémas, câbles des baies) : mode, paliers, couleur « coupé »."""
+    return {
+        "colorMode": "rate" if v.get("colorMode") == "rate" else "util",
+        "utilSteps": _color_steps(v.get("utilSteps"), 100), "rateSteps": _color_steps(v.get("rateSteps"), 1e7),
+        "downColor": _hex(v.get("downColor")) or None,
+    }
 
 
 _HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -873,6 +880,8 @@ def _rack_save(data: dict) -> None:
 
 
 def _clean_room(body: dict, d: dict) -> None:
+    if "view" in body and isinstance(body["view"], dict):
+        d["view"] = _color_view(body["view"])
     if "location" in body:
         d["location"] = _txt(body.get("location"), 120)
     if "racks" in body:
