@@ -201,7 +201,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ChevronLeft, Pencil, Check, Settings, Loader2, CircleCheck, CircleAlert, Plus, Server, Box, Rows3, Trash2, ExternalLink,
@@ -249,6 +249,12 @@ async function load() {
     d.racks ||= []; d.items ||= []; d.cables ||= []
     room.value = d
     base = snap(); undoStack.value = []; redoStack.value = []
+    // arrivée depuis le widget : baie demandée sélectionnée et amenée à l'écran
+    const want = route.query.rack
+    if (want && d.racks.some((r) => r.id === want)) {
+      selected.value = { type: 'rack', id: want }
+      nextTick(() => document.querySelector(`[data-rack="${CSS.escape(want)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }))
+    }
     document.title = `${d.name} · ${t('Baies')} · LibreNMS XUI`
   } catch (e) { error.value = e.message }
 }

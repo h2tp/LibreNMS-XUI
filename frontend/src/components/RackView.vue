@@ -2,8 +2,8 @@
   <div class="rv-scroll">
     <div ref="rv" class="rv" :class="{ cabling: cableMode }" :style="{ zoom }" @mousemove="onMove" @mouseleave="cursor = null">
       <div ref="refEl" class="rv-ref"></div>
-      <div v-for="r in room.racks" :key="r.id" class="rack" :class="{ sel: selected?.type === 'rack' && selected.id === r.id }">
-        <div class="rack-head" @click="$emit('select', { type: 'rack', id: r.id })">
+      <div v-for="r in room.racks" :key="r.id" class="rack" :class="{ sel: selected?.type === 'rack' && selected.id === r.id }" :data-rack="r.id">
+        <div class="rack-head" :title="headTitle" @click="$emit('select', { type: 'rack', id: r.id })">
           <b class="ellipsis">{{ r.name || t('Baie') }}</b><span class="faint">{{ r.units }}U</span>
           <span class="grow"></span><span class="faint small">{{ t('{n} U libres', { n: free(r) }) }}</span>
         </div>
@@ -58,6 +58,7 @@ import { t } from '../i18n'
 const props = defineProps({
   room: Object, devById: Object, portsByDev: Object, portById: { type: Object, default: () => ({}) }, editing: Boolean, selected: Object,
   zoom: { type: Number, default: 1 }, cableMode: Boolean, cableFrom: Object, cableView: { type: String, default: 'real' },
+  headTitle: String,
 })
 const emit = defineEmits(['select', 'drop', 'open', 'invalid', 'socket', 'cable', 'hover', 'unhover', 'bend', 'straighten', 'replug'])
 

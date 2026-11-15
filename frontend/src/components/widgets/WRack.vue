@@ -4,7 +4,7 @@
   <div v-else class="wr" :style="{ height: `${size.h}px` }">
     <div class="wr-racks" :style="{ height: `${size.h - (legendOn ? LEGEND_H : 0)}px` }">
     <RackView :room="shown" :dev-by-id="devById" :ports-by-dev="portsByDev" :port-by-id="portById" :zoom="zoom"
-      :cable-view="config.cables || 'real'" @open="openItem" @hover="onHover" @unhover="onUnhover" @cable="onCable" @select="hover = null" />
+      :cable-view="config.cables || 'real'" :head-title="t('Ouvrir la baie')" @open="openItem" @hover="onHover" @unhover="onUnhover" @cable="onCable" @select="onSelect" />
     <!-- hors du cadre du widget (sinon la fenêtre serait coupée) : positionnée par rapport à la fenêtre du navigateur -->
     <Teleport to="body">
       <div v-if="hover && hoverInfo" class="wr-pop"><LinkHover :link="hoverInfo" :x="hover.x" :y="hover.y" :pinned="hover.pinned" @close="hover = null" /></div>
@@ -94,6 +94,11 @@ const onScroll = () => { if (hover.value && !hover.value.pinned) hover.value = n
 onMounted(() => { window.addEventListener('keydown', onKey); window.addEventListener('mousedown', onDown); window.addEventListener('scroll', onScroll, true) })
 onBeforeUnmount(() => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onDown); window.removeEventListener('scroll', onScroll, true) })
 
+// clic sur le nom d'une baie : page de la salle, baie mise en évidence
+function onSelect(s) {
+  hover.value = null
+  if (s?.type === 'rack') router.push({ path: `/racks/${room.value.id}`, query: { rack: s.id } })
+}
 function openItem(it) {
   const d = it.device_id && devById.value[it.device_id]
   if (d) router.push(`/device/${encodeURIComponent(d.hostname)}`)
