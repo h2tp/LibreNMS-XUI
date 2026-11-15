@@ -250,8 +250,12 @@ async function load() {
     room.value = d
     base = snap(); undoStack.value = []; redoStack.value = []
     // arrivée depuis le widget : baie demandée sélectionnée et amenée à l'écran
-    const want = route.query.rack
-    if (want && d.racks.some((r) => r.id === want)) {
+    const want = route.query.rack; const wantItem = route.query.item
+    if (wantItem && d.items.some((i) => i.id === wantItem)) {
+      // arrivée depuis la fiche d'un équipement : élément sélectionné et amené à l'écran
+      selected.value = { type: 'item', id: wantItem }
+      nextTick(() => document.querySelector(`[data-item="${CSS.escape(wantItem)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }))
+    } else if (want && d.racks.some((r) => r.id === want)) {
       selected.value = { type: 'rack', id: want }
       nextTick(() => document.querySelector(`[data-rack="${CSS.escape(want)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }))
     }

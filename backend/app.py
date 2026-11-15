@@ -1004,6 +1004,20 @@ async def rack_list(request: Request):
     return {"items": items, "user": user}
 
 
+@app.get("/xui/racks/by-device/{device_id}")
+async def rack_by_device(device_id: int, request: Request):
+    """Emplacements d'un équipement dans les baies visibles : salle complète + baie et élément concernés."""
+    user = _require(request)["user"]
+    out = []
+    for d in _rack_load()["rooms"]:
+        if not _dash_visible(d, user):
+            continue
+        for it in d.get("items", []):
+            if it.get("kind") == "device" and it.get("device_id") == device_id:
+                out.append({"room": _dash_view(d, user), "rack": it["rack"], "item": it["id"]})
+    return out
+
+
 @app.get("/xui/racks/{room_id}")
 async def rack_get(room_id: str, request: Request):
     user = _require(request)["user"]

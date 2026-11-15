@@ -4,16 +4,16 @@
       <div ref="refEl" class="rv-ref"></div>
       <div v-for="r in room.racks" :key="r.id" class="rack" :class="{ sel: selected?.type === 'rack' && selected.id === r.id }" :data-rack="r.id">
         <div class="rack-head" :title="headTitle" @click="$emit('select', { type: 'rack', id: r.id })">
-          <b class="ellipsis">{{ r.name || t('Baie') }}</b><span class="faint">{{ r.units }}U</span>
-          <span class="grow"></span><span class="faint small">{{ t('{n} U libres', { n: free(r) }) }}</span>
+          <b class="ellipsis">{{ r.name || t('Baie') }}</b><span class="faint">{{ r.offset !== undefined ? r.label : `${r.units}U` }}</span>
+          <span class="grow"></span><span v-if="r.offset === undefined" class="faint small">{{ t('{n} U libres', { n: free(r) }) }}</span>
         </div>
         <div class="frame">
-          <div class="rail"><span v-for="u in r.units" :key="u" :style="{ height: `${UH}px` }">{{ r.units - u + 1 }}</span></div>
+          <div class="rail"><span v-for="u in r.units" :key="u" :style="{ height: `${UH}px` }">{{ r.units - u + 1 + (r.offset || 0) }}</span></div>
           <div class="slots" :style="{ height: `${r.units * UH}px`, width: `${FACE_W}px`, backgroundSize: `100% ${UH}px` }"
             @dragover.prevent="over(r, $event)" @dragleave="leave(r, $event)" @drop.prevent="drop(r)" @click.self="$emit('select', null)">
             <div v-if="preview && preview.rack === r.id" class="preview" :class="{ bad: !preview.ok }"
               :style="{ top: `${(r.units - (preview.u + preview.h - 1)) * UH}px`, height: `${preview.h * UH}px` }"></div>
-            <div v-for="it in itemsOf(r)" :key="it.id" class="slot-item"
+            <div v-for="it in itemsOf(r)" :key="it.id" class="slot-item" :data-item="it.id"
               :class="{ sel: selected?.type === 'item' && selected.id === it.id, editing, dim: dragId === it.id }"
               :style="{ top: `${(r.units - (it.u + it.h - 1)) * UH + 1}px`, height: `${it.h * UH - 2}px` }"
               :draggable="editing && !cableMode" @dragstart="startMove(it, $event)" @dragend="endDrag" @click.stop="onItemClick(it, $event)">
@@ -21,7 +21,7 @@
                 :cable-mode="cableMode" :cabled="cabled" :highlight="highlight" @socket="(e) => $emit('socket', e)" />
             </div>
           </div>
-          <div class="rail"><span v-for="u in r.units" :key="u" :style="{ height: `${UH}px` }">{{ r.units - u + 1 }}</span></div>
+          <div class="rail"><span v-for="u in r.units" :key="u" :style="{ height: `${UH}px` }">{{ r.units - u + 1 + (r.offset || 0) }}</span></div>
         </div>
       </div>
       <div v-if="!room.racks.length" class="empty small">{{ t('Aucune baie dans cette salle.') }}</div>

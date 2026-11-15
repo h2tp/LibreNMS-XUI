@@ -8,6 +8,7 @@
         </dl>
       </div>
       <DevicePhotos :device="device" />
+      <DeviceRack :device="device" />
       <div class="card" v-if="device.sysDescr">
         <div class="card-title"><FileText :size="17" /> {{ t('Description système') }}</div>
         <div class="small muted mono" style="word-break:break-word">{{ device.sysDescr }}</div>
@@ -99,6 +100,7 @@ import MiniMap from '../../components/MiniMap.vue'
 import DeviceTraffic from '../../components/DeviceTraffic.vue'
 import WSwitches from '../../components/widgets/WSwitches.vue'
 import DevicePhotos from '../../components/DevicePhotos.vue'
+import DeviceRack from '../../components/DeviceRack.vue'
 import { api, pick, safeList, L } from '../../api'
 import { useLoader } from '../../refresh'
 import { loadHealth } from '../../health'

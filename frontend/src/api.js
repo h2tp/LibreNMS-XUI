@@ -147,4 +147,5 @@ export const rackApi = {
   create: (body) => request('/xui/racks', { method: 'POST', body }),
   update: (id, body) => request(`/xui/racks/${enc(id)}`, { method: 'PUT', body }),
   remove: (id) => request(`/xui/racks/${enc(id)}`, { method: 'DELETE' }),
+  byDevice: (deviceId) => request(`/xui/racks/by-device/${enc(deviceId)}`),
 }

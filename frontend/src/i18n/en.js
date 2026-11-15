@@ -1208,4 +1208,5 @@ export default {
   "Couleur des équipements en ligne": "Color of online devices",
   "État (vert)": "Status (green)",
   "Latence (vert → rouge)": "Latency (green → red)",
+  "Aucun câble déclaré pour cet équipement.": "No cable declared for this device.",
 }
