@@ -8,9 +8,10 @@ import { ref, watch } from 'vue'
 import DataTable from './DataTable.vue'
 import { api, pick } from '../api'
 import { useLoader } from '../refresh'
+import { t } from '../i18n'
 const props = defineProps({
   path: String, params: Object, listKey: String, columns: Array, transform: Function, filename: String, rowClick: Function,
-  emptyText: { type: String, default: 'Aucune donnée' }, pageSize: { type: Number, default: 50 }, auto: { type: Boolean, default: true },
+  emptyText: { type: String, default: t('Aucune donnée') }, pageSize: { type: Number, default: 50 }, auto: { type: Boolean, default: true },
 })
 const emit = defineEmits(['loaded'])
 const rows = ref([])

@@ -79,9 +79,9 @@
     <LinkHover v-if="hover && hoverData" :link="hoverData" :x="hover.x" :y="hover.y" :pinned="hover.pinned" @close="closePopup" />
 
     <div class="zoom">
-      <button class="btn ghost sm icon" title="Zoom +" @click="zoomBy(0.8)"><ZoomIn /></button>
-      <button class="btn ghost sm icon" title="Zoom −" @click="zoomBy(1.25)"><ZoomOut /></button>
-      <button class="btn ghost sm icon" title="Ajuster à l'écran" @click="fit()"><Maximize /></button>
+      <button class="btn ghost sm icon" :title="t('Zoom +')" @click="zoomBy(0.8)"><ZoomIn /></button>
+      <button class="btn ghost sm icon" :title="t('Zoom −')" @click="zoomBy(1.25)"><ZoomOut /></button>
+      <button class="btn ghost sm icon" :title="t('Ajuster à l\'écran')" @click="fit()"><Maximize /></button>
     </div>
   </div>
 </template>
@@ -94,6 +94,7 @@ import { linkState, nodeStatus } from '../diagram/core'
 import { diagApi } from '../api'
 import LinkHover from './LinkHover.vue'
 import { devName, fmtBits, fmtSpeed, osIcon, statusLabel } from '../utils'
+import { t } from '../i18n'
 
 const props = defineProps({
   diagram: Object, live: Object, editing: Boolean, tool: { type: String, default: 'select' },
@@ -126,11 +127,11 @@ const drawnNodes = computed(() => (props.diagram?.nodes || []).map((n) => {
   const d = n.kind === 'device' ? props.live.devById.value[n.device_id] : null
   const status = nodeStatus(n, props.live.devById.value)
   const boxed = n.kind === 'device' || n.kind === 'custom' // rendu en carte (équipement LibreNMS ou élément libre)
-  const full = n.label || (d ? devName(d) : n.kind === 'device' ? `#${n.device_id}` : n.kind === 'cloud' ? 'Internet' : n.kind === 'custom' ? 'Élément' : 'Texte')
+  const full = n.label || (d ? devName(d) : n.kind === 'device' ? `#${n.device_id}` : n.kind === 'cloud' ? t('Internet') : n.kind === 'custom' ? t('Élément') : t('Texte'))
   const mode = boxed && n.image && (n.display === 'icon' || n.display === 'image') ? n.display : 'card'
   // largeur utile : carte = de x -34 au badge d'alerte (≈ 106 px) ; image seule = 170 px ; nuage ≈ 110 px
   const name = n.kind === 'text' ? full : fitText(full, mode === 'image' ? 170 : n.kind === 'cloud' ? 110 : 106, 13, 700)
-  const sub = d ? fitText(d.hardware || d.os || d.hostname || '', 106, 10.5) : n.kind === 'device' ? 'équipement inconnu'
+  const sub = d ? fitText(d.hardware || d.os || d.hostname || '', 106, 10.5) : n.kind === 'device' ? t('équipement inconnu')
     : n.kind === 'custom' ? fitText(n.sub || '', mode === 'image' ? 170 : 106, 10.5) : ''
   return {
     ...n, raw: n, name, sub, status, mode, boxed, img: mode !== 'card' ? diagApi.imgUrl(n.image) : null,
@@ -164,7 +165,7 @@ const drawnLinks = computed(() => (props.diagram?.links || []).map((l) => {
   const rp = pa || pb; const rdev = rp && props.live.devById.value[rp.device_id]
   const info = {
     titleA: `${nameA}${pa ? ` (${pa.ifName})` : ''}`, titleB: `${devB ? devName(devB) : B.label || 'B'}${pb ? ` (${pb.ifName})` : ''}`, nameA,
-    status: st.known ? (st.down ? 'Lien coupé' : `${fmtSpeed(st.speed)} · charge ${Math.round(st.util)} % · ↓ ${fmtBits(st.rin)} ↑ ${fmtBits(st.rout)}`) : 'Ports non renseignés : état inconnu',
+    status: st.known ? (st.down ? t('Lien coupé') : `${fmtSpeed(st.speed)} · charge ${Math.round(st.util)} % · ↓ ${fmtBits(st.rin)} ↑ ${fmtBits(st.rout)}`) : t('Ports non renseignés : état inconnu'),
     host: rdev?.hostname || null, portId: rp ? +rp.port_id : null, flip: !pa && !!pb,
     // liens vers les fiches des ports (affichés quand la fenêtre est épinglée)
     ports: [[pa, A, devA], [pb, B, devB]].filter(([p]) => p).map(([p, n, dv]) => ({

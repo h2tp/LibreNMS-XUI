@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import { session } from './api'
+import { t, locale, lang } from './i18n'
 
 export function fmtBits(v, digits = 1) {
   if (v === null || v === undefined || isNaN(v)) return '—'
@@ -10,7 +11,9 @@ export function fmtBits(v, digits = 1) {
 }
 export function fmtBytes(v, digits = 1, base = 1024) {
   if (v === null || v === undefined || isNaN(v)) return '—'
-  const u = base === 1024 ? ['o', 'Kio', 'Mio', 'Gio', 'Tio', 'Pio'] : ['o', 'Ko', 'Mo', 'Go', 'To', 'Po']
+  const u = lang === 'en'
+    ? (base === 1024 ? ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'] : ['B', 'KB', 'MB', 'GB', 'TB', 'PB'])
+    : (base === 1024 ? ['o', 'Kio', 'Mio', 'Gio', 'Tio', 'Pio'] : ['o', 'Ko', 'Mo', 'Go', 'To', 'Po'])
   let i = 0; let x = Math.abs(+v)
   while (x >= base && i < u.length - 1) { x /= base; i++ }
   return `${x.toFixed(i === 0 ? 0 : digits)} ${u[i]}`
@@ -32,7 +35,7 @@ export function fmtUptime(sec) {
   sec = +sec
   if (!sec) return '—'
   const d = Math.floor(sec / 86400); const h = Math.floor((sec % 86400) / 3600); const m = Math.floor((sec % 3600) / 60)
-  if (d) return `${d} j ${h} h`
+  if (d) return `${d} ${t('j')} ${h} h`
   if (h) return `${h} h ${m} min`
   return `${m} min`
 }
@@ -44,18 +47,18 @@ export function toDate(v) {
 }
 export function fmtDate(v) {
   const d = toDate(v)
-  return d ? d.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' }) : '—'
+  return d ? d.toLocaleString(locale, { dateStyle: 'short', timeStyle: 'medium' }) : '—'
 }
 export function timeAgo(v) {
   const d = toDate(v)
   if (!d) return '—'
   const s = Math.round((Date.now() - d.getTime()) / 1000)
   const abs = Math.abs(s)
-  const f = (n, u) => (s >= 0 ? `il y a ${n} ${u}` : `dans ${n} ${u}`)
+  const f = (n, u) => (s >= 0 ? t('il y a {n} {u}', { n, u }) : t('dans {n} {u}', { n, u }))
   if (abs < 60) return f(abs, 's')
   if (abs < 3600) return f(Math.round(abs / 60), 'min')
   if (abs < 86400) return f(Math.round(abs / 3600), 'h')
-  if (abs < 86400 * 30) return f(Math.round(abs / 86400), 'j')
+  if (abs < 86400 * 30) return f(Math.round(abs / 86400), t('j'))
   return fmtDate(v)
 }
 export function pct(a, b) { a = +a; b = +b; return b ? Math.round((a / b) * 1000) / 10 : 0 }
@@ -70,7 +73,7 @@ export function devStatus(d) {
   if (+d.ignore) return 'ignored'
   return +d.status ? 'up' : 'down'
 }
-export const statusLabel = { up: 'En ligne', down: 'Hors ligne', disabled: 'Désactivé', ignored: 'Ignoré', unknown: 'Inconnu', warning: 'Alerte', ok: 'OK', critical: 'Critique' }
+export const statusLabel = { up: t('En ligne'), down: t('Hors ligne'), disabled: t('Désactivé'), ignored: t('Ignoré'), unknown: t('Inconnu'), warning: t('Alerte'), ok: 'OK', critical: t('Critique') }
 
 export function portStatus(p) {
   if (!p) return 'unknown'
@@ -145,7 +148,7 @@ export const prefs = reactive({
 
 export const RANGES = [
   { v: '-1h', l: '1 h' }, { v: '-6h', l: '6 h' }, { v: '-1d', l: '24 h' },
-  { v: '-7d', l: '7 j' }, { v: '-30d', l: '30 j' }, { v: '-1y', l: '1 an' },
+  { v: '-7d', l: t('7 j') }, { v: '-30d', l: t('30 j') }, { v: '-1y', l: t('1 an') },
 ]
 
 export const reducedMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches

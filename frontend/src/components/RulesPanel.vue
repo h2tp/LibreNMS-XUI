@@ -1,35 +1,35 @@
 <template>
   <div class="card">
     <DataTable :rows="rows" :columns="cols" :loading="loading" :error="error" row-key="id" filename="regles.csv" :row-click="session.read_only ? null : openEdit">
-      <template #tools><button v-if="!session.read_only" class="btn sm primary" @click="openEdit(null)"><Plus /> Nouvelle règle</button></template>
+      <template #tools><button v-if="!session.read_only" class="btn sm primary" @click="openEdit(null)"><Plus /> {{ t('Nouvelle règle') }}</button></template>
       <template #c-severity="{ row }"><span class="badge" :class="severityClass(row.severity)">{{ row.severity }}</span></template>
-      <template #c-disabled="{ row }"><span class="badge" :class="+row.disabled ? 'disabled' : 'ok'">{{ +row.disabled ? 'Désactivée' : 'Active' }}</span></template>
+      <template #c-disabled="{ row }"><span class="badge" :class="+row.disabled ? 'disabled' : 'ok'">{{ +row.disabled ? t('Désactivée') : t('Active') }}</span></template>
       <template #c-rule="{ row }"><code class="small ellipsis" style="display:block;max-width:420px">{{ row.rule || row.query }}</code></template>
       <template #c-actions="{ row }">
         <div v-if="!session.read_only" class="row" style="gap:4px" @click.stop>
-          <button class="btn sm icon ghost" :title="+row.disabled ? 'Activer' : 'Désactiver'" @click="toggle(row)"><Power /></button>
-          <button class="btn sm icon ghost danger" title="Supprimer" @click="remove(row)"><Trash2 /></button>
+          <button class="btn sm icon ghost" :title="+row.disabled ? t('Activer') : t('Désactiver')" @click="toggle(row)"><Power /></button>
+          <button class="btn sm icon ghost danger" :title="t('Supprimer')" @click="remove(row)"><Trash2 /></button>
         </div>
       </template>
     </DataTable>
 
-    <Modal v-if="edit" :title="edit.id ? 'Modifier la règle' : 'Nouvelle règle d\'alerte'" :icon="ListChecks" wide @close="edit = null">
+    <Modal v-if="edit" :title="edit.id ? t('Modifier la règle') : t('Nouvelle règle d\'alerte')" :icon="ListChecks" wide @close="edit = null">
       <div class="form-grid">
-        <label class="field full"><span>Nom *</span><input v-model="edit.name" class="input" /></label>
-        <label class="field"><span>Sévérité</span><select v-model="edit.severity" class="input"><option value="ok">ok</option><option value="warning">warning</option><option value="critical">critical</option></select></label>
-        <label class="field"><span>Appliquer à</span>
-          <select v-model="edit.scope" class="input"><option value="all">Tous les équipements</option><option value="devices">Équipements choisis</option><option value="groups">Groupes choisis</option></select></label>
-        <label v-if="edit.scope === 'devices'" class="field full"><span>Équipements</span>
+        <label class="field full"><span>{{ t('Nom *') }}</span><input v-model="edit.name" class="input" /></label>
+        <label class="field"><span>{{ t('Sévérité') }}</span><select v-model="edit.severity" class="input"><option value="ok">ok</option><option value="warning">warning</option><option value="critical">critical</option></select></label>
+        <label class="field"><span>{{ t('Appliquer à') }}</span>
+          <select v-model="edit.scope" class="input"><option value="all">{{ t('Tous les équipements') }}</option><option value="devices">{{ t('Équipements choisis') }}</option><option value="groups">{{ t('Groupes choisis') }}</option></select></label>
+        <label v-if="edit.scope === 'devices'" class="field full"><span>{{ t('Équipements') }}</span>
           <select v-model="edit.devices" multiple class="input" size="6"><option v-for="d in devList" :key="d.device_id" :value="+d.device_id">{{ devName(d) }}</option></select></label>
-        <label v-if="edit.scope === 'groups'" class="field full"><span>Groupes</span>
+        <label v-if="edit.scope === 'groups'" class="field full"><span>{{ t('Groupes') }}</span>
           <select v-model="edit.groups" multiple class="input" size="5"><option v-for="g in groupList" :key="g.id" :value="+g.id">{{ g.name }}</option></select></label>
 
-        <div class="field full"><span>Conditions</span>
+        <div class="field full"><span>{{ t('Conditions') }}</span>
           <div class="seg" style="align-self:flex-start;margin-bottom:8px">
-            <button :class="{ on: !edit.raw }" @click="edit.raw = false">Assistant</button><button :class="{ on: edit.raw }" @click="toRaw">JSON (QueryBuilder)</button>
+            <button :class="{ on: !edit.raw }" @click="edit.raw = false">{{ t('Assistant') }}</button><button :class="{ on: edit.raw }" @click="toRaw">{{ t('JSON (QueryBuilder)') }}</button>
           </div>
           <template v-if="!edit.raw">
-            <div class="row" style="margin-bottom:8px"><span class="small muted">Combiner avec</span>
+            <div class="row" style="margin-bottom:8px"><span class="small muted">{{ t('Combiner avec') }}</span>
               <div class="seg"><button :class="{ on: edit.condition === 'AND' }" @click="edit.condition = 'AND'">ET</button><button :class="{ on: edit.condition === 'OR' }" @click="edit.condition = 'OR'">OU</button></div></div>
             <div v-for="(c, i) in edit.conds" :key="i" class="row cond">
               <input v-model="c.field" class="input grow mono" list="rule-fields" placeholder="devices.status" />
@@ -38,22 +38,22 @@
               <button class="btn sm icon ghost danger" @click="edit.conds.splice(i, 1)"><X /></button>
             </div>
             <datalist id="rule-fields"><option v-for="f in FIELDS" :key="f" :value="f" /></datalist>
-            <button class="btn sm" @click="edit.conds.push({ field: '', operator: 'equal', value: '' })"><Plus /> Condition</button>
+            <button class="btn sm" @click="edit.conds.push({ field: '', operator: 'equal', value: '' })"><Plus /> {{ t('Condition') }}</button>
           </template>
           <textarea v-else v-model="edit.builderText" class="input" rows="10"></textarea>
         </div>
 
-        <label class="field"><span>Nombre max d'alertes (count)</span><input v-model.number="edit.count" type="number" class="input" /></label>
-        <label class="field"><span>Délai avant alerte</span><input v-model="edit.delay" class="input" placeholder="5m" /></label>
-        <label class="field"><span>Intervalle de ré-alerte</span><input v-model="edit.interval" class="input" placeholder="5m" /></label>
+        <label class="field"><span>{{ t('Nombre max d\'alertes (count)') }}</span><input v-model.number="edit.count" type="number" class="input" /></label>
+        <label class="field"><span>{{ t('Délai avant alerte') }}</span><input v-model="edit.delay" class="input" placeholder="5m" /></label>
+        <label class="field"><span>{{ t('Intervalle de ré-alerte') }}</span><input v-model="edit.interval" class="input" placeholder="5m" /></label>
         <div class="col" style="justify-content:flex-end">
-          <label class="check"><input v-model="edit.mute" type="checkbox" /> Muette (pas de notification)</label>
-          <label class="check"><input v-model="edit.invert" type="checkbox" /> Inverser la règle</label>
-          <label class="check"><input v-model="edit.disabled" type="checkbox" /> Désactivée</label>
+          <label class="check"><input v-model="edit.mute" type="checkbox" /> {{ t('Muette (pas de notification)') }}</label>
+          <label class="check"><input v-model="edit.invert" type="checkbox" /> {{ t('Inverser la règle') }}</label>
+          <label class="check"><input v-model="edit.disabled" type="checkbox" /> {{ t('Désactivée') }}</label>
         </div>
-        <label class="field full"><span>Notes</span><textarea v-model="edit.notes" class="input" rows="2"></textarea></label>
+        <label class="field full"><span>{{ t('Notes') }}</span><textarea v-model="edit.notes" class="input" rows="2"></textarea></label>
       </div>
-      <template #foot><button class="btn" @click="edit = null">Annuler</button><button class="btn primary" @click="save"><Save /> Enregistrer</button></template>
+      <template #foot><button class="btn" @click="edit = null">{{ t('Annuler') }}</button><button class="btn primary" @click="save"><Save /> {{ t('Enregistrer') }}</button></template>
     </Modal>
   </div>
 </template>
@@ -66,11 +66,12 @@ import Modal from './Modal.vue'
 import { session, api, pick, safeList, devicesCached } from '../api'
 import { useLoader } from '../refresh'
 import { devName, severityClass, toast, toastError, confirmAction } from '../utils'
+import { t } from '../i18n'
 
 const OPS = [
   { v: 'equal', l: '=' }, { v: 'not_equal', l: '≠' }, { v: 'less', l: '<' }, { v: 'less_or_equal', l: '≤' }, { v: 'greater', l: '>' }, { v: 'greater_or_equal', l: '≥' },
-  { v: 'contains', l: 'contient' }, { v: 'not_contains', l: 'ne contient pas' }, { v: 'begins_with', l: 'commence par' }, { v: 'ends_with', l: 'finit par' },
-  { v: 'regex', l: 'regex' }, { v: 'not_regex', l: 'pas regex' }, { v: 'in', l: 'dans' }, { v: 'is_null', l: 'est nul' }, { v: 'is_not_null', l: 'non nul' },
+  { v: 'contains', l: t('contient') }, { v: 'not_contains', l: t('ne contient pas') }, { v: 'begins_with', l: t('commence par') }, { v: 'ends_with', l: t('finit par') },
+  { v: 'regex', l: 'regex' }, { v: 'not_regex', l: t('pas regex') }, { v: 'in', l: t('dans') }, { v: 'is_null', l: t('est nul') }, { v: 'is_not_null', l: t('non nul') },
 ]
 const FIELDS = [
   'macros.device_down', 'macros.device_up', 'macros.port_down', 'macros.port_up', 'macros.port_usage_perc', 'macros.state_sensor_critical', 'macros.sensor',
@@ -84,7 +85,7 @@ const devList = ref([])
 const groupList = ref([])
 const edit = ref(null)
 const cols = [
-  { key: 'name', label: 'Nom' }, { key: 'severity', label: 'Sévérité' }, { key: 'disabled', label: 'État' }, { key: 'rule', label: 'Règle' }, { key: 'actions', label: '', sortable: false },
+  { key: 'name', label: t('Nom') }, { key: 'severity', label: t('Sévérité') }, { key: 'disabled', label: t('État') }, { key: 'rule', label: t('Règle') }, { key: 'actions', label: '', sortable: false },
 ]
 
 const { loading, error, reload } = useLoader(async () => {
@@ -121,7 +122,7 @@ async function save() {
   const e = edit.value
   let builder
   try { builder = e.raw ? JSON.parse(e.builderText) : buildFromConds(e) } catch { return toastError('JSON invalide') }
-  if (!e.name) return toastError('Nom requis')
+  if (!e.name) return toastError(t('Nom requis'))
   const body = {
     name: e.name, severity: e.severity, disabled: e.disabled ? 1 : 0, builder: JSON.stringify(builder),
     devices: e.scope === 'devices' ? e.devices : [-1], groups: e.scope === 'groups' ? e.groups : [],
@@ -130,19 +131,19 @@ async function save() {
   try {
     if (e.id) await api.put('rules', { ...body, rule_id: e.id })
     else await api.post('rules', body)
-    toast('Règle enregistrée', 'success'); edit.value = null; reload()
+    toast(t('Règle enregistrée'), 'success'); edit.value = null; reload()
   } catch (err) { toastError(err) }
 }
 async function toggle(r) {
   const extra = parseJSON(r.extra, {})
   try {
     await api.put('rules', { rule_id: r.id, name: r.name, severity: r.severity, builder: typeof r.builder === 'string' ? r.builder : JSON.stringify(r.builder), disabled: +r.disabled ? 0 : 1, devices: parseJSON(r.devices, [-1]), groups: parseJSON(r.groups, []), ...extra })
-    toast(+r.disabled ? 'Règle activée' : 'Règle désactivée', 'success'); reload()
+    toast(+r.disabled ? t('Règle activée') : t('Règle désactivée'), 'success'); reload()
   } catch (e) { toastError(e) }
 }
 async function remove(r) {
-  if (!confirmAction(`Supprimer la règle « ${r.name} » ?`)) return
-  try { await api.del(`rules/${r.id}`); toast('Règle supprimée', 'success'); reload() } catch (e) { toastError(e) }
+  if (!confirmAction(t('Supprimer la règle « {n} » ?', { n: r.name }))) return
+  try { await api.del(`rules/${r.id}`); toast(t('Règle supprimée'), 'success'); reload() } catch (e) { toastError(e) }
 }
 </script>
 <style scoped>

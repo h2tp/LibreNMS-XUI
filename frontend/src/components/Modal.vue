@@ -11,6 +11,7 @@
 </template>
 <script setup>
 import { X } from 'lucide-vue-next'
+import { t } from '../i18n'
 defineProps({ title: String, icon: Object, wide: Boolean })
 defineEmits(['close'])
 </script>

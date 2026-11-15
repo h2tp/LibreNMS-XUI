@@ -4,6 +4,7 @@ import { safeList } from '../api'
 import { D, cached } from '../dashboard/data'
 import { useLoader } from '../refresh'
 import { devStatus, portUtil } from '../utils'
+import { t } from '../i18n'
 
 export const lldpLinks = () => cached('lldp', () => safeList('resources/links', null, 'links'), 60000)
 

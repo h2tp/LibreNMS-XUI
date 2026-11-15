@@ -7,8 +7,8 @@
       </div>
       <slot name="tools" />
       <div class="grow"></div>
-      <span class="muted small">{{ filtered.length }} élément{{ filtered.length > 1 ? 's' : '' }}</span>
-      <button v-if="exportable && filtered.length" class="btn sm" title="Exporter en CSV" @click="exportCsv"><Download /> CSV</button>
+      <span class="muted small">{{ filtered.length > 1 ? t('{n} éléments', { n: filtered.length }) : t('{n} élément', { n: filtered.length }) }}</span>
+      <button v-if="exportable && filtered.length" class="btn sm" :title="t('Exporter en CSV')" @click="exportCsv"><Download /> CSV</button>
     </div>
 
     <div v-if="loading && !rows.length" class="col">
@@ -53,6 +53,7 @@
 import { ref, computed, watch } from 'vue'
 import { Search, Download, Inbox, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { downloadCSV } from '../utils'
+import { t } from '../i18n'
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -61,8 +62,8 @@ const props = defineProps({
   error: String,
   searchable: { type: Boolean, default: true },
   exportable: { type: Boolean, default: true },
-  placeholder: { type: String, default: 'Filtrer…' },
-  emptyText: { type: String, default: 'Aucune donnée' },
+  placeholder: { type: String, default: t('Filtrer…') },
+  emptyText: { type: String, default: t('Aucune donnée') },
   pageSize: { type: Number, default: 50 },
   rowKey: String,
   rowClick: Function,

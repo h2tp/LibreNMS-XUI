@@ -9,8 +9,8 @@
     <aside class="sidebar" :class="{ collapsed: !prefs.sidebar, mobile: isMobile }">
       <div class="brand">
         <div class="brand-logo"><Activity :size="20" color="#fff" /></div>
-        <div class="brand-text">LibreNMS <span class="grad-text">XUI</span><small>Supervision réseau</small></div>
-        <button v-if="isMobile" class="btn ghost icon sb-close" title="Fermer le menu" @click="closeSidebar"><X /></button>
+        <div class="brand-text">{{ t('LibreNMS') }} <span class="grad-text">XUI</span><small>{{ t('Supervision réseau') }}</small></div>
+        <button v-if="isMobile" class="btn ghost icon sb-close" :title="t('Fermer le menu')" @click="closeSidebar"><X /></button>
       </div>
       <nav class="nav">
         <template v-for="sec in nav" :key="sec.title">
@@ -25,26 +25,27 @@
 
     <div class="main">
       <header class="topbar">
-        <button class="btn ghost icon" title="Menu" @click="toggleSidebar"><PanelLeft /></button>
+        <button class="btn ghost icon" :title="t('Menu')" @click="toggleSidebar"><PanelLeft /></button>
         <div class="searchbox" @click="paletteOpen = true">
-          <Search :size="16" /><span>Rechercher équipement, port, IP…</span><span class="kbd">Ctrl K</span>
+          <Search :size="16" /><span>{{ t('Rechercher équipement, port, IP…') }}</span><span class="kbd">{{ t('Ctrl K') }}</span>
         </div>
         <div class="grow"></div>
-        <span v-if="session.read_only" class="badge warning" title="Modifications désactivées"><Lock :size="12" /> Lecture seule</span>
-        <div class="row small muted nowrap refresh-ctl" title="Rafraîchissement automatique">
+        <span v-if="session.read_only" class="badge warning" :title="t('Modifications désactivées')"><Lock :size="12" /> {{ t('Lecture seule') }}</span>
+        <div class="row small muted nowrap refresh-ctl" :title="t('Rafraîchissement automatique')">
           <RefreshCw :size="15" :class="{ spin: spinning }" @click="manualRefresh" style="cursor:pointer" />
           <select v-model.number="prefs.refresh" class="input" style="padding:5px 8px" @change="save('refresh', prefs.refresh)">
-            <option :value="0">Manuel</option><option :value="15">15 s</option><option :value="30">30 s</option>
+            <option :value="0">{{ t('Manuel') }}</option><option :value="15">15 s</option><option :value="30">30 s</option>
             <option :value="60">1 min</option><option :value="300">5 min</option>
           </select>
         </div>
-        <button class="btn ghost icon" :title="prefs.theme === 'dark' ? 'Thème clair' : 'Thème sombre'" @click="toggleTheme">
+        <button class="btn ghost icon" :title="prefs.theme === 'dark' ? t('Thème clair') : t('Thème sombre')" @click="toggleTheme">
           <Sun v-if="prefs.theme === 'dark'" /><Moon v-else />
         </button>
-        <a v-if="session.librenms_url" class="btn ghost icon" :href="session.librenms_url" target="_blank" title="Ouvrir LibreNMS"><ExternalLink /></a>
+        <a v-if="session.librenms_url" class="btn ghost icon" :href="session.librenms_url" target="_blank" :title="t('Ouvrir LibreNMS')"><ExternalLink /></a>
+        <LangSwitch />
         <div v-if="session.auth_mode !== 'none'" class="row">
-          <span class="user-chip" :title="session.role ? `Rôle : ${({ admin: 'administrateur LibreNMS', 'global-read': 'lecture globale LibreNMS', local: 'compte local XUI' })[session.role] || session.role}` : ''"><UserRound :size="15" />{{ session.user }}</span>
-          <button class="btn ghost icon" title="Déconnexion" @click="logout"><LogOut /></button>
+          <span class="user-chip" :title="session.role ? t('Rôle : {r}', { r: ({ admin: t('administrateur LibreNMS'), 'global-read': t('lecture globale LibreNMS'), local: t('compte local XUI') })[session.role] || session.role }) : ''"><UserRound :size="15" />{{ session.user }}</span>
+          <button class="btn ghost icon" :title="t('Déconnexion')" @click="logout"><LogOut /></button>
         </div>
       </header>
 
@@ -62,11 +63,11 @@
 
   <div class="toasts">
     <transition-group name="toast">
-      <div v-for="t in toasts" :key="t.id" class="toast" :class="t.type">
-        <CircleCheck v-if="t.type === 'success'" :size="18" color="var(--green)" />
-        <CircleAlert v-else-if="t.type === 'error'" :size="18" color="var(--red)" />
+      <div v-for="ts in toasts" :key="ts.id" class="toast" :class="ts.type">
+        <CircleCheck v-if="ts.type === 'success'" :size="18" color="var(--green)" />
+        <CircleAlert v-else-if="ts.type === 'error'" :size="18" color="var(--red)" />
         <Info v-else :size="18" color="var(--accent)" />
-        <span>{{ t.message }}</span>
+        <span>{{ ts.message }}</span>
       </div>
     </transition-group>
   </div>
@@ -85,32 +86,34 @@ import { clock, refreshNow } from './refresh'
 import router from './router'
 import Login from './views/Login.vue'
 import CommandPalette from './components/CommandPalette.vue'
+import LangSwitch from './components/LangSwitch.vue'
+import { t } from './i18n'
 
 const nav = [
-  { title: 'Supervision', items: [
-    { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
-    { to: '/devices', label: 'Équipements', icon: Server },
-    { to: '/ports', label: 'Ports', icon: Network },
-    { to: '/health', label: 'Santé & capteurs', icon: Thermometer },
-    { to: '/alerts', label: 'Alertes', icon: Bell },
-    { to: '/logs', label: 'Journaux', icon: ScrollText },
+  { title: t('Supervision'), items: [
+    { to: '/', label: t('Tableau de bord'), icon: LayoutDashboard },
+    { to: '/devices', label: t('Équipements'), icon: Server },
+    { to: '/ports', label: t('Ports'), icon: Network },
+    { to: '/health', label: t('Santé & capteurs'), icon: Thermometer },
+    { to: '/alerts', label: t('Alertes'), icon: Bell },
+    { to: '/logs', label: t('Journaux'), icon: ScrollText },
   ] },
-  { title: 'Visualisation', items: [
-    { to: '/map', label: 'Carte', icon: Map },
-    { to: '/topology', label: 'Topologie', icon: Share2 },
-    { to: '/diagrams', label: 'Schémas', icon: Workflow },
+  { title: t('Visualisation'), items: [
+    { to: '/map', label: t('Carte'), icon: Map },
+    { to: '/topology', label: t('Topologie'), icon: Share2 },
+    { to: '/diagrams', label: t('Schémas'), icon: Workflow },
   ] },
-  { title: 'Inventaire', items: [
-    { to: '/groups', label: 'Groupes', icon: Boxes },
-    { to: '/locations', label: 'Emplacements', icon: MapPin },
-    { to: '/services', label: 'Services', icon: HeartPulse },
-    { to: '/routing', label: 'Routage', icon: Route },
-    { to: '/resources', label: 'Ressources IP/MAC', icon: Database },
-    { to: '/bills', label: 'Facturation', icon: Receipt },
+  { title: t('Inventaire'), items: [
+    { to: '/groups', label: t('Groupes'), icon: Boxes },
+    { to: '/locations', label: t('Emplacements'), icon: MapPin },
+    { to: '/services', label: t('Services'), icon: HeartPulse },
+    { to: '/routing', label: t('Routage'), icon: Route },
+    { to: '/resources', label: t('Ressources IP/MAC'), icon: Database },
+    { to: '/bills', label: t('Facturation'), icon: Receipt },
   ] },
-  { title: 'Administration', items: [
-    { to: '/system', label: 'Système', icon: Settings2 },
-    { to: '/explorer', label: 'Explorateur API', icon: Code2 },
+  { title: t('Administration'), items: [
+    { to: '/system', label: t('Système'), icon: Settings2 },
+    { to: '/explorer', label: t('Explorateur API'), icon: Code2 },
   ] },
 ]
 

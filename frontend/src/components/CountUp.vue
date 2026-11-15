@@ -5,6 +5,7 @@ const props = defineProps({ value: { type: Number, default: 0 }, duration: { typ
 const cur = ref(0)
 let raf = null
 import { reducedMotion } from '../utils'
+import { locale } from '../i18n'
 function animate(from, to) {
   cancelAnimationFrame(raf)
   if (reducedMotion) { cur.value = to; return }
@@ -19,5 +20,5 @@ function animate(from, to) {
 }
 onMounted(() => animate(0, props.value || 0))
 watch(() => props.value, (v, o) => animate(o || 0, v || 0))
-const text = computed(() => (props.value === null || props.value === undefined || isNaN(props.value) ? '—' : cur.value.toLocaleString('fr-FR', { maximumFractionDigits: props.decimals, minimumFractionDigits: props.decimals })))
+const text = computed(() => (props.value === null || props.value === undefined || isNaN(props.value) ? '—' : cur.value.toLocaleString(locale, { maximumFractionDigits: props.decimals, minimumFractionDigits: props.decimals })))
 </script>

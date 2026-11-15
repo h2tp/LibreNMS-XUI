@@ -42,6 +42,7 @@ import { D, devicesFor, cached } from '../../dashboard/data'
 import { interpretState } from '../../dashboard/states'
 import { useLoader } from '../../refresh'
 import { devName } from '../../utils'
+import { locale } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const printers = ref([]); const sensors = ref([]); const devById = ref({}); const loaded = ref(false)
@@ -97,7 +98,7 @@ const cards = computed(() => {
   }).filter((c) => !props.config.onlyAlarm || c.st !== 'ok').sort((a, b) => RANK[a.st] - RANK[b.st] || a.name.localeCompare(b.name))
 })
 
-const fmtN = (v) => Math.round(v).toLocaleString('fr-FR')
+const fmtN = (v) => Math.round(v).toLocaleString(locale)
 const link = (c) => `/device/${encodeURIComponent(c.hostname)}/health`
 
 // Pages imprimées sur 30 jours = écart du compteur total dans son RRD

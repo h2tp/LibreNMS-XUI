@@ -11,7 +11,7 @@
             <div class="row wrap">
               <h1 class="hero-title">{{ devName(device) }}</h1>
               <span class="badge" :class="st"><span class="dot" :class="st"></span>{{ statusLabel[st] }}</span>
-              <span v-if="maintenance" class="badge warning"><Wrench :size="12" /> Maintenance</span>
+              <span v-if="maintenance" class="badge warning"><Wrench :size="12" /> {{ t('Maintenance') }}</span>
               <span v-if="device.status_reason && st === 'down'" class="badge down">{{ device.status_reason }}</span>
             </div>
             <div class="row wrap small muted" style="gap:14px">
@@ -25,18 +25,18 @@
           </div>
           <div class="grow"></div>
           <div class="row wrap">
-            <button class="btn" title="Rafraîchir" @click="reload()"><RefreshCw :class="{ spin: loading }" /></button>
+            <button class="btn" :title="t('Rafraîchir')" @click="reload()"><RefreshCw :class="{ spin: loading }" /></button>
             <template v-if="!session.read_only">
-              <button class="btn" @click="rediscover"><ScanSearch /> Redécouvrir</button>
-              <button class="btn" @click="tab = 'settings'"><Settings /> Gérer</button>
+              <button class="btn" @click="rediscover"><ScanSearch /> {{ t('Redécouvrir') }}</button>
+              <button class="btn" @click="tab = 'settings'"><Settings /> {{ t('Gérer') }}</button>
             </template>
-            <a class="btn" :href="`${session.librenms_url}/device/device=${device.device_id}/`" target="_blank"><ExternalLink /> LibreNMS</a>
+            <a class="btn" :href="`${session.librenms_url}/device/device=${device.device_id}/`" target="_blank"><ExternalLink /> {{ t('LibreNMS') }}</a>
           </div>
         </div>
       </div>
 
       <div class="tabs mt">
-        <button v-for="t in tabs" :key="t.id" :class="{ on: tab === t.id }" @click="tab = t.id"><component :is="t.icon" />{{ t.label }}</button>
+        <button v-for="tb in tabs" :key="tb.id" :class="{ on: tab === tb.id }" @click="tab = tb.id"><component :is="tb.icon" />{{ tb.label }}</button>
       </div>
 
       <transition name="fade" mode="out-in">
@@ -58,6 +58,7 @@ import {
 import { session, api, L, rrd } from '../api'
 import { useLoader } from '../refresh'
 import { devName, devStatus, statusLabel, osIcon, fmtUptime, toast, toastError } from '../utils'
+import { t } from '../i18n'
 
 const A = (f) => defineAsyncComponent(f)
 const comps = {
@@ -77,20 +78,20 @@ const comps = {
   settings: A(() => import('./device/DevSettings.vue')),
 }
 const tabs = computed(() => [
-  { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard },
-  { id: 'ports', label: 'Ports', icon: Network },
-  { id: 'health', label: 'Santé', icon: HeartPulse },
-  { id: 'graphs', label: 'Graphiques', icon: LineChart },
-  { id: 'inventory', label: 'Inventaire', icon: Boxes },
-  { id: 'network', label: 'Réseau', icon: Share2 },
-  { id: 'routing', label: 'Routage', icon: Route },
-  { id: 'services', label: 'Services', icon: Activity },
-  { id: 'alerts', label: 'Alertes', icon: Bell },
-  { id: 'logs', label: 'Journaux', icon: ScrollText },
-  { id: 'availability', label: 'Disponibilité', icon: Clock },
-  { id: 'components', label: 'Composants', icon: Puzzle },
-  { id: 'config', label: 'Configuration', icon: FileCode2 },
-  ...(session.read_only ? [] : [{ id: 'settings', label: 'Gestion', icon: Cog }]),
+  { id: 'overview', label: t('Vue d\'ensemble'), icon: LayoutDashboard },
+  { id: 'ports', label: t('Ports'), icon: Network },
+  { id: 'health', label: t('Santé'), icon: HeartPulse },
+  { id: 'graphs', label: t('Graphiques'), icon: LineChart },
+  { id: 'inventory', label: t('Inventaire'), icon: Boxes },
+  { id: 'network', label: t('Réseau'), icon: Share2 },
+  { id: 'routing', label: t('Routage'), icon: Route },
+  { id: 'services', label: t('Services'), icon: Activity },
+  { id: 'alerts', label: t('Alertes'), icon: Bell },
+  { id: 'logs', label: t('Journaux'), icon: ScrollText },
+  { id: 'availability', label: t('Disponibilité'), icon: Clock },
+  { id: 'components', label: t('Composants'), icon: Puzzle },
+  { id: 'config', label: t('Configuration'), icon: FileCode2 },
+  ...(session.read_only ? [] : [{ id: 'settings', label: t('Gestion'), icon: Cog }]),
 ])
 
 const route = useRoute()
@@ -108,7 +109,7 @@ const st = computed(() => devStatus(device.value))
 
 const { loading, error, reload } = useLoader(async ({ silent }) => {
   const d = await L.device(host.value)
-  if (!d) throw new Error(`Équipement « ${host.value} » introuvable`)
+  if (!d) throw new Error(t('Équipement « {h} » introuvable', { h: host.value }))
   device.value = d
   if (!silent || !files.value.length) {
     if (session.rrd) files.value = (await rrd.list(d.hostname).catch(() => ({ files: [] }))).files.map((f) => f.name)
@@ -117,7 +118,7 @@ const { loading, error, reload } = useLoader(async ({ silent }) => {
 })
 
 async function rediscover() {
-  try { const r = await api.get(`devices/${L.enc(device.value.hostname)}/discover`); toast(r.message || 'Redécouverte planifiée', 'success') } catch (e) { toastError(e) }
+  try { const r = await api.get(`devices/${L.enc(device.value.hostname)}/discover`); toast(r.message || t('Redécouverte planifiée'), 'success') } catch (e) { toastError(e) }
 }
 </script>
 

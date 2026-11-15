@@ -71,6 +71,7 @@ import Modal from '../components/Modal.vue'
 import { session, api, pick, safeList, devicesCached, rrd, L } from '../api'
 import { useLoader } from '../refresh'
 import { timeAgo, devName, portStatus, fmtBits, fmtSpeed, fmtNum, fmtUptime, prefs, toast, toastError } from '../utils'
+import { locale } from '../i18n'
 
 const route = useRoute()
 const fmtMac = (m) => (m && m.length === 12 ? m.match(/../g).join(':') : m || '—')
@@ -98,7 +99,7 @@ const details = computed(() => {
     ['ifIndex', p.ifIndex], ['ifDescr', p.ifDescr], ['ifName', p.ifName], ['ifAlias', p.ifAlias], ['Type', p.ifType], ['Vitesse', fmtSpeed(p.ifSpeed)],
     ['Duplex', p.ifDuplex], ['MTU', p.ifMtu], ['MAC', mac], ['VLAN', p.ifVlan], ['Trunk', p.ifTrunk], ['État admin', p.ifAdminStatus], ['État opérationnel', p.ifOperStatus],
     ['Dernier changement', device.value && p.ifLastChange ? `il y a ${fmtUptime(device.value.uptime - p.ifLastChange / 100)}` : null],
-    ['Octets in / out', `${fmtNum(p.ifInOctets)} / ${fmtNum(p.ifOutOctets)}`], ['Dernier polling', p.poll_time ? new Date(p.poll_time * 1000).toLocaleString('fr-FR') : null],
+    ['Octets in / out', `${fmtNum(p.ifInOctets)} / ${fmtNum(p.ifOutOctets)}`], ['Dernier polling', p.poll_time ? new Date(p.poll_time * 1000).toLocaleString(locale) : null],
   ].filter(([, v]) => v !== null && v !== undefined && v !== '')
 })
 

@@ -1,28 +1,28 @@
 <template>
   <div>
     <div class="page-head">
-      <div><h1>Équipements</h1><div class="sub">{{ filtered.length }} / {{ devices.length }} équipements</div></div>
+      <div><h1>{{ t('Équipements') }}</h1><div class="sub">{{ t('{a} / {b} équipements', { a: filtered.length, b: devices.length }) }}</div></div>
       <div class="right">
         <div class="seg">
-          <button :class="{ on: prefs.devView === 'cards' }" @click="setView('cards')"><LayoutGrid /> Cartes</button>
-          <button :class="{ on: prefs.devView === 'table' }" @click="setView('table')"><List /> Tableau</button>
+          <button :class="{ on: prefs.devView === 'cards' }" @click="setView('cards')"><LayoutGrid /> {{ t('Cartes') }}</button>
+          <button :class="{ on: prefs.devView === 'table' }" @click="setView('table')"><List /> {{ t('Tableau') }}</button>
         </div>
-        <button v-if="!session.read_only" class="btn primary" @click="addOpen = true"><Plus /> Ajouter</button>
+        <button v-if="!session.read_only" class="btn primary" @click="addOpen = true"><Plus /> {{ t('Ajouter') }}</button>
       </div>
     </div>
 
     <div class="card mb filters">
       <div class="row wrap">
-        <div class="row search-in grow"><Search :size="15" class="faint" /><input v-model="q" class="input" placeholder="Nom, IP, OS, matériel, numéro de série…" /></div>
+        <div class="row search-in grow"><Search :size="15" class="faint" /><input v-model="q" class="input" :placeholder="t('Nom, IP, OS, matériel, numéro de série…')" /></div>
         <div class="seg">
           <button v-for="s in statuses" :key="s.v" :class="{ on: status === s.v }" @click="status = s.v">
             <span v-if="s.v !== 'all'" class="dot" :class="s.v"></span>{{ s.l }} <span class="faint">{{ statusCount(s.v) }}</span>
           </button>
         </div>
-        <select v-model="os" class="input"><option value="">Tous les OS</option><option v-for="o in osList" :key="o" :value="o">{{ o }}</option></select>
-        <select v-model="dtype" class="input"><option value="">Tous les types</option><option v-for="o in typeList" :key="o" :value="o">{{ o }}</option></select>
-        <select v-model="loc" class="input"><option value="">Tous les emplacements</option><option v-for="o in locList" :key="o" :value="o">{{ o }}</option></select>
-        <select v-model="group" class="input"><option value="">Tous les groupes</option><option v-for="g in groups" :key="g.id" :value="g.name">{{ g.name }}</option></select>
+        <select v-model="os" class="input"><option value="">{{ t('Tous les OS') }}</option><option v-for="o in osList" :key="o" :value="o">{{ o }}</option></select>
+        <select v-model="dtype" class="input"><option value="">{{ t('Tous les types') }}</option><option v-for="o in typeList" :key="o" :value="o">{{ o }}</option></select>
+        <select v-model="loc" class="input"><option value="">{{ t('Tous les emplacements') }}</option><option v-for="o in locList" :key="o" :value="o">{{ o }}</option></select>
+        <select v-model="group" class="input"><option value="">{{ t('Tous les groupes') }}</option><option v-for="g in groups" :key="g.id" :value="g.name">{{ g.name }}</option></select>
       </div>
     </div>
 
@@ -40,14 +40,14 @@
           <span class="badge" :class="devStatus(d)"><span class="dot" :class="devStatus(d)"></span>{{ statusLabel[devStatus(d)] }}</span>
         </div>
         <div class="kv small mt" style="margin-top:14px">
-          <dt>Système</dt><dd class="ellipsis">{{ d.os }} {{ d.version }}</dd>
-          <dt>Matériel</dt><dd class="ellipsis">{{ d.hardware || '—' }}</dd>
-          <dt>Emplacement</dt><dd class="ellipsis">{{ d.location || '—' }}</dd>
-          <dt>Uptime</dt><dd>{{ fmtUptime(d.uptime) }}</dd>
+          <dt>{{ t('Système') }}</dt><dd class="ellipsis">{{ d.os }} {{ d.version }}</dd>
+          <dt>{{ t('Matériel') }}</dt><dd class="ellipsis">{{ d.hardware || '—' }}</dd>
+          <dt>{{ t('Emplacement') }}</dt><dd class="ellipsis">{{ d.location || '—' }}</dd>
+          <dt>{{ t('Uptime') }}</dt><dd>{{ fmtUptime(d.uptime) }}</dd>
         </div>
         <div class="row small muted dev-foot">
-          <span class="row" style="gap:4px" title="Latence ICMP"><Timer :size="13" />{{ d.last_ping_timetaken ? (+d.last_ping_timetaken).toFixed(1) + ' ms' : '—' }}</span>
-          <span class="row" style="gap:4px" title="Dernier polling"><RefreshCw :size="13" />{{ timeAgo(d.last_polled) }}</span>
+          <span class="row" style="gap:4px" :title="t('Latence ICMP')"><Timer :size="13" />{{ d.last_ping_timetaken ? (+d.last_ping_timetaken).toFixed(1) + ' ms' : '—' }}</span>
+          <span class="row" style="gap:4px" :title="t('Dernier polling')"><RefreshCw :size="13" />{{ timeAgo(d.last_polled) }}</span>
           <span class="grow"></span>
           <span class="badge">{{ d.type || 'n/a' }}</span>
         </div>
@@ -67,7 +67,7 @@
     <div v-if="prefs.devView === 'cards' && filtered.length > shown" class="row mt" style="justify-content:center">
       <button class="btn" @click="shown += 60">Afficher plus ({{ filtered.length - shown }} restants)</button>
     </div>
-    <div v-if="!loading && !filtered.length && devices.length" class="empty"><SearchX /><div>Aucun équipement ne correspond aux filtres</div></div>
+    <div v-if="!loading && !filtered.length && devices.length" class="empty"><SearchX /><div>{{ t('Aucun équipement ne correspond aux filtres') }}</div></div>
 
     <AddDevice v-if="addOpen" @close="addOpen = false" @added="reload()" />
   </div>
@@ -83,6 +83,7 @@ import AddDevice from '../components/AddDevice.vue'
 import { session, api, pick, safeList, devicesCached, invalidateDevices } from '../api'
 import { useLoader } from '../refresh'
 import { prefs, save, devName, devStatus, statusLabel, osIcon, fmtUptime, timeAgo } from '../utils'
+import { t } from '../i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -98,7 +99,7 @@ const group = ref(route.query.group || '')
 const addOpen = ref(false)
 const shown = ref(60)
 
-const statuses = [{ v: 'all', l: 'Tous' }, { v: 'up', l: 'En ligne' }, { v: 'down', l: 'Hors ligne' }, { v: 'disabled', l: 'Désactivés' }]
+const statuses = [{ v: 'all', l: t('Tous') }, { v: 'up', l: t('En ligne') }, { v: 'down', l: t('Hors ligne') }, { v: 'disabled', l: t('Désactivés') }]
 const uniq = (k) => computed(() => [...new Set(devices.value.map((d) => d[k]).filter(Boolean))].sort())
 const osList = uniq('os'); const typeList = uniq('type'); const locList = uniq('location')
 
@@ -125,17 +126,17 @@ const filtered = computed(() => {
 const paged = computed(() => filtered.value.slice(0, shown.value))
 
 const cols = [
-  { key: 'hostname', label: 'Équipement', sortValue: devName },
-  { key: 'status', label: 'État', sortValue: devStatus },
+  { key: 'hostname', label: t('Équipement'), sortValue: devName },
+  { key: 'status', label: t('État'), sortValue: devStatus },
   { key: 'ip', label: 'IP', class: 'mono' },
   { key: 'os', label: 'OS' },
-  { key: 'version', label: 'Version' },
-  { key: 'hardware', label: 'Matériel' },
-  { key: 'serial', label: 'N° série', class: 'mono' },
-  { key: 'location', label: 'Emplacement' },
-  { key: 'uptime', label: 'Uptime' },
-  { key: 'last_ping_timetaken', label: 'Latence' },
-  { key: 'last_polled', label: 'Polling' },
+  { key: 'version', label: t('Version') },
+  { key: 'hardware', label: t('Matériel') },
+  { key: 'serial', label: t('N° série'), class: 'mono' },
+  { key: 'location', label: t('Emplacement') },
+  { key: 'uptime', label: t('Uptime') },
+  { key: 'last_ping_timetaken', label: t('Latence') },
+  { key: 'last_polled', label: t('Polling') },
 ]
 
 function setView(v) { prefs.devView = v; save('devView', v) }

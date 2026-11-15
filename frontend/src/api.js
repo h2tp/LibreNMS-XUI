@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { t } from './i18n'
 
 export const session = reactive({ loaded: false, authenticated: false, user: null, auth_mode: 'password', read_only: false, role: '', librenms_url: '', rrd: false })
 
@@ -13,14 +14,14 @@ async function request(url, opts = {}) {
     init.body = JSON.stringify(opts.body)
   }
   let r
-  try { r = await fetch(url, init) } catch (e) { throw new ApiError('Réseau indisponible', 0) }
+  try { r = await fetch(url, init) } catch (e) { throw new ApiError(t('Réseau indisponible'), 0) }
   if (r.status === 401 && !url.startsWith('/xui/login')) {
     session.authenticated = false
   }
   const ct = r.headers.get('content-type') || ''
   const data = ct.includes('json') ? await r.json().catch(() => null) : await r.text()
   if (!r.ok || (data && data.status === 'error')) {
-    const msg = (data && (data.message || data.detail)) || `Erreur HTTP ${r.status}`
+    const msg = (data && (data.message || data.detail)) || t('Erreur HTTP {n}', { n: r.status })
     throw new ApiError(typeof msg === 'string' ? msg : JSON.stringify(msg), r.status)
   }
   return data
@@ -92,7 +93,7 @@ export const diagApi = {
   async setBackground(id, file) {
     const r = await fetch(`/xui/diagrams/${enc(id)}/background`, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file, credentials: 'same-origin' })
     const j = await r.json().catch(() => ({}))
-    if (!r.ok) throw new ApiError(j.detail || `Erreur HTTP ${r.status}`, r.status)
+    if (!r.ok) throw new ApiError(j.detail || t('Erreur HTTP {n}', { n: r.status }), r.status)
     return j
   },
   removeBackground: (id) => request(`/xui/diagrams/${enc(id)}/background`, { method: 'DELETE' }),
@@ -102,7 +103,7 @@ export const diagApi = {
   async uploadImage(file) {
     const r = await fetch('/xui/diagram-images', { method: 'POST', headers: { 'Content-Type': file.type }, body: file, credentials: 'same-origin' })
     const j = await r.json().catch(() => ({}))
-    if (!r.ok) throw new ApiError(j.detail || `Erreur HTTP ${r.status}`, r.status)
+    if (!r.ok) throw new ApiError(j.detail || t('Erreur HTTP {n}', { n: r.status }), r.status)
     return j
   },
   removeImage: (name) => request(`/xui/diagram-images/${enc(name)}`, { method: 'DELETE' }),
@@ -132,7 +133,7 @@ export const photoApi = {
   async add(deviceId, file) {
     const r = await fetch(`/xui/devices/${enc(deviceId)}/photos`, { method: 'POST', headers: { 'Content-Type': file.type }, body: file, credentials: 'same-origin' })
     const j = await r.json().catch(() => ({}))
-    if (!r.ok) throw new ApiError(j.detail || `Erreur HTTP ${r.status}`, r.status)
+    if (!r.ok) throw new ApiError(j.detail || t('Erreur HTTP {n}', { n: r.status }), r.status)
     return j
   },
   edit: (deviceId, name, body) => request(`/xui/devices/${enc(deviceId)}/photos/${enc(name)}`, { method: 'PATCH', body }),

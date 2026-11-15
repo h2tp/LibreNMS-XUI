@@ -5,6 +5,7 @@
 </template>
 <script setup>
 import { RANGES } from '../utils'
+import { t } from '../i18n'
 defineProps({ modelValue: String })
 defineEmits(['update:modelValue'])
 </script>

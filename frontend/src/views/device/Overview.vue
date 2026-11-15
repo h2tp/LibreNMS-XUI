@@ -2,18 +2,18 @@
   <div class="grid ov">
     <div class="col" style="gap:18px">
       <div class="card">
-        <div class="card-title"><Info :size="17" /> Informations</div>
+        <div class="card-title"><Info :size="17" /> {{ t('Informations') }}</div>
         <dl class="kv small">
-          <template v-for="[k, v] in info" :key="k"><dt>{{ k }}</dt><dd :class="{ mono: /IP|Nom d'hôte|Série/.test(k) }">{{ v }}</dd></template>
+          <template v-for="[k, v] in info" :key="k"><dt>{{ k }}</dt><dd :class="{ mono: /IP|Nom d'hôte|Série|Hostname|Serial/.test(k) }">{{ v }}</dd></template>
         </dl>
       </div>
       <DevicePhotos :device="device" />
       <div class="card" v-if="device.sysDescr">
-        <div class="card-title"><FileText :size="17" /> Description système</div>
+        <div class="card-title"><FileText :size="17" /> {{ t('Description système') }}</div>
         <div class="small muted mono" style="word-break:break-word">{{ device.sysDescr }}</div>
       </div>
       <div v-if="device.lat && device.lng" class="card">
-        <div class="card-title"><MapPin :size="17" /> Localisation</div>
+        <div class="card-title"><MapPin :size="17" /> {{ t('Localisation') }}</div>
         <MiniMap :lat="+device.lat" :lng="+device.lng" :status="devStatus(device)" />
       </div>
     </div>
@@ -22,23 +22,23 @@
       <template v-if="isPing">
         <div class="grid g4">
           <div v-for="a in availList" :key="a.d" class="card ring-card">
-            <Ring :value="a.v" :text="a.v !== null ? a.v.toFixed(1) + '%' : '—'" :label="'Dispo. ' + a.label" :colors="availColors(a.v)" />
-            <span class="small muted">{{ a.v === null ? 'pas encore de données' : a.v >= 100 ? 'aucune coupure' : 'indisponible ' + fmtDown(a) }}</span>
+            <Ring :value="a.v" :text="a.v !== null ? a.v.toFixed(1) + '%' : '—'" :label="t('Dispo. ') + a.label" :colors="availColors(a.v)" />
+            <span class="small muted">{{ a.v === null ? t('pas encore de données') : a.v >= 100 ? t('aucune coupure') : 'indisponible ' + fmtDown(a) }}</span>
           </div>
         </div>
         <div class="card">
-          <div class="card-title"><Activity :size="17" /> Latence ICMP <div class="right small muted">actuelle <b class="mono" style="color:var(--text)">{{ fmtNum(device.last_ping_timetaken) }} ms</b></div></div>
+          <div class="card-title"><Activity :size="17" /> {{ t('Latence ICMP') }} <div class="right small muted">actuelle <b class="mono" style="color:var(--text)">{{ fmtNum(device.last_ping_timetaken) }} ms</b></div></div>
           <RrdChart v-if="has('icmp-perf.rrd')" :host="device.hostname" file="icmp-perf.rrd" height="260px" range="-1d" />
-          <div v-else class="empty small">Aucune donnée de latence (icmp-perf.rrd absent)</div>
+          <div v-else class="empty small">{{ t('Aucune donnée de latence (icmp-perf.rrd absent)') }}</div>
         </div>
       </template>
 
       <template v-else>
       <div class="grid g4">
         <div class="card ring-card"><Ring :value="cpu" :label="'CPU'" /><span class="small muted">{{ procs.length }} processeur(s)</span></div>
-        <div class="card ring-card"><Ring :value="mem.pct" label="Mémoire" :colors="['#a78bfa', '#f472b6']" /><span class="small muted">{{ fmtBytes(mem.used) }} / {{ fmtBytes(mem.total) }}</span></div>
-        <div class="card ring-card"><Ring :value="disk.pct" label="Stockage" :colors="['#34d399', '#22d3ee']" /><span class="small muted">{{ fmtBytes(disk.used) }} / {{ fmtBytes(disk.total) }}</span></div>
-        <div class="card ring-card"><Ring :value="avail" :text="avail !== null ? avail.toFixed(1) + '%' : '—'" label="Dispo. 30 j" :colors="availColors(avail)" /><span class="small muted">{{ fmtNum(device.last_ping_timetaken) }} ms ICMP</span></div>
+        <div class="card ring-card"><Ring :value="mem.pct" :label="t('Mémoire')" :colors="['#a78bfa', '#f472b6']" /><span class="small muted">{{ fmtBytes(mem.used) }} / {{ fmtBytes(mem.total) }}</span></div>
+        <div class="card ring-card"><Ring :value="disk.pct" :label="t('Stockage')" :colors="['#34d399', '#22d3ee']" /><span class="small muted">{{ fmtBytes(disk.used) }} / {{ fmtBytes(disk.total) }}</span></div>
+        <div class="card ring-card"><Ring :value="avail" :text="avail !== null ? avail.toFixed(1) + '%' : '—'" :label="t('Dispo. 30 j')" :colors="availColors(avail)" /><span class="small muted">{{ fmtNum(device.last_ping_timetaken) }} ms ICMP</span></div>
       </div>
 
       <div v-if="device.type === 'network' && swCount !== 0" class="card"><WSwitches :config="{ device: device.hostname, embedded: true }" @count="(c) => (swCount = c)" /></div>
@@ -48,15 +48,15 @@
       <!-- tout le contenu de l'onglet Santé (processeurs, mémoire, stockage, capteurs) -->
       <div>
         <div class="row health-head">
-          <HeartPulse :size="18" /><b>Santé</b><span class="grow"></span>
-          <router-link :to="{ name: 'device', params: { host: device.hostname, tab: 'health' } }" class="small">Onglet Santé →</router-link>
+          <HeartPulse :size="18" /><b>{{ t('Santé') }}</b><span class="grow"></span>
+          <router-link :to="{ name: 'device', params: { host: device.hostname, tab: 'health' } }" class="small">{{ t('Onglet Santé →') }}</router-link>
         </div>
         <DevHealth :device="device" :files="files" compact class="health-in" />
       </div>
 
       <div class="card">
-        <div class="card-title"><ArrowDownUp :size="17" /> Ports les plus actifs <div class="right"><router-link :to="{ name: 'device', params: { host: device.hostname, tab: 'ports' } }" class="small">Tous les ports →</router-link></div></div>
-        <div v-if="!topPorts.length" class="empty small">Aucun port</div>
+        <div class="card-title"><ArrowDownUp :size="17" /> {{ t('Ports les plus actifs') }} <div class="right"><router-link :to="{ name: 'device', params: { host: device.hostname, tab: 'ports' } }" class="small">{{ t('Tous les ports →') }}</router-link></div></div>
+        <div v-if="!topPorts.length" class="empty small">{{ t('Aucun port') }}</div>
         <div v-for="p in topPorts" :key="p.port_id" class="tp-row">
           <router-link :to="`/port/${p.port_id}`" class="row" style="color:inherit;min-width:0">
             <span class="dot" :class="portStatus(p)"></span><b class="nowrap">{{ p.ifName }}</b><span class="muted small ellipsis">{{ p.ifAlias }}</span>
@@ -70,20 +70,20 @@
 
       <div class="grid g2">
         <div v-if="isPing" class="card">
-          <RrdChart v-if="has('availability-86400.rrd')" :host="device.hostname" file="availability-86400.rrd" :icon="Activity" title="Disponibilité dans le temps (glissante 24 h)" height="180px" range="-7d" />
-          <div v-else class="empty small">Aucun historique de disponibilité (availability-86400.rrd absent)</div>
+          <RrdChart v-if="has('availability-86400.rrd')" :host="device.hostname" file="availability-86400.rrd" :icon="Activity" :title="t('Disponibilité dans le temps (glissante 24 h)')" height="180px" range="-7d" />
+          <div v-else class="empty small">{{ t('Aucun historique de disponibilité (availability-86400.rrd absent)') }}</div>
         </div>
-        <div v-if="has('poller-perf.rrd')" class="card"><RrdChart :host="device.hostname" file="poller-perf.rrd" :icon="Gauge" height="180px" range="-1d" hide-range :show-stats="false" title="Durée de polling (24 h)" :zoom="false" /></div>
-        <div v-if="has('ucd_load.rrd')" class="card"><RrdChart :host="device.hostname" file="ucd_load.rrd" :icon="Cpu" height="180px" range="-1d" hide-range :show-stats="false" title="Load average (24 h)" :zoom="false" /></div>
-        <div v-else-if="procFile" class="card"><RrdChart :host="device.hostname" :file="procFile" :icon="Cpu" height="180px" range="-1d" hide-range :show-stats="false" title="CPU (24 h)" :zoom="false" /></div>
+        <div v-if="has('poller-perf.rrd')" class="card"><RrdChart :host="device.hostname" file="poller-perf.rrd" :icon="Gauge" height="180px" range="-1d" hide-range :show-stats="false" :title="t('Durée de polling (24 h)')" :zoom="false" /></div>
+        <div v-if="has('ucd_load.rrd')" class="card"><RrdChart :host="device.hostname" file="ucd_load.rrd" :icon="Cpu" height="180px" range="-1d" hide-range :show-stats="false" :title="t('Load average (24 h)')" :zoom="false" /></div>
+        <div v-else-if="procFile" class="card"><RrdChart :host="device.hostname" :file="procFile" :icon="Cpu" height="180px" range="-1d" hide-range :show-stats="false" :title="t('CPU (24 h)')" :zoom="false" /></div>
       </div>
 
       <div class="card">
-        <div class="card-title"><ScrollText :size="17" /> Évènements récents</div>
+        <div class="card-title"><ScrollText :size="17" /> {{ t('Évènements récents') }}</div>
         <div v-for="(e, i) in events" :key="i" class="ev small">
           <span class="mono muted nowrap">{{ fmtDate(e.datetime) }}</span><span class="badge">{{ e.type }}</span><span class="ellipsis">{{ e.message }}</span>
         </div>
-        <div v-if="!events.length" class="empty small">Aucun évènement</div>
+        <div v-if="!events.length" class="empty small">{{ t('Aucun évènement') }}</div>
       </div>
     </div>
   </div>
@@ -103,6 +103,7 @@ import { api, pick, safeList, L } from '../../api'
 import { useLoader } from '../../refresh'
 import { loadHealth } from '../../health'
 import { devStatus, fmtUptime, fmtDate, fmtBytes, fmtBits, fmtNum, timeAgo, portStatus, portUtil, utilColor, availColors } from '../../utils'
+import { t } from '../../i18n'
 
 const props = defineProps({ device: Object, files: Array })
 const enc = L.enc
@@ -127,12 +128,12 @@ const fmtDown = (a) => { const s = Math.round(a.d * (100 - a.v) / 100); return s
 const info = computed(() => {
   const d = props.device
   return [
-    ['Nom d\'hôte', d.hostname], ['sysName', d.sysName], ['IP', d.ip || d.overwrite_ip], ['Type', d.type], ['OS', `${d.os || ''} ${d.version || ''}`],
-    ['Matériel', d.hardware], ['N° de série', d.serial], ['Fonctions', d.features], ['Contact', d.sysContact], ['Emplacement', d.location],
+    [t('Nom d\'hôte'), d.hostname], ['sysName', d.sysName], ['IP', d.ip || d.overwrite_ip], ['Type', d.type], ['OS', `${d.os || ''} ${d.version || ''}`],
+    [t('Matériel'), d.hardware], [t('N° de série'), d.serial], [t('Fonctions'), d.features], [t('Contact'), d.sysContact], [t('Emplacement'), d.location],
     ['Uptime', fmtUptime(d.uptime)], ['Dernier polling', `${timeAgo(d.last_polled)} (${fmtNum(d.last_polled_timetaken)} s)`],
-    ['Dernière découverte', `${timeAgo(d.last_discovered)} (${fmtNum(d.last_discovered_timetaken)} s)`],
-    ['SNMP', d.snmp_disable && +d.snmp_disable ? 'désactivé' : `${d.snmpver || ''} · ${d.transport || 'udp'}:${d.port || 161}`],
-    ['Groupe de pollers', d.poller_group], ['Rôle', d.purpose], ['Notes', d.notes],
+    [t('Dernière découverte'), `${timeAgo(d.last_discovered)} (${fmtNum(d.last_discovered_timetaken)} s)`],
+    ['SNMP', d.snmp_disable && +d.snmp_disable ? t('désactivé') : `${d.snmpver || ''} · ${d.transport || 'udp'}:${d.port || 161}`],
+    [t('Groupe de pollers'), d.poller_group], [t('Rôle'), d.purpose], [t('Notes'), d.notes],
   ].filter(([, v]) => v !== null && v !== undefined && v !== '' && String(v).trim() !== '')
 })
 

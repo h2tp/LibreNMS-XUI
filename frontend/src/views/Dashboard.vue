@@ -3,60 +3,60 @@
     <div class="page-head">
       <div style="min-width:0">
         <h1 class="row" style="gap:10px">
-          <span class="grad-text ellipsis">{{ dash?.name || 'Tableau de bord' }}</span>
-          <button v-if="dash && !editing" class="btn ghost sm icon" :title="isDefault ? 'Tableau par défaut' : 'Définir comme tableau par défaut'" @click="makeDefault">
+          <span class="grad-text ellipsis">{{ dash?.name || t('Tableau de bord') }}</span>
+          <button v-if="dash && !editing" class="btn ghost sm icon" :title="isDefault ? t('Tableau par défaut') : t('Définir comme tableau par défaut')" @click="makeDefault">
             <Star :size="17" :fill="isDefault ? 'var(--yellow)' : 'none'" :color="isDefault ? 'var(--yellow)' : 'currentColor'" />
           </button>
         </h1>
         <div class="sub">
-          {{ system?.local_ver ? `LibreNMS ${system.local_ver}` : 'LibreNMS' }}
+          {{ system?.local_ver ? `LibreNMS ${system.local_ver}` : t('LibreNMS') }}
           <template v-if="dash">
             · <span :title="ACCESS[dash.access].desc"><component :is="ACCESS[dash.access].icon" :size="13" style="vertical-align:-2px" /> {{ ACCESS[dash.access].l }}</span>
-            <template v-if="!dash.mine"> · par {{ dash.owner }}</template>
+            <template v-if="!dash.mine"> · {{ t('par {u}', { u: dash.owner }) }}</template>
           </template>
-          · mis à jour {{ timeAgo(clock.last) }}
+          · {{ t('mis à jour {t}', { t: timeAgo(clock.last) }) }}
         </div>
       </div>
 
       <div class="right">
         <template v-if="!editing">
           <select v-if="list.length > 1" class="input" :value="dash?.id" style="max-width:240px" @change="(e) => open(e.target.value)">
-            <optgroup v-if="mineList.length" label="Mes tableaux de bord">
+            <optgroup v-if="mineList.length" :label="t('Mes tableaux de bord')">
               <option v-for="d in mineList" :key="d.id" :value="d.id">{{ d.id === defaultId ? '★ ' : '' }}{{ d.name }}</option>
             </optgroup>
-            <optgroup v-if="sharedList.length" label="Partagés avec moi">
+            <optgroup v-if="sharedList.length" :label="t('Partagés avec moi')">
               <option v-for="d in sharedList" :key="d.id" :value="d.id">{{ d.id === defaultId ? '★ ' : '' }}{{ d.name }} — {{ d.owner }}</option>
             </optgroup>
           </select>
-          <button class="btn" title="Nouveau tableau de bord" @click="openCreate()"><Plus /> Nouveau</button>
-          <button v-if="dash" class="btn ghost icon" title="Dupliquer ce tableau de bord" @click="openCreate('copy')"><Copy /></button>
-          <button v-if="dash?.can_edit && !mobile" class="btn primary" @click="startEdit"><Pencil /> Personnaliser</button>
+          <button class="btn" :title="t('Nouveau tableau de bord')" @click="openCreate()"><Plus /> {{ t('Nouveau') }}</button>
+          <button v-if="dash" class="btn ghost icon" :title="t('Dupliquer ce tableau de bord')" @click="openCreate('copy')"><Copy /></button>
+          <button v-if="dash?.can_edit && !mobile" class="btn primary" @click="startEdit"><Pencil /> {{ t('Personnaliser') }}</button>
         </template>
         <template v-else>
           <span class="small muted row nowrap">
             <Loader2 v-if="saveState === 'saving'" class="spin" :size="14" />
             <CircleAlert v-else-if="saveState === 'error'" :size="14" color="var(--red)" />
             <CircleCheck v-else :size="14" color="var(--green)" />
-            {{ { saving: 'Enregistrement…', error: 'Échec de l\'enregistrement', saved: 'Enregistré' }[saveState] }}
+            {{ { saving: t('Enregistrement…'), error: t('Échec de l\'enregistrement'), saved: t('Enregistré') }[saveState] }}
           </span>
-          <button class="btn" @click="settingsOpen = true"><Settings /> Paramètres</button>
-          <button class="btn" @click="galleryOpen = true"><Plus /> Ajouter un widget</button>
-          <button class="btn primary" @click="stopEdit"><Check /> Terminer</button>
+          <button class="btn" @click="settingsOpen = true"><Settings /> {{ t('Paramètres') }}</button>
+          <button class="btn" @click="galleryOpen = true"><Plus /> {{ t('Ajouter un widget') }}</button>
+          <button class="btn primary" @click="stopEdit"><Check /> {{ t('Terminer') }}</button>
         </template>
       </div>
     </div>
 
     <div v-if="error" class="err mb">{{ error }}</div>
-    <div v-if="editing" class="edit-hint mb small"><Move :size="15" /> Faites glisser un widget par sa barre de titre, redimensionnez-le par son coin inférieur droit. Les modifications sont enregistrées automatiquement.</div>
+    <div v-if="editing" class="edit-hint mb small"><Move :size="15" /> {{ t('Faites glisser un widget par sa barre de titre, redimensionnez-le par son coin inférieur droit. Les modifications sont enregistrées automatiquement.') }}</div>
 
     <div v-if="loading && !dash" class="grid g3"><div v-for="i in 6" :key="i" class="skeleton" style="height:220px"></div></div>
 
     <div v-else-if="dash && !dash.widgets.length" class="card empty big-empty">
       <LayoutDashboard />
-      <div>Ce tableau de bord est vide.</div>
+      <div>{{ t('Ce tableau de bord est vide.') }}</div>
       <div v-if="dash.can_edit" class="row mt" style="justify-content:center">
-        <button class="btn primary" @click="startEdit(); galleryOpen = true"><Plus /> Ajouter un widget</button>
-        <button class="btn" @click="loadStarter"><Sparkles /> Partir du modèle par défaut</button>
+        <button class="btn primary" @click="startEdit(); galleryOpen = true"><Plus /> {{ t('Ajouter un widget') }}</button>
+        <button class="btn" @click="loadStarter"><Sparkles /> {{ t('Partir du modèle par défaut') }}</button>
       </div>
     </div>
 
@@ -78,13 +78,13 @@
     </GridLayout>
 
     <!-- Galerie de widgets -->
-    <Modal v-if="galleryOpen" title="Ajouter un widget" :icon="Plus" wide @close="galleryOpen = false">
+    <Modal v-if="galleryOpen" :title="t('Ajouter un widget')" :icon="Plus" wide @close="galleryOpen = false">
       <div class="gallery">
         <button v-for="(def, type) in WIDGETS" :key="type" class="gitem" :disabled="!available(type)" @click="pick(type)">
           <div class="gico"><component :is="def.icon" :size="20" /></div>
           <div style="min-width:0">
             <b>{{ def.label }}</b>
-            <div class="small muted">{{ available(type) ? def.desc : 'Nécessite l\'accès aux fichiers RRD.' }}</div>
+            <div class="small muted">{{ available(type) ? def.desc : t('Nécessite l\'accès aux fichiers RRD.') }}</div>
           </div>
         </button>
       </div>
@@ -93,51 +93,51 @@
     <WidgetConfig v-if="cfgEdit" :type="cfgEdit.type" :config="cfgEdit.config" :is-new="cfgEdit.isNew" @close="cfgEdit = null" @save="saveConfig" />
 
     <!-- Paramètres du tableau -->
-    <Modal v-if="settingsOpen && dash" title="Paramètres du tableau de bord" :icon="Settings" @close="settingsOpen = false">
+    <Modal v-if="settingsOpen && dash" :title="t('Paramètres du tableau de bord')" :icon="Settings" @close="settingsOpen = false">
       <div class="col" style="gap:16px">
-        <label class="field"><span>Nom</span><input v-model="form.name" class="input" maxlength="80" @keyup.enter="saveSettings" /></label>
+        <label class="field"><span>{{ t('Nom') }}</span><input v-model="form.name" class="input" maxlength="80" @keyup.enter="saveSettings" /></label>
         <div v-if="dash.mine" class="field">
-          <span>Partage</span>
+          <span>{{ t('Partage') }}</span>
           <label v-for="(a, k) in ACCESS" :key="k" class="check access">
             <input v-model="form.access" type="radio" :value="k" />
             <component :is="a.icon" :size="15" /><span><b>{{ a.l }}</b> <span class="muted small">— {{ a.desc }}</span></span>
           </label>
         </div>
-        <div v-else class="small muted">Tableau de {{ dash.owner }} : seul son propriétaire peut changer le partage ou le supprimer.</div>
+        <div v-else class="small muted">{{ t('Tableau de {u} : seul son propriétaire peut changer le partage ou le supprimer.', { u: dash.owner }) }}</div>
         <div class="hr"></div>
         <div class="row wrap">
-          <button class="btn sm" @click="exportJson"><Download /> Exporter (JSON)</button>
-          <button v-if="dash.mine" class="btn sm danger" @click="removeDash"><Trash2 /> Supprimer ce tableau</button>
+          <button class="btn sm" @click="exportJson"><Download /> {{ t('Exporter (JSON)') }}</button>
+          <button v-if="dash.mine" class="btn sm danger" @click="removeDash"><Trash2 /> {{ t('Supprimer ce tableau') }}</button>
         </div>
       </div>
       <template #foot>
-        <button class="btn" @click="settingsOpen = false">Annuler</button>
-        <button class="btn primary" :disabled="!form.name.trim()" @click="saveSettings"><Check /> Enregistrer</button>
+        <button class="btn" @click="settingsOpen = false">{{ t('Annuler') }}</button>
+        <button class="btn primary" :disabled="!form.name.trim()" @click="saveSettings"><Check /> {{ t('Enregistrer') }}</button>
       </template>
     </Modal>
 
     <!-- Nouveau tableau -->
-    <Modal v-if="createOpen" title="Nouveau tableau de bord" :icon="Plus" @close="createOpen = false">
+    <Modal v-if="createOpen" :title="t('Nouveau tableau de bord')" :icon="Plus" @close="createOpen = false">
       <div class="col" style="gap:16px">
-        <label class="field"><span>Nom</span><input v-model="form.name" class="input" maxlength="80" placeholder="Ex. Cœur de réseau, Salle serveurs…" @keyup.enter="create" /></label>
+        <label class="field"><span>{{ t('Nom') }}</span><input v-model="form.name" class="input" maxlength="80" :placeholder="t('Ex. Cœur de réseau, Salle serveurs…')" @keyup.enter="create" /></label>
         <div class="field">
-          <span>Point de départ</span>
-          <label class="check"><input v-model="form.from" type="radio" value="empty" /> Tableau vide</label>
-          <label class="check"><input v-model="form.from" type="radio" value="starter" /> Modèle par défaut (vue d'ensemble)</label>
+          <span>{{ t('Point de départ') }}</span>
+          <label class="check"><input v-model="form.from" type="radio" value="empty" /> {{ t('Tableau vide') }}</label>
+          <label class="check"><input v-model="form.from" type="radio" value="starter" /> {{ t('Modèle par défaut (vue d\'ensemble)') }}</label>
           <label v-if="dash" class="check"><input v-model="form.from" type="radio" value="copy" /> Copie de « {{ dash.name }} »</label>
-          <label class="check"><input v-model="form.from" type="radio" value="import" /> Importer un fichier JSON</label>
+          <label class="check"><input v-model="form.from" type="radio" value="import" /> {{ t('Importer un fichier JSON') }}</label>
           <input v-if="form.from === 'import'" type="file" accept="application/json,.json" class="input" @change="readImport" />
         </div>
         <div class="field">
-          <span>Partage</span>
+          <span>{{ t('Partage') }}</span>
           <select v-model="form.access" class="input">
             <option v-for="(a, k) in ACCESS" :key="k" :value="k">{{ a.l }} — {{ a.desc }}</option>
           </select>
         </div>
       </div>
       <template #foot>
-        <button class="btn" @click="createOpen = false">Annuler</button>
-        <button class="btn primary" :disabled="!form.name.trim() || (form.from === 'import' && !form.imported)" @click="create"><Check /> Créer</button>
+        <button class="btn" @click="createOpen = false">{{ t('Annuler') }}</button>
+        <button class="btn primary" :disabled="!form.name.trim() || (form.from === 'import' && !form.imported)" @click="create"><Check /> {{ t('Créer') }}</button>
       </template>
     </Modal>
   </div>
@@ -159,13 +159,14 @@ import { D } from '../dashboard/data'
 import { WIDGETS, available, defaultConfig, missingConfig, starterWidgets, newId } from '../dashboard/widgets'
 import { clock } from '../refresh'
 import { timeAgo, toast, toastError, confirmAction } from '../utils'
+import { t } from '../i18n'
 
 const ROW = 30
 const GAP = 16
 const ACCESS = {
-  private: { l: 'Privé', desc: 'visible par vous seul', icon: Lock },
-  read: { l: 'Partagé en lecture', desc: 'visible par tous, modifiable par vous', icon: Eye },
-  edit: { l: 'Partagé en écriture', desc: 'visible et modifiable par tous', icon: Users },
+  private: { l: t('Privé'), desc: t('visible par vous seul'), icon: Lock },
+  read: { l: t('Partagé en lecture'), desc: t('visible par tous, modifiable par vous'), icon: Eye },
+  edit: { l: t('Partagé en écriture'), desc: t('visible et modifiable par tous'), icon: Users },
 }
 
 const route = useRoute()
@@ -315,17 +316,17 @@ async function saveSettings() {
     Object.assign(dash.value, { name: d.name, access: d.access })
     settingsOpen.value = false
     await refreshList()
-    toast('Paramètres enregistrés', 'success')
+    toast(t('Paramètres enregistrés'), 'success')
   } catch (e) { toastError(e) }
 }
 
 async function removeDash() {
-  if (!confirmAction(`Supprimer définitivement le tableau de bord « ${dash.value.name} » ?`)) return
+  if (!confirmAction(t('Supprimer définitivement le tableau de bord « {n} » ?', { n: dash.value.name }))) return
   try {
     await dashApi.remove(dash.value.id)
     settingsOpen.value = false; editing.value = false; clearTimeout(timer); timer = null
     const r = await refreshList()
-    toast('Tableau de bord supprimé', 'success')
+    toast(t('Tableau de bord supprimé'), 'success')
     if (!r.items.length) { dash.value = null; init(); return }
     dash.value = null
     open(r.default, true)
@@ -333,7 +334,7 @@ async function removeDash() {
 }
 
 async function makeDefault() {
-  try { await dashApi.setDefault(dash.value.id); defaultId.value = dash.value.id; toast('Tableau de bord par défaut', 'success') } catch (e) { toastError(e) }
+  try { await dashApi.setDefault(dash.value.id); defaultId.value = dash.value.id; toast(t('Tableau de bord par défaut'), 'success') } catch (e) { toastError(e) }
 }
 
 function openCreate(from = 'empty') {
@@ -366,7 +367,7 @@ async function create() {
     await refreshList()
     await open(d.id)
     if (!widgets.length) startEdit()
-    toast('Tableau de bord créé', 'success')
+    toast(t('Tableau de bord créé'), 'success')
   } catch (e) { toastError(e) }
 }
 

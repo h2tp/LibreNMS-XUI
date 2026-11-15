@@ -1,17 +1,17 @@
 <template>
   <div>
-    <div class="page-head"><div><h1>Ports</h1><div class="sub">{{ ports.length }} interfaces supervisées</div></div></div>
+    <div class="page-head"><div><h1>{{ t('Ports') }}</h1><div class="sub">{{ t('{n} interfaces supervisées', { n: ports.length }) }}</div></div></div>
     <div class="grid g4 mb stagger">
-      <StatCard :icon="Network" label="Ports" :value="ports.length" color="#22d3ee" />
-      <StatCard :icon="ArrowUpCircle" label="Up" :value="cnt.up" color="#22c55e" />
-      <StatCard :icon="ArrowDownCircle" label="Down (admin up)" :value="cnt.down" color="#f43f5e" />
-      <StatCard :icon="AlertTriangle" label="Avec erreurs" :value="cnt.err" color="#fb923c" />
+      <StatCard :icon="Network" :label="t('Ports')" :value="ports.length" color="#22d3ee" />
+      <StatCard :icon="ArrowUpCircle" :label="t('Up')" :value="cnt.up" color="#22c55e" />
+      <StatCard :icon="ArrowDownCircle" :label="t('Down (admin up)')" :value="cnt.down" color="#f43f5e" />
+      <StatCard :icon="AlertTriangle" :label="t('Avec erreurs')" :value="cnt.err" color="#fb923c" />
     </div>
     <div class="card">
       <DataTable :rows="rows" :columns="cols" :loading="loading" :error="error" row-key="port_id" :row-click="(p) => $router.push(`/port/${p.port_id}`)" filename="ports.csv" :page-size="100" :filter="filterFn" :default-sort="{ key: 'traffic', dir: -1 }">
         <template #tools>
           <div class="seg"><button v-for="f in filters" :key="f.v" :class="{ on: flt === f.v }" @click="flt = f.v">{{ f.l }}</button></div>
-          <select v-model="ifType" class="input" style="padding:6px 10px"><option value="">Tous types</option><option v-for="t in typeList" :key="t">{{ t }}</option></select>
+          <select v-model="ifType" class="input" style="padding:6px 10px"><option value="">{{ t('Tous types') }}</option><option v-for="tb in typeList" :key="tb">{{ tb }}</option></select>
         </template>
         <template #c-device="{ row }"><DeviceCell :device="devById[row.device_id]" :show-icon="false" :sub="false" /></template>
         <template #c-ifName="{ row }"><div class="row"><span class="dot" :class="portStatus(row)"></span><b class="nowrap">{{ row.ifName }}</b></div></template>
@@ -36,12 +36,13 @@ import DeviceCell from '../components/DeviceCell.vue'
 import { safeList, devicesCached } from '../api'
 import { useLoader } from '../refresh'
 import { devName, portStatus, portUtil, utilColor, fmtBits, fmtSpeed, fmtNum } from '../utils'
+import { t } from '../i18n'
 
 const ports = ref([])
 const devById = ref({})
 const flt = ref('active')
 const ifType = ref('')
-const filters = [{ v: 'active', l: 'Actifs' }, { v: 'up', l: 'Up' }, { v: 'down', l: 'Down' }, { v: 'errors', l: 'Erreurs' }, { v: 'all', l: 'Tous' }]
+const filters = [{ v: 'active', l: t('Actifs') }, { v: 'up', l: t('Up') }, { v: 'down', l: t('Down') }, { v: 'errors', l: t('Erreurs') }, { v: 'all', l: t('Tous') }]
 const typeList = computed(() => [...new Set(ports.value.map((p) => p.ifType).filter(Boolean))].sort())
 const rows = computed(() => ports.value.map((p) => ({
   ...p, device: devName(devById.value[p.device_id]), util: portUtil(p), traffic: (+p.ifInOctets_rate || 0) + (+p.ifOutOctets_rate || 0),
@@ -62,8 +63,8 @@ function filterFn(p) {
   return !+p.disabled && !+p.ignore
 }
 const cols = [
-  { key: 'device', label: 'Équipement' }, { key: 'ifName', label: 'Port' }, { key: 'ifAlias', label: 'Description' }, { key: 'ifSpeed', label: 'Vitesse' },
-  { key: 'traffic', label: 'Trafic' }, { key: 'util', label: 'Util.' }, { key: 'errors', label: 'Erreurs/s' }, { key: 'ifType', label: 'Type' }, { key: 'ifVlan', label: 'VLAN' },
+  { key: 'device', label: t('Équipement') }, { key: 'ifName', label: t('Port') }, { key: 'ifAlias', label: t('Description') }, { key: 'ifSpeed', label: t('Vitesse') },
+  { key: 'traffic', label: t('Trafic') }, { key: 'util', label: t('Util.') }, { key: 'errors', label: t('Erreurs/s') }, { key: 'ifType', label: t('Type') }, { key: 'ifVlan', label: 'VLAN' },
 ]
 const { loading, error } = useLoader(async () => {
   const [p, d] = await Promise.all([

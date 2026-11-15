@@ -2,26 +2,26 @@
   <div class="deditor">
     <div class="page-head">
       <div style="min-width:0">
-        <h1 class="row" style="gap:10px"><router-link to="/diagrams" class="muted" title="Tous les schémas"><ChevronLeft :size="22" /></router-link><span class="grad-text ellipsis">{{ diag?.name || 'Schéma' }}</span></h1>
+        <h1 class="row" style="gap:10px"><router-link to="/diagrams" class="muted" :title="t('Tous les schémas')"><ChevronLeft :size="22" /></router-link><span class="grad-text ellipsis">{{ diag?.name || t('Schéma') }}</span></h1>
         <div class="sub">
-          <template v-if="diag">{{ diag.nodes.length }} élément(s) · {{ diag.links.length }} lien(s) · {{ ACCESS[diag.access] }}<template v-if="!diag.mine"> · par {{ diag.owner }}</template></template>
-          · mis à jour {{ timeAgo(clock.last) }}
+          <template v-if="diag">{{ t('{n} élément(s) · {l} lien(s)', { n: diag.nodes.length, l: diag.links.length }) }} · {{ ACCESS[diag.access] }}<template v-if="!diag.mine"> · {{ t('par {u}', { u: diag.owner }) }}</template></template>
+          · {{ t('mis à jour {t}', { t: timeAgo(clock.last) }) }}
         </div>
       </div>
       <div class="right">
         <template v-if="editing">
           <span class="small muted row nowrap">
             <Loader2 v-if="saveState === 'saving'" class="spin" :size="14" /><CircleAlert v-else-if="saveState === 'error'" :size="14" color="var(--red)" /><CircleCheck v-else :size="14" color="var(--green)" />
-            {{ { saving: 'Enregistrement…', error: 'Échec de l\'enregistrement', saved: 'Enregistré' }[saveState] }}
+            {{ { saving: t('Enregistrement…'), error: t('Échec de l\'enregistrement'), saved: t('Enregistré') }[saveState] }}
           </span>
-          <button class="btn ghost icon" title="Annuler (Ctrl+Z)" :disabled="!undoStack.length" @click="undo"><Undo2 /></button>
-          <button class="btn ghost icon" title="Rétablir (Ctrl+Y)" :disabled="!redoStack.length" @click="redo"><Redo2 /></button>
-          <button class="btn" @click="openSettings"><Settings /> Paramètres</button>
-          <button class="btn primary" @click="stopEdit"><Check /> Terminer</button>
+          <button class="btn ghost icon" :title="t('Annuler (Ctrl+Z)')" :disabled="!undoStack.length" @click="undo"><Undo2 /></button>
+          <button class="btn ghost icon" :title="t('Rétablir (Ctrl+Y)')" :disabled="!redoStack.length" @click="redo"><Redo2 /></button>
+          <button class="btn" @click="openSettings"><Settings /> {{ t('Paramètres') }}</button>
+          <button class="btn primary" @click="stopEdit"><Check /> {{ t('Terminer') }}</button>
         </template>
         <template v-else>
-          <button v-if="diag" class="btn" @click="openSettings"><Settings /> Paramètres</button>
-          <button v-if="diag?.can_edit" class="btn primary" @click="editing = true"><Pencil /> Modifier</button>
+          <button v-if="diag" class="btn" @click="openSettings"><Settings /> {{ t('Paramètres') }}</button>
+          <button v-if="diag?.can_edit" class="btn primary" @click="editing = true"><Pencil /> {{ t('Modifier') }}</button>
         </template>
       </div>
     </div>
@@ -30,78 +30,78 @@
     <div v-if="diag" class="layout" :class="{ editing }">
       <aside v-if="editing" class="card side">
         <div class="seg" style="width:100%">
-          <button :class="{ on: tool === 'select' }" @click="tool = 'select'"><MousePointer2 :size="14" /> Déplacer</button>
-          <button :class="{ on: tool === 'link' }" @click="tool = 'link'"><Spline :size="14" /> Relier</button>
+          <button :class="{ on: tool === 'select' }" @click="tool = 'select'"><MousePointer2 :size="14" /> {{ t('Déplacer') }}</button>
+          <button :class="{ on: tool === 'link' }" @click="tool = 'link'"><Spline :size="14" /> {{ t('Relier') }}</button>
         </div>
-        <div v-if="tool === 'link'" class="hint small">Cliquez sur un premier élément puis sur un second pour les relier ; choisissez ensuite les ports.</div>
+        <div v-if="tool === 'link'" class="hint small">{{ t('Cliquez sur un premier élément puis sur un second pour les relier ; choisissez ensuite les ports.') }}</div>
 
         <!-- inspecteur -->
         <div v-if="selNode" class="insp">
           <div class="insp-title"><component :is="selNode.kind === 'device' ? Server : selNode.kind === 'custom' ? Box : selNode.kind === 'cloud' ? Cloud : Type" :size="15" /> {{ selNodeName }}</div>
-          <label class="field"><span>{{ selNode.kind === 'device' ? 'Libellé (vide : nom de l\'équipement)' : selNode.kind === 'custom' ? 'Nom' : 'Texte' }}</span><input v-model="selNode.label" class="input" maxlength="60" @focus="push()" @input="changed()" /></label>
-          <label v-if="selNode.kind === 'custom'" class="field"><span>Sous-titre</span><input v-model="selNode.sub" class="input" maxlength="60" placeholder="Ex. box opérateur, 192.0.2.1, baie B2…" @focus="push()" @input="changed()" /></label>
-          <div v-if="selNode.kind === 'custom'" class="small faint">Élément hors LibreNMS : pas d'état ni de trafic. Ses liens avec un équipement affichent le trafic du port côté équipement.</div>
-          <label class="field"><span>Taille</span><input v-model.number="selNode.size" type="range" min="0.6" max="2" step="0.1" @pointerdown="push()" @input="changed()" /></label>
+          <label class="field"><span>{{ selNode.kind === 'device' ? t('Libellé (vide : nom de l\'équipement)') : selNode.kind === 'custom' ? t('Nom') : t('Texte') }}</span><input v-model="selNode.label" class="input" maxlength="60" @focus="push()" @input="changed()" /></label>
+          <label v-if="selNode.kind === 'custom'" class="field"><span>{{ t('Sous-titre') }}</span><input v-model="selNode.sub" class="input" maxlength="60" :placeholder="t('Ex. box opérateur, 192.0.2.1, baie B2…')" @focus="push()" @input="changed()" /></label>
+          <div v-if="selNode.kind === 'custom'" class="small faint">{{ t('Élément hors LibreNMS : pas d\'état ni de trafic. Ses liens avec un équipement affichent le trafic du port côté équipement.') }}</div>
+          <label class="field"><span>{{ t('Taille') }}</span><input v-model.number="selNode.size" type="range" min="0.6" max="2" step="0.1" @pointerdown="push()" @input="changed()" /></label>
           <template v-if="selNode.kind === 'device' || selNode.kind === 'custom'">
-            <div class="field"><span>Apparence</span>
+            <div class="field"><span>{{ t('Apparence') }}</span>
               <div class="seg" style="width:100%">
-                <button v-for="b in [['card', 'Carte'], ['icon', 'Carte + image'], ['image', 'Image seule']]" :key="b[0]"
+                <button v-for="b in [['card', t('Carte')], ['icon', t('Carte + image')], ['image', t('Image seule')]]" :key="b[0]"
                   :class="{ on: (selNode.image ? selNode.display || 'card' : 'card') === b[0] }" :disabled="b[0] !== 'card' && !selNode.image"
-                  :title="b[0] !== 'card' && !selNode.image ? 'Choisissez d\'abord une image ci-dessous' : ''" @click="setDisplay(b[0])">{{ b[1] }}</button>
+                  :title="b[0] !== 'card' && !selNode.image ? t('Choisissez d\'abord une image ci-dessous') : ''" @click="setDisplay(b[0])">{{ b[1] }}</button>
               </div>
             </div>
-            <div class="field"><span>Image</span>
+            <div class="field"><span>{{ t('Image') }}</span>
               <div class="gallery">
-                <button class="gimg none" :class="{ on: !selNode.image }" title="Aucune image" @click="setImage(null)">—</button>
+                <button class="gimg none" :class="{ on: !selNode.image }" :title="t('Aucune image')" @click="setImage(null)">—</button>
                 <div v-for="im in images" :key="im.name" class="gwrap">
                   <button class="gimg" :class="{ on: selNode.image === im.name }" @click="setImage(im.name)"><img :src="diagApi.imgUrl(im.name)" alt="" loading="lazy" /></button>
-                  <button class="gdel" title="Supprimer de la bibliothèque" @click.stop="deleteImage(im.name)">×</button>
+                  <button class="gdel" :title="t('Supprimer de la bibliothèque')" @click.stop="deleteImage(im.name)">×</button>
                 </div>
-                <label class="gimg add" title="Importer une image (PNG, JPEG, WebP, GIF, 2 Mo max.)">
+                <label class="gimg add" :title="t('Importer une image (PNG, JPEG, WebP, GIF, 2 Mo max.)')">
                   <Loader2 v-if="imgBusy" :size="15" class="spin" /><ImageUp v-else :size="15" />
                   <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden @change="uploadImage" />
                 </label>
               </div>
-              <span class="small faint">Bibliothèque partagée entre tous les schémas. Une image PNG à fond transparent rend le mieux.</span>
+              <span class="small faint">{{ t('Bibliothèque partagée entre tous les schémas. Une image PNG à fond transparent rend le mieux.') }}</span>
             </div>
           </template>
           <div class="row wrap" style="gap:6px">
-            <router-link v-if="selDev" :to="`/device/${encodeURIComponent(selDev.hostname)}`" class="btn sm"><ExternalLink :size="13" /> Fiche</router-link>
-            <button class="btn sm danger" @click="removeSelected"><Trash2 :size="13" /> Retirer</button>
+            <router-link v-if="selDev" :to="`/device/${encodeURIComponent(selDev.hostname)}`" class="btn sm"><ExternalLink :size="13" /> {{ t('Fiche') }}</router-link>
+            <button class="btn sm danger" @click="removeSelected"><Trash2 :size="13" /> {{ t('Retirer') }}</button>
           </div>
         </div>
         <div v-else-if="selLink" class="insp">
-          <div class="insp-title"><Spline :size="15" /> Lien</div>
-          <label v-if="isDev(selLink.a)" class="field"><span>Port côté {{ nodeName(selLink.a) }}</span>
+          <div class="insp-title"><Spline :size="15" /> {{ t('Lien') }}</div>
+          <label v-if="isDev(selLink.a)" class="field"><span>{{ t('Port côté {n}', { n: nodeName(selLink.a) }) }}</span>
             <select v-model="selLink.port_a" class="input" @focus="push()" @change="changed()">
-              <option :value="null">— non précisé —</option>
+              <option :value="null">{{ t('— non précisé —') }}</option>
               <option v-for="p in portsOf(selLink.a)" :key="p.port_id" :value="+p.port_id">{{ portOpt(p) }}</option>
             </select></label>
-          <label v-if="isDev(selLink.b)" class="field"><span>Port côté {{ nodeName(selLink.b) }}</span>
+          <label v-if="isDev(selLink.b)" class="field"><span>{{ t('Port côté {n}', { n: nodeName(selLink.b) }) }}</span>
             <select v-model="selLink.port_b" class="input" @focus="push()" @change="changed()">
-              <option :value="null">— non précisé —</option>
+              <option :value="null">{{ t('— non précisé —') }}</option>
               <option v-for="p in portsOf(selLink.b)" :key="p.port_id" :value="+p.port_id">{{ portOpt(p) }}</option>
             </select></label>
-          <label class="field"><span>Étiquette</span><input v-model="selLink.label" class="input" maxlength="40" placeholder="Ex. fibre, VPN, uplink…" @focus="push()" @input="changed()" /></label>
-          <div class="small faint">Faites glisser le lien pour le courber.</div>
+          <label class="field"><span>{{ t('Étiquette') }}</span><input v-model="selLink.label" class="input" maxlength="40" :placeholder="t('Ex. fibre, VPN, uplink…')" @focus="push()" @input="changed()" /></label>
+          <div class="small faint">{{ t('Faites glisser le lien pour le courber.') }}</div>
           <div class="row wrap" style="gap:6px">
-            <button v-if="selLink.bend" class="btn sm" @click="push(); selLink.bend = 0; changed()"><Minus :size="13" /> Redresser</button>
-            <button class="btn sm danger" @click="removeSelected"><Trash2 :size="13" /> Supprimer</button>
+            <button v-if="selLink.bend" class="btn sm" @click="push(); selLink.bend = 0; changed()"><Minus :size="13" /> {{ t('Redresser') }}</button>
+            <button class="btn sm danger" @click="removeSelected"><Trash2 :size="13" /> {{ t('Supprimer') }}</button>
           </div>
         </div>
 
         <div class="insp">
-          <div class="insp-title"><Plus :size="15" /> Ajouter</div>
+          <div class="insp-title"><Plus :size="15" /> {{ t('Ajouter') }}</div>
           <div class="row wrap" style="gap:6px">
-            <button class="btn sm" title="Élément qui n'existe pas dans LibreNMS (box, caméra, équipement non supervisé…)" @click="addFree('custom')"><Box :size="13" /> Élément</button>
-            <button class="btn sm" @click="addFree('cloud')"><Cloud :size="13" /> Nuage</button>
-            <button class="btn sm" @click="addFree('text')"><Type :size="13" /> Texte</button>
-            <button class="btn sm" :title="`${missingLldp.length} lien(s) LLDP entre éléments du schéma`" :disabled="!missingLldp.length" @click="addLldp"><Network :size="13" /> Liens LLDP ({{ missingLldp.length }})</button>
+            <button class="btn sm" :title="t('Élément qui n\'existe pas dans LibreNMS (box, caméra, équipement non supervisé…)')" @click="addFree('custom')"><Box :size="13" /> {{ t('Élément') }}</button>
+            <button class="btn sm" @click="addFree('cloud')"><Cloud :size="13" /> {{ t('Nuage') }}</button>
+            <button class="btn sm" @click="addFree('text')"><Type :size="13" /> {{ t('Texte') }}</button>
+            <button class="btn sm" :title="t('{n} lien(s) LLDP entre éléments du schéma', { n: missingLldp.length })" :disabled="!missingLldp.length" @click="addLldp"><Network :size="13" /> {{ t('Liens LLDP ({n})', { n: missingLldp.length }) }}</button>
           </div>
-          <input v-model="q" class="input" placeholder="Rechercher un équipement…" />
+          <input v-model="q" class="input" :placeholder="t('Rechercher un équipement…')" />
           <div class="devlist">
             <div v-for="d in devList" :key="d.device_id" class="dev" :class="{ present: present.has(+d.device_id) }" draggable="true"
-              :title="present.has(+d.device_id) ? 'Déjà dans le schéma — glisser pour l\'ajouter encore' : 'Glisser sur le schéma ou cliquer pour ajouter'"
+              :title="present.has(+d.device_id) ? t('Déjà dans le schéma — glisser pour l\'ajouter encore') : t('Glisser sur le schéma ou cliquer pour ajouter')"
               @dragstart="(e) => e.dataTransfer.setData('text/x-device', d.device_id)" @click="addDevice(d.device_id)">
               <span class="dot" :class="devStatus(d)"></span><span class="ellipsis grow">{{ devName(d) }}</span><span class="faint small">{{ d.type || d.os }}</span>
             </div>
@@ -116,72 +116,72 @@
           @edit-node="(n) => (selected = { type: 'node', id: n.id })" @edit-link="(l) => (selected = { type: 'link', id: l.id })" />
         <div class="legend small muted">
           <span v-for="(s, i) in legend" :key="i"><i :style="{ background: s.color }"></i>{{ s.label }}</span>
-          <span><i :style="{ background: scale.down }"></i>coupé</span>
-          <span><i class="dash"></i>ports non renseignés</span>
-          <span v-if="!editing" class="faint">Clic sur un équipement : sa fiche · molette : zoom · glisser : déplacer la vue</span>
+          <span><i :style="{ background: scale.down }"></i>{{ t('coupé') }}</span>
+          <span><i class="dash"></i>{{ t('ports non renseignés') }}</span>
+          <span v-if="!editing" class="faint">{{ t('Clic sur un équipement : sa fiche · molette : zoom · glisser : déplacer la vue') }}</span>
         </div>
       </div>
     </div>
     <div v-else-if="!error" class="skeleton" style="height:70vh"></div>
 
-    <Modal v-if="settingsOpen && diag" title="Paramètres du schéma" :icon="Settings" @close="settingsOpen = false">
+    <Modal v-if="settingsOpen && diag" :title="t('Paramètres du schéma')" :icon="Settings" @close="settingsOpen = false">
       <div class="col" style="gap:16px">
-        <label class="field"><span>Nom</span><input v-model="sform.name" class="input" maxlength="80" :disabled="!diag.can_edit" /></label>
-        <div v-if="diag.mine" class="field"><span>Partage</span>
+        <label class="field"><span>{{ t('Nom') }}</span><input v-model="sform.name" class="input" maxlength="80" :disabled="!diag.can_edit" /></label>
+        <div v-if="diag.mine" class="field"><span>{{ t('Partage') }}</span>
           <select v-model="sform.access" class="input">
-            <option value="private">Privé — visible par vous seul</option>
-            <option value="read">Partagé en lecture — visible par tous</option>
-            <option value="edit">Partagé en écriture — modifiable par tous</option>
+            <option value="private">{{ t('Privé — visible par vous seul') }}</option>
+            <option value="read">{{ t('Partagé en lecture — visible par tous') }}</option>
+            <option value="edit">{{ t('Partagé en écriture — modifiable par tous') }}</option>
           </select></div>
-        <div class="field"><span>Fond</span>
+        <div class="field"><span>{{ t('Fond') }}</span>
           <div class="seg">
             <button v-for="b in [['none', 'Uni'], ['grid', 'Grille'], ['image', 'Image']]" :key="b[0]" :class="{ on: sform.background === b[0] }" :disabled="!diag.can_edit" @click="sform.background = b[0]">{{ b[1] }}</button>
           </div>
         </div>
         <template v-if="sform.background === 'image' && diag.can_edit">
           <div class="row wrap" style="gap:8px">
-            <label class="btn sm"><ImageUp :size="14" /> {{ diag.bg ? 'Remplacer l\'image' : 'Choisir une image' }}<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden @change="uploadBg" /></label>
-            <button v-if="diag.bg" class="btn sm danger" @click="removeBg"><Trash2 :size="13" /> Retirer</button>
-            <span class="small faint">PNG, JPEG, WebP ou GIF, 8 Mo max. (plan, photo de baie…)</span>
+            <label class="btn sm"><ImageUp :size="14" /> {{ diag.bg ? t('Remplacer l\'image') : t('Choisir une image') }}<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden @change="uploadBg" /></label>
+            <button v-if="diag.bg" class="btn sm danger" @click="removeBg"><Trash2 :size="13" /> {{ t('Retirer') }}</button>
+            <span class="small faint">{{ t('PNG, JPEG, WebP ou GIF, 8 Mo max. (plan, photo de baie…)') }}</span>
           </div>
-          <label v-if="diag.bg" class="field"><span>Opacité de l'image : {{ Math.round(sform.bgOpacity * 100) }} %</span><input v-model.number="sform.bgOpacity" type="range" min="0.1" max="1" step="0.05" /></label>
+          <label v-if="diag.bg" class="field"><span>{{ t('Opacité de l\'image : {p} %', { p: Math.round(sform.bgOpacity * 100) }) }}</span><input v-model.number="sform.bgOpacity" type="range" min="0.1" max="1" step="0.05" /></label>
         </template>
-        <label class="check"><input v-model="sform.showRates" type="checkbox" :disabled="!diag.can_edit" /> Afficher les débits sur les liens</label>
-        <label class="check"><input v-model="sform.showPorts" type="checkbox" :disabled="!diag.can_edit" /> Afficher les noms de ports</label>
+        <label class="check"><input v-model="sform.showRates" type="checkbox" :disabled="!diag.can_edit" /> {{ t('Afficher les débits sur les liens') }}</label>
+        <label class="check"><input v-model="sform.showPorts" type="checkbox" :disabled="!diag.can_edit" /> {{ t('Afficher les noms de ports') }}</label>
         <div class="hr"></div>
-        <div class="field"><span>Couleur des liens selon</span>
+        <div class="field"><span>{{ t('Couleur des liens selon') }}</span>
           <div class="seg">
-            <button v-for="b in [['util', 'Charge (%)'], ['rate', 'Débit']]" :key="b[0]" :class="{ on: sform.colorMode === b[0] }" :disabled="!diag.can_edit" @click="sform.colorMode = b[0]">{{ b[1] }}</button>
+            <button v-for="b in [['util', t('Charge (%)')], ['rate', t('Débit')]]" :key="b[0]" :class="{ on: sform.colorMode === b[0] }" :disabled="!diag.can_edit" @click="sform.colorMode = b[0]">{{ b[1] }}</button>
           </div>
         </div>
         <div class="steps">
           <div v-for="(st, i) in curSteps" :key="i" class="step row">
             <input v-model="st.color" type="color" class="swatch" :disabled="!diag.can_edit" />
-            <span class="small muted">à partir de</span>
+            <span class="small muted">{{ t('à partir de') }}</span>
             <input v-model.number="st.min" type="number" class="input num" min="0" :step="sform.colorMode === 'rate' ? 'any' : 1" :disabled="!diag.can_edit || i === 0" />
-            <span class="small muted">{{ sform.colorMode === 'rate' ? 'Mbit/s' : '%' }}</span>
+            <span class="small muted">{{ sform.colorMode === 'rate' ? t('Mbit/s') : '%' }}</span>
             <span v-if="sform.colorMode === 'rate'" class="small faint">{{ fmtBits(st.min * 1e6) }}</span>
-            <button v-if="diag.can_edit && i > 0" class="btn ghost sm icon" title="Supprimer ce palier" @click="curSteps.splice(i, 1)"><Minus :size="13" /></button>
+            <button v-if="diag.can_edit && i > 0" class="btn ghost sm icon" :title="t('Supprimer ce palier')" @click="curSteps.splice(i, 1)"><Minus :size="13" /></button>
           </div>
           <div class="step row">
             <input v-model="sform.downColor" type="color" class="swatch" :disabled="!diag.can_edit" />
-            <span class="small muted">lien coupé</span>
+            <span class="small muted">{{ t('lien coupé') }}</span>
           </div>
           <div v-if="diag.can_edit" class="row wrap" style="gap:8px">
-            <button class="btn sm" :disabled="curSteps.length >= 10" @click="addStep"><Plus :size="13" /> Ajouter un palier</button>
-            <button class="btn sm ghost" @click="resetSteps">Couleurs par défaut</button>
+            <button class="btn sm" :disabled="curSteps.length >= 10" @click="addStep"><Plus :size="13" /> {{ t('Ajouter un palier') }}</button>
+            <button class="btn sm ghost" @click="resetSteps">{{ t('Couleurs par défaut') }}</button>
           </div>
-          <span class="small faint">{{ sform.colorMode === 'rate' ? 'Débit le plus élevé des deux sens (1 Gbit/s = 1000 Mbit/s).' : 'Charge la plus élevée des deux extrémités, rapportée à la vitesse du port.' }}</span>
+          <span class="small faint">{{ sform.colorMode === 'rate' ? t('Débit le plus élevé des deux sens (1 Gbit/s = 1000 Mbit/s).') : t('Charge la plus élevée des deux extrémités, rapportée à la vitesse du port.') }}</span>
         </div>
         <div class="hr"></div>
         <div class="row wrap">
-          <button class="btn sm" @click="exportSvg"><Download :size="13" /> Exporter en image (SVG)</button>
-          <button v-if="diag.mine" class="btn sm danger" @click="removeDiagram"><Trash2 :size="13" /> Supprimer ce schéma</button>
+          <button class="btn sm" @click="exportSvg"><Download :size="13" /> {{ t('Exporter en image (SVG)') }}</button>
+          <button v-if="diag.mine" class="btn sm danger" @click="removeDiagram"><Trash2 :size="13" /> {{ t('Supprimer ce schéma') }}</button>
         </div>
       </div>
       <template #foot>
-        <button class="btn" @click="settingsOpen = false">Fermer</button>
-        <button v-if="diag.can_edit" class="btn primary" :disabled="!sform.name.trim()" @click="saveSettings"><Check /> Enregistrer</button>
+        <button class="btn" @click="settingsOpen = false">{{ t('Fermer') }}</button>
+        <button v-if="diag.can_edit" class="btn primary" :disabled="!sform.name.trim()" @click="saveSettings"><Check /> {{ t('Enregistrer') }}</button>
       </template>
     </Modal>
   </div>
@@ -200,8 +200,9 @@ import { diagApi } from '../api'
 import { useDiagramLive, lldpLinks, lldpLinksBetween, uid, colorScale, DEFAULT_UTIL_STEPS, DEFAULT_RATE_STEPS, DEFAULT_DOWN_COLOR } from '../diagram/core'
 import { clock } from '../refresh'
 import { devName, devStatus, fmtBits, fmtSpeed, timeAgo, toast, toastError, confirmAction } from '../utils'
+import { t } from '../i18n'
 
-const ACCESS = { private: 'Privé', read: 'Partagé (lecture)', edit: 'Partagé (écriture)' }
+const ACCESS = { private: t('Privé'), read: t('Partagé (lecture)'), edit: t('Partagé (écriture)') }
 const route = useRoute(); const router = useRouter()
 const live = useDiagramLive()
 const diag = ref(null); const error = ref(null)
@@ -232,8 +233,8 @@ async function uploadImage(e) {
   } catch (err) { toastError(err) } finally { imgBusy.value = false }
 }
 async function deleteImage(name) {
-  if (!confirmAction('Supprimer cette image de la bibliothèque ?')) return
-  try { await diagApi.removeImage(name); await loadImages(); toast('Image supprimée', 'success') } catch (err) { toastError(err) }
+  if (!confirmAction(t('Supprimer cette image de la bibliothèque ?'))) return
+  try { await diagApi.removeImage(name); await loadImages(); toast(t('Image supprimée'), 'success') } catch (err) { toastError(err) }
 }
 
 const canvas = ref(null)
@@ -245,7 +246,7 @@ async function load() {
     const d = await diagApi.get(route.params.id)
     d.view = { background: 'grid', showRates: true, showPorts: true, bgOpacity: 0.6, ...(d.view || {}) }
     diag.value = d
-    document.title = `${d.name} · Schémas · LibreNMS XUI`
+    document.title = `${d.name} · ${t('Schémas')} · LibreNMS XUI`
   } catch (e) { error.value = e.message }
   lldp.value = await lldpLinks().catch(() => [])
 }
@@ -260,7 +261,7 @@ function nodeName(id) {
   const n = diag.value.nodes.find((x) => x.id === id)
   if (!n) return '?'
   const d = live.devById.value[n.device_id]
-  return n.label || (d ? devName(d) : n.kind === 'cloud' ? 'Nuage' : n.kind === 'custom' ? 'Élément' : 'Texte')
+  return n.label || (d ? devName(d) : n.kind === 'cloud' ? t('Nuage') : n.kind === 'custom' ? t('Élément') : t('Texte'))
 }
 const isDev = (nodeId) => diag.value.nodes.find((x) => x.id === nodeId)?.kind === 'device'
 function portsOf(nodeId) {
@@ -336,7 +337,7 @@ function addDevice(device_id, x, y) {
 }
 function addFree(kind) {
   const pos = freeSpot()
-  const label = { cloud: 'Internet', custom: 'Nouvel élément' }[kind] || 'Texte'
+  const label = { cloud: 'Internet', custom: t('Nouvel élément') }[kind] || t('Texte')
   addNode({ id: uid(), kind, device_id: null, x: pos.x, y: pos.y, label, size: 1, ...(kind === 'custom' ? { sub: '' } : {}) })
 }
 function connect({ a, b }) {
@@ -350,7 +351,7 @@ function connect({ a, b }) {
   selected.value = { type: 'link', id: link.id }
   tool.value = 'select'
   scheduleSave(200)
-  if (!hit && !rev && (A.kind === 'device' || B.kind === 'device')) toast('Lien créé : choisissez les ports dans le panneau pour afficher l\'état et le trafic', 'info')
+  if (!hit && !rev && (A.kind === 'device' || B.kind === 'device')) toast(t('Lien créé : choisissez les ports dans le panneau pour afficher l\'état et le trafic'), 'info')
 }
 const missingLldp = computed(() => {
   if (!diag.value) return []
@@ -360,7 +361,7 @@ const missingLldp = computed(() => {
 function addLldp() {
   push()
   for (const l of missingLldp.value) diag.value.links.push({ id: uid(), ...l, label: '', bend: 0 })
-  toast(`${missingLldp.value.length} lien(s) ajouté(s)`, 'success')
+  toast(t('{n} lien(s) ajouté(s)', { n: missingLldp.value.length }), 'success')
   scheduleSave(200)
 }
 function removeSelected() {
@@ -438,7 +439,7 @@ async function saveSettings() {
     const d = await diagApi.update(diag.value.id, body)
     Object.assign(diag.value, { name: d.name, access: d.access, view })
     settingsOpen.value = false
-    toast('Paramètres enregistrés', 'success')
+    toast(t('Paramètres enregistrés'), 'success')
   } catch (e) { toastError(e) }
 }
 async function uploadBg(e) {
@@ -452,15 +453,15 @@ async function uploadBg(e) {
     sform.background = 'image'
     await diagApi.update(diag.value.id, { view: diag.value.view })
     setTimeout(() => canvas.value?.fit(), 50)
-    toast('Image de fond enregistrée', 'success')
+    toast(t('Image de fond enregistrée'), 'success')
   } catch (err) { toastError(err) }
 }
 async function removeBg() {
-  try { await diagApi.removeBackground(diag.value.id); diag.value.bg = null; toast('Image retirée', 'success') } catch (e) { toastError(e) }
+  try { await diagApi.removeBackground(diag.value.id); diag.value.bg = null; toast(t('Image retirée'), 'success') } catch (e) { toastError(e) }
 }
 async function removeDiagram() {
-  if (!confirmAction(`Supprimer définitivement le schéma « ${diag.value.name} » ?`)) return
-  try { clearTimeout(timer); timer = null; await diagApi.remove(diag.value.id); toast('Schéma supprimé', 'success'); router.push('/diagrams') } catch (e) { toastError(e) }
+  if (!confirmAction(t('Supprimer définitivement le schéma « {n} » ?', { n: diag.value.name }))) return
+  try { clearTimeout(timer); timer = null; await diagApi.remove(diag.value.id); toast(t('Schéma supprimé'), 'success'); router.push('/diagrams') } catch (e) { toastError(e) }
 }
 function exportSvg() {
   const el = document.querySelector('.canvas-card svg')

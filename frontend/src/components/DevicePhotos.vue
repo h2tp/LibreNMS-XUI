@@ -1,33 +1,33 @@
 <template>
   <div v-if="photos.length || canEdit" class="card photos" :class="{ drag: dragOver }"
     @dragover.prevent="canEdit && (dragOver = true)" @dragleave.self="dragOver = false" @drop.prevent="onDrop">
-    <div class="card-title"><Camera :size="17" /> Photos
+    <div class="card-title"><Camera :size="17" /> {{ t('Photos') }}
       <span v-if="photos.length > 1" class="sub">{{ cur + 1 }} / {{ photos.length }}</span>
       <div class="right">
-        <label v-if="canEdit && photos.length < MAX" class="btn ghost sm" title="Ajouter des photos (PNG, JPEG, WebP, GIF, 10 Mo max.)">
-          <Loader2 v-if="busy" :size="14" class="spin" /><ImagePlus v-else :size="14" /> Ajouter
+        <label v-if="canEdit && photos.length < MAX" class="btn ghost sm" :title="t('Ajouter des photos (PNG, JPEG, WebP, GIF, 10 Mo max.)')">
+          <Loader2 v-if="busy" :size="14" class="spin" /><ImagePlus v-else :size="14" /> {{ t('Ajouter') }}
           <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden @change="onPick" />
         </label>
       </div>
     </div>
 
     <div v-if="!photos.length" class="empty small">
-      <ImagePlus :size="22" /><span>Aucune photo. Cliquez sur « Ajouter » ou déposez des images ici.</span>
+      <ImagePlus :size="22" /><span>{{ t('Aucune photo. Cliquez sur « Ajouter » ou déposez des images ici.') }}</span>
     </div>
 
     <template v-else>
       <div class="main" @click="lightbox = true">
         <img :src="photoApi.url(current.name)" :alt="current.caption || device.hostname" />
-        <button v-if="photos.length > 1" class="nav prev" title="Précédente" @click.stop="go(-1)"><ChevronLeft :size="18" /></button>
-        <button v-if="photos.length > 1" class="nav next" title="Suivante" @click.stop="go(1)"><ChevronRight :size="18" /></button>
+        <button v-if="photos.length > 1" class="nav prev" :title="t('Précédente')" @click.stop="go(-1)"><ChevronLeft :size="18" /></button>
+        <button v-if="photos.length > 1" class="nav next" :title="t('Suivante')" @click.stop="go(1)"><ChevronRight :size="18" /></button>
       </div>
 
       <div class="cap row">
-        <input v-if="canEdit" v-model="caption" class="input sm grow" maxlength="120" placeholder="Légende (ex. façade, arrière, baie B2…)" @change="saveCaption" @keydown.enter="$event.target.blur()" />
+        <input v-if="canEdit" v-model="caption" class="input sm grow" maxlength="120" :placeholder="t('Légende (ex. façade, arrière, baie B2…)')" @change="saveCaption" @keydown.enter="$event.target.blur()" />
         <span v-else class="small muted grow">{{ current.caption }}</span>
         <template v-if="canEdit">
-          <button v-if="cur > 0" class="btn ghost sm icon" title="Mettre en première position" @click="makeFirst"><Star :size="14" /></button>
-          <button class="btn ghost sm icon danger" title="Supprimer cette photo" @click="remove"><Trash2 :size="14" /></button>
+          <button v-if="cur > 0" class="btn ghost sm icon" :title="t('Mettre en première position')" @click="makeFirst"><Star :size="14" /></button>
+          <button class="btn ghost sm icon danger" :title="t('Supprimer cette photo')" @click="remove"><Trash2 :size="14" /></button>
         </template>
       </div>
 
@@ -36,17 +36,17 @@
           <img :src="photoApi.url(p.name)" alt="" loading="lazy" />
         </button>
       </div>
-      <div class="small faint meta">Ajoutée {{ timeAgo(current.added * 1000) }}{{ current.by ? ` par ${current.by}` : '' }}</div>
+      <div class="small faint meta">{{ current.by ? t('Ajoutée {t} par {u}', { t: timeAgo(current.added * 1000), u: current.by }) : t('Ajoutée {t}', { t: timeAgo(current.added * 1000) }) }}</div>
     </template>
 
     <teleport to="body">
       <div v-if="lightbox && current" class="lb" @click.self="lightbox = false">
         <img :src="photoApi.url(current.name)" :alt="current.caption" />
         <div class="lb-cap">{{ current.caption || device.hostname }}<span v-if="photos.length > 1"> · {{ cur + 1 }} / {{ photos.length }}</span></div>
-        <button class="lb-btn close" title="Fermer (Échap)" @click="lightbox = false"><X :size="22" /></button>
+        <button class="lb-btn close" :title="t('Fermer (Échap)')" @click="lightbox = false"><X :size="22" /></button>
         <template v-if="photos.length > 1">
-          <button class="lb-btn prev" title="Précédente (←)" @click="go(-1)"><ChevronLeft :size="28" /></button>
-          <button class="lb-btn next" title="Suivante (→)" @click="go(1)"><ChevronRight :size="28" /></button>
+          <button class="lb-btn prev" :title="t('Précédente (←)')" @click="go(-1)"><ChevronLeft :size="28" /></button>
+          <button class="lb-btn next" :title="t('Suivante (→)')" @click="go(1)"><ChevronRight :size="28" /></button>
         </template>
       </div>
     </teleport>
@@ -58,6 +58,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { Camera, ImagePlus, Loader2, Trash2, Star, ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
 import { photoApi, session } from '../api'
 import { timeAgo, toast, toastError, confirmAction } from '../utils'
+import { t } from '../i18n'
 
 const MAX = 20
 const props = defineProps({ device: Object })
@@ -77,7 +78,7 @@ const go = (d) => { const n = photos.value.length; if (n) cur.value = (cur.value
 
 async function upload(files) {
   const imgs = [...files].filter((f) => /^image\/(png|jpeg|webp|gif)$/.test(f.type))
-  if (!imgs.length) { toast('Formats acceptés : PNG, JPEG, WebP, GIF', 'error'); return }
+  if (!imgs.length) { toast(t('Formats acceptés : PNG, JPEG, WebP, GIF'), 'error'); return }
   busy.value = true
   let ok = 0
   for (const f of imgs) {
@@ -86,7 +87,7 @@ async function upload(files) {
   busy.value = false
   const before = photos.value.length
   await load()
-  if (ok) { cur.value = Math.max(0, before); toast(ok > 1 ? `${ok} photos ajoutées` : 'Photo ajoutée', 'success') }
+  if (ok) { cur.value = Math.max(0, before); toast(ok > 1 ? t('{n} photos ajoutées', { n: ok }) : t('Photo ajoutée'), 'success') }
 }
 function onPick(e) { const f = e.target.files; if (f?.length) upload(f); e.target.value = '' }
 function onDrop(e) { dragOver.value = false; if (canEdit.value && e.dataTransfer.files?.length) upload(e.dataTransfer.files) }
@@ -100,8 +101,8 @@ async function makeFirst() {
   try { photos.value = await photoApi.edit(props.device.device_id, current.value.name, { first: true }); cur.value = 0 } catch (e) { toastError(e) }
 }
 async function remove() {
-  if (!confirmAction('Supprimer cette photo ?')) return
-  try { await photoApi.remove(props.device.device_id, current.value.name); await load(); toast('Photo supprimée', 'success') } catch (e) { toastError(e) }
+  if (!confirmAction(t('Supprimer cette photo ?'))) return
+  try { await photoApi.remove(props.device.device_id, current.value.name); await load(); toast(t('Photo supprimée'), 'success') } catch (e) { toastError(e) }
 }
 
 function onKey(e) {

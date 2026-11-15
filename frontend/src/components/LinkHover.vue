@@ -1,6 +1,6 @@
 <template>
   <div class="lh" :class="{ pinned }" :style="{ left: `${x}px`, top: `${y}px` }" @pointerdown.stop @wheel.stop>
-    <button v-if="pinned" class="lh-close" title="Fermer (Échap)" @click="$emit('close')"><X :size="14" /></button>
+    <button v-if="pinned" class="lh-close" :title="t('Fermer (Échap)')" @click="$emit('close')"><X :size="14" /></button>
     <div class="lh-title">{{ link.titleA }} <span class="muted">↔</span> {{ link.titleB }}</div>
     <div class="small muted">{{ link.status }}</div>
     <template v-if="host">
@@ -16,15 +16,15 @@
       <div v-if="pts" class="lh-legend small">
         <span><i style="background:#22d3ee"></i>vers {{ link.nameA }} · moy. {{ fmtBits(pts.avgIn) }} · max {{ fmtBits(pts.maxIn) }}</span>
         <span><i style="background:#a78bfa"></i>depuis {{ link.nameA }} · moy. {{ fmtBits(pts.avgOut) }} · max {{ fmtBits(pts.maxOut) }}</span>
-        <span class="muted">24 dernières heures</span>
+        <span class="muted">{{ t('24 dernières heures') }}</span>
       </div>
     </template>
     <div v-if="pinned && link.ports?.length" class="lh-ports">
-      <router-link v-for="p in link.ports" :key="p.id" :to="`/port/${p.id}`" class="lh-port" :title="`Ouvrir la fiche du port ${p.name}`">
+      <router-link v-for="p in link.ports" :key="p.id" :to="`/port/${p.id}`" class="lh-port" :title="t('Ouvrir la fiche du port {n}', { n: p.name })">
         <Cable :size="13" /><span class="ellipsis"><b>{{ p.name }}</b> · {{ p.dev }}<span v-if="p.alias" class="muted"> · {{ p.alias }}</span></span><ArrowRight :size="13" class="go" />
       </router-link>
     </div>
-    <div v-else-if="!pinned && link.ports?.length" class="small faint lh-hint">Cliquez sur le lien pour accéder aux ports</div>
+    <div v-else-if="!pinned && link.ports?.length" class="small faint lh-hint">{{ t('Cliquez sur le lien pour accéder aux ports') }}</div>
   </div>
 </template>
 
@@ -34,6 +34,7 @@ import { X, Cable, ArrowRight } from 'lucide-vue-next'
 import { rrd, session } from '../api'
 import { cached } from '../dashboard/data'
 import { fmtBits } from '../utils'
+import { t } from '../i18n'
 
 // link : { titleA, titleB, nameA, status, host, portId, flip } — flip : le RRD est celui de l'extrémité B (entrant/sortant inversés)
 const props = defineProps({ link: Object, x: Number, y: Number, pinned: Boolean })
@@ -48,7 +49,7 @@ watch(() => [host.value, props.link.portId], async ([h, id]) => {
   try {
     const r = await cached(`linkgraph:${id}`, () => rrd.data(h, `port-id${id}.rrd`, { ds: 'INOCTETS,OUTOCTETS', start: '-1d', rows: 150 }), 300000)
     if (props.link.portId === id) data.value = r
-  } catch { if (props.link.portId === id) err.value = 'Pas d\'historique pour ce port' }
+  } catch { if (props.link.portId === id) err.value = t('Pas d\'historique pour ce port') }
 }, { immediate: true })
 
 const pts = computed(() => {

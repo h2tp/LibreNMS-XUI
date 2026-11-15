@@ -1,15 +1,15 @@
 <template>
   <div>
     <div class="page-head">
-      <div><h1>Schémas</h1><div class="sub">Schémas réseau dessinés à la main, avec l'état et le trafic en direct</div></div>
-      <div class="right"><button class="btn primary" @click="openCreate"><Plus /> Nouveau schéma</button></div>
+      <div><h1>{{ t('Schémas') }}</h1><div class="sub">{{ t('Schémas réseau dessinés à la main, avec l\'état et le trafic en direct') }}</div></div>
+      <div class="right"><button class="btn primary" @click="openCreate"><Plus /> {{ t('Nouveau schéma') }}</button></div>
     </div>
     <div v-if="error" class="err mb">{{ error }}</div>
     <div v-if="loading && !items.length" class="grid g3"><div v-for="i in 3" :key="i" class="skeleton" style="height:130px"></div></div>
     <div v-else-if="!items.length" class="card empty big">
-      <Workflow /><div>Aucun schéma pour l'instant.</div>
-      <div class="small muted" style="max-width:440px">Partez de la topologie détectée automatiquement (LLDP), puis complétez à la main : équipements, liens et ports, image de fond (plan, baie).</div>
-      <button class="btn primary mt" @click="openCreate"><Plus /> Créer mon premier schéma</button>
+      <Workflow /><div>{{ t('Aucun schéma pour l\'instant.') }}</div>
+      <div class="small muted" style="max-width:440px">{{ t('Partez de la topologie détectée automatiquement (LLDP), puis complétez à la main : équipements, liens et ports, image de fond (plan, baie).') }}</div>
+      <button class="btn primary mt" @click="openCreate"><Plus /> {{ t('Créer mon premier schéma') }}</button>
     </div>
     <div v-else class="grid g3">
       <router-link v-for="d in items" :key="d.id" :to="`/diagrams/${d.id}`" class="card dcard">
@@ -17,39 +17,39 @@
           <div class="dico"><Workflow :size="20" /></div>
           <div class="grow" style="min-width:0">
             <b class="ellipsis" style="display:block">{{ d.name }}</b>
-            <span class="small muted">{{ d.nodes }} élément(s) · {{ d.links }} lien(s){{ d.has_bg ? ' · image de fond' : '' }}</span>
+            <span class="small muted">{{ t('{n} élément(s) · {l} lien(s)', { n: d.nodes, l: d.links }) }}{{ d.has_bg ? t(' · image de fond') : '' }}</span>
           </div>
         </div>
         <div class="row small muted" style="gap:8px">
           <span class="badge">{{ ACCESS[d.access] }}</span>
-          <span v-if="!d.mine">par {{ d.owner }}</span>
+          <span v-if="!d.mine">{{ t('par {u}', { u: d.owner }) }}</span>
           <span class="grow"></span>
-          <span>modifié {{ timeAgo((d.updated || 0) * 1000) }}</span>
+          <span>{{ t('modifié {t}', { t: timeAgo((d.updated || 0) * 1000) }) }}</span>
         </div>
       </router-link>
     </div>
 
-    <Modal v-if="createOpen" title="Nouveau schéma" :icon="Plus" @close="createOpen = false">
+    <Modal v-if="createOpen" :title="t('Nouveau schéma')" :icon="Plus" @close="createOpen = false">
       <div class="col" style="gap:16px">
-        <label class="field"><span>Nom</span><input v-model="form.name" class="input" maxlength="80" placeholder="Ex. Réseau maison, Baie du garage…" @keyup.enter="create" /></label>
+        <label class="field"><span>{{ t('Nom') }}</span><input v-model="form.name" class="input" maxlength="80" :placeholder="t('Ex. Réseau maison, Baie du garage…')" @keyup.enter="create" /></label>
         <div class="field">
-          <span>Point de départ</span>
-          <label class="check"><input v-model="form.from" type="radio" value="lldp" /> Topologie détectée (équipements reliés par LLDP / CDP et leurs liens)</label>
-          <label class="check"><input v-model="form.from" type="radio" value="all" /> Tous les équipements, rangés par type (liens LLDP inclus)</label>
-          <label class="check"><input v-model="form.from" type="radio" value="empty" /> Schéma vide</label>
+          <span>{{ t('Point de départ') }}</span>
+          <label class="check"><input v-model="form.from" type="radio" value="lldp" /> {{ t('Topologie détectée (équipements reliés par LLDP / CDP et leurs liens)') }}</label>
+          <label class="check"><input v-model="form.from" type="radio" value="all" /> {{ t('Tous les équipements, rangés par type (liens LLDP inclus)') }}</label>
+          <label class="check"><input v-model="form.from" type="radio" value="empty" /> {{ t('Schéma vide') }}</label>
         </div>
         <div class="field">
-          <span>Partage</span>
+          <span>{{ t('Partage') }}</span>
           <select v-model="form.access" class="input">
-            <option value="private">Privé — visible par vous seul</option>
-            <option value="read">Partagé en lecture — visible par tous</option>
-            <option value="edit">Partagé en écriture — modifiable par tous</option>
+            <option value="private">{{ t('Privé — visible par vous seul') }}</option>
+            <option value="read">{{ t('Partagé en lecture — visible par tous') }}</option>
+            <option value="edit">{{ t('Partagé en écriture — modifiable par tous') }}</option>
           </select>
         </div>
       </div>
       <template #foot>
-        <button class="btn" @click="createOpen = false">Annuler</button>
-        <button class="btn primary" :disabled="!form.name.trim() || busy" @click="create"><Loader2 v-if="busy" class="spin" /><Check v-else /> Créer</button>
+        <button class="btn" @click="createOpen = false">{{ t('Annuler') }}</button>
+        <button class="btn primary" :disabled="!form.name.trim() || busy" @click="create"><Loader2 v-if="busy" class="spin" /><Check v-else /> {{ t('Créer') }}</button>
       </template>
     </Modal>
   </div>
@@ -65,8 +65,9 @@ import { D } from '../dashboard/data'
 import { lldpLinks, topoLayout, lldpLinksBetween, uid } from '../diagram/core'
 import { useLoader } from '../refresh'
 import { timeAgo, toastError } from '../utils'
+import { t } from '../i18n'
 
-const ACCESS = { private: 'Privé', read: 'Partagé (lecture)', edit: 'Partagé (écriture)' }
+const ACCESS = { private: t('Privé'), read: t('Partagé (lecture)'), edit: t('Partagé (écriture)') }
 const router = useRouter()
 const items = ref([])
 const createOpen = ref(false)

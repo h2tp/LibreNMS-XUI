@@ -45,6 +45,7 @@ import { D, devicesFor } from '../../dashboard/data'
 import { interpretState } from '../../dashboard/states'
 import { useLoader } from '../../refresh'
 import { devName } from '../../utils'
+import { locale } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const all = ref([]); const devById = ref({}); const loaded = ref(false)
@@ -98,7 +99,7 @@ const upsList = computed(() => {
   return out.sort((a, b) => RANK[a.st] - RANK[b.st] || a.name.localeCompare(b.name))
 })
 
-const fmt = (v) => (Math.round(v * 10) / 10).toLocaleString('fr-FR')
+const fmt = (v) => (Math.round(v * 10) / 10).toLocaleString(locale)
 function fmtRuntime(m) {
   if (m >= 120) return `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')}`
   return `${Math.round(m)} min`

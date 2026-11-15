@@ -39,6 +39,7 @@ import { sensorUnit } from '../../rrdmeta'
 import { rrdNameFor } from '../../health'
 import { barOption, timeOption, PALETTE } from '../../charts'
 import { devName } from '../../utils'
+import { locale } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const router = useRouter()
@@ -79,7 +80,7 @@ const list = computed(() => {
   return l.slice(0, c.limit || 12)
 })
 
-const fmt = (v) => (v === null || v === undefined ? '—' : (Math.round(+v * 10) / 10).toLocaleString('fr-FR'))
+const fmt = (v) => (v === null || v === undefined ? '—' : (Math.round(+v * 10) / 10).toLocaleString(locale))
 const label = (s) => `${devName(devById.value[s.device_id])} · ${s.sensor_descr}`
 const tip = (s) => `${label(s)}\nValeur : ${fmt(s.sensor_current)} ${unit.value}${s.sensor_limit != null ? `\nSeuil haut : ${fmt(s.sensor_limit)} ${unit.value}` : ''}${s.sensor_limit_low != null ? `\nSeuil bas : ${fmt(s.sensor_limit_low)} ${unit.value}` : ''}`
 const link = (s) => `/device/${encodeURIComponent(devById.value[s.device_id]?.hostname || '')}/health`
