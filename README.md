@@ -36,6 +36,9 @@ lecture seule) : rien à modifier ni à installer dans LibreNMS.
   des câbles exportable.
 - **Fiche équipement complète** : vue d'ensemble avec photos, ports, santé, inventaire, voisins CDP/LLDP,
   réseau, routage, services, alertes, journaux, disponibilité, config Oxidized, gestion.
+- **Fiche d'alerte** : chronologie (première détection, durée), conditions de la règle en clair avec la
+  valeur mesurée, indicateurs de l'élément concerné (port, capteur avec jauge des seuils, latence, service),
+  propriétés regroupées et filtrables, secrets SNMP masqués.
 - **Gestion** : ajout / suppression d'équipements, acquittement d'alertes, règles d'alerte avec assistant,
   groupes, emplacements, maintenance.
 - **Confort** : interface en français ou en anglais (bouton FR / EN, langue du navigateur par défaut), recherche globale `Ctrl+K`,

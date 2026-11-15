@@ -37,6 +37,9 @@ the **LibreNMS API** and its **RRD files** (mounted read-only): nothing to chang
   cabling (including between racks and to ping-only devices) with live status and traffic, exportable cable list.
 - **Complete device page**: overview with photos, ports, health, inventory, CDP/LLDP neighbours, network,
   routing, services, alerts, logs, availability, Oxidized config, management.
+- **Alert details**: timeline (first detection, duration), rule conditions in plain words with the measured
+  value, metrics for the affected entity (port, sensor with threshold gauge, latency, service), grouped and
+  filterable properties, SNMP secrets masked.
 - **Management**: add / delete devices, acknowledge alerts, alert rules with a wizard, groups, locations,
   maintenance.
 - **Convenience**: English / French interface, global search `Ctrl+K`, light / dark theme, full width on large screens, auto-refresh, CSV

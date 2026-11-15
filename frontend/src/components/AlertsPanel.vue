@@ -32,17 +32,11 @@
     </Modal>
 
     <Modal v-if="detail" :title="detail.rule" :icon="Bell" wide @close="detail = null">
-      <dl class="kv small">
-        <dt>{{ t('Équipement') }}</dt><dd><DeviceCell :device="devById[detail.device_id]" /></dd>
-        <dt>{{ t('Sévérité') }}</dt><dd><span class="badge" :class="severityClass(detail.severity)">{{ detail.severity }}</span></dd>
-        <dt>{{ t('État') }}</dt><dd>{{ stateLbl(detail.state) }}</dd>
-        <dt>{{ t('Déclenchée') }}</dt><dd>{{ fmtDate(detail.timestamp) }}</dd>
-        <dt>{{ t('Règle') }}</dt><dd><code>{{ rules[detail.rule_id]?.rule || rules[detail.rule_id]?.builder || '—' }}</code></dd>
-        <dt v-if="detail.note">{{ t('Note') }}</dt><dd v-if="detail.note">{{ detail.note }}</dd>
-      </dl>
-      <div class="hr"></div>
-      <div class="small muted" style="margin-bottom:6px">{{ t('Données brutes') }}</div>
-      <pre class="code">{{ JSON.stringify(detail.raw, null, 2) }}</pre>
+      <AlertDetail :alert="detail.raw" :rule="rules[detail.rule_id]" :device="devById[detail.device_id]" />
+      <template v-if="!session.read_only && (+detail.state === 1 || +detail.state === 2)" #foot>
+        <button v-if="+detail.state === 1" class="btn primary" @click="ackRow = detail; ackNote = ''; untilClear = false; detail = null"><Check /> {{ t('Acquitter') }}</button>
+        <button v-if="+detail.state === 2" class="btn" @click="unack(detail); detail = null"><BellRing /> {{ t('Réactiver') }}</button>
+      </template>
     </Modal>
   </div>
 </template>
@@ -53,6 +47,7 @@ import { Bell, Check, BellRing } from 'lucide-vue-next'
 import DataTable from './DataTable.vue'
 import DeviceCell from './DeviceCell.vue'
 import Modal from './Modal.vue'
+import AlertDetail from './AlertDetail.vue'
 import { session, api, pick, safeList, devicesCached } from '../api'
 import { useLoader } from '../refresh'
 import { devName, fmtDate, timeAgo, severityClass, toast, toastError } from '../utils'
