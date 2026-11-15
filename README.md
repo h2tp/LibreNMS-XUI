@@ -144,7 +144,8 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   y compris entre baies et vers les panneaux de brassage : couleur, type (cuivre, fibre, DAC, alimentation), longueur,
   étiquette ; câbles affichés selon leur couleur ou leur état / charge (paliers et couleurs réglables par salle, comme
   pour les schémas, avec légende), fenêtre de trafic au survol, liste des câbles
-  exportable en CSV. Annuler / rétablir (Ctrl+Z / Ctrl+Y). Partage comme les schémas. Stockage : `./data/racks.json`.
+  exportable en CSV. Câbles déplaçables (forme libre) et rebranchables en glissant leurs extrémités.
+  Annuler / rétablir (Ctrl+Z / Ctrl+Y). Partage comme les schémas. Stockage : `./data/racks.json`.
 - **Équipements** : cartes / tableau, filtres (état, OS, type, emplacement, groupe), ajout SNMP v1/v2c/v3 ou ICMP.
 - **Fiche équipement** : vue d'ensemble (jauges CPU / RAM / disque / dispo, photos avec légendes et plein écran),
   ports avec sparklines, santé (processeurs, mémoire, stockage, capteurs + graphiques), explorateur de tous les

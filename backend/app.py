@@ -972,6 +972,9 @@ def _clean_room(body: dict, d: dict) -> None:
                 "color": _hex(c.get("color")) or "#3b82f6",
                 "type": c.get("type") if c.get("type") in ("copper", "fiber", "dac", "power", "other") else "copper",
                 "label": _txt(c.get("label"), 40), "length": _txt(c.get("length"), 20),
+                # forme du câble : décalage du point de passage (pixels), None = courbe automatique
+                "bend": {"x": _num(c["bend"].get("x"), -5000, 5000, 0), "y": _num(c["bend"].get("y"), -5000, 5000, 0)}
+                if isinstance(c.get("bend"), dict) else None,
             })
         d["cables"] = cables
 

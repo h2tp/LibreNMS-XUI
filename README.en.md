@@ -139,7 +139,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   Port-to-port cabling in two clicks, including
   between racks and to patch panels: color, type (copper, fiber, DAC, power), length, label; cables shown by their
   color or by status / load (per-room custom thresholds and colors, as for diagrams, with a legend), traffic popup
-  on hover, cable list exportable to CSV. Undo / redo (Ctrl+Z / Ctrl+Y).
+  on hover, cable list exportable to CSV. Cables can be reshaped by dragging and re-plugged by dragging their ends.
+  Undo / redo (Ctrl+Z / Ctrl+Y).
   Shared like diagrams. Storage:
   `./data/racks.json`.
 - **Devices**: cards / table, filters (status, OS, type, location, group), SNMP v1/v2c/v3 or ICMP onboarding.

@@ -1190,4 +1190,9 @@ export default {
   "Câbles :": "Cables:",
   "gris : câble passif": "grey: passive cable",
   "Modifier la légende": "Edit legend",
+  "Glisser pour déplacer le câble · double-clic : forme automatique": "Drag to move the cable · double-click: automatic shape",
+  "Glisser sur une autre prise pour rebrancher": "Drag onto another socket to re-plug",
+  "Les deux extrémités ne peuvent pas être sur la même prise": "Both ends cannot be on the same socket",
+  "Glissez le câble pour le déplacer, ou ses extrémités pour le rebrancher ; double-clic : forme automatique.": "Drag the cable to move it, or its ends to re-plug it; double-click: automatic shape.",
+  "Forme automatique": "Automatic shape",
 }

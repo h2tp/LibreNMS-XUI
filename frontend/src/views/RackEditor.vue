@@ -61,8 +61,10 @@
               <select v-model="selCable.type" class="input" @change="onTypeChange"><option v-for="(l, v) in CABLE_TYPES" :key="v" :value="v">{{ l }}</option></select></label>
             <label class="field grow"><span>{{ t('Longueur') }}</span><input v-model="selCable.length" class="input" maxlength="20" placeholder="1 m" @input="typed()" /></label>
           </div>
+          <div class="small faint">{{ t('Glissez le câble pour le déplacer, ou ses extrémités pour le rebrancher ; double-clic : forme automatique.') }}</div>
           <label class="field"><span>{{ t('Étiquette') }}</span><input v-model="selCable.label" class="input" maxlength="40" :placeholder="t('Ex. C-042, bureau 3…')" @input="typed()" /></label>
           <div class="row wrap" style="gap:6px">
+            <button v-if="selCable.bend" class="btn sm" @click="onStraighten(selCable)">{{ t('Forme automatique') }}</button>
             <button class="btn sm danger" @click="removeCable(selCable)"><Trash2 :size="13" /> {{ t('Supprimer le câble') }}</button>
           </div>
         </div>
@@ -147,7 +149,8 @@
         <RackView :room="room" :dev-by-id="devById" :ports-by-dev="portsByDev" :port-by-id="portById" :editing="editing" :selected="selected" :zoom="zoom"
           :cable-mode="editing && tool === 'cable'" :cable-from="cableFrom" :cable-view="cableView"
           @select="(s) => (selected = s)" @drop="onDrop" @invalid="toast(t('Pas assez de place à cet endroit'), 'error')" @open="openItem"
-          @socket="onSocket" @cable="onCableClick" @hover="onHover" @unhover="onUnhover" />
+          @socket="onSocket" @cable="onCableClick" @hover="onHover" @unhover="onUnhover"
+          @bend="onBend" @straighten="onStraighten" @replug="onReplug" />
         <LinkHover v-if="hover && hoverInfo" :link="hoverInfo" :x="hover.x" :y="hover.y" :pinned="hover.pinned" @close="hover = null" />
         <div class="legend small muted">
           <span><i style="background:#22d3ee"></i>10 G+</span><span><i style="background:#22c55e"></i>1 G</span><span><i style="background:#facc15"></i>100 M</span><span><i style="background:#fb923c"></i>10 M</span>
@@ -457,6 +460,27 @@ function onSocket(e) {
 }
 function onTypeChange() { if (selCable.value.type !== 'power') lastType.value = selCable.value.type; changed() }
 function rememberColor(c) { if (selCable.value?.type === 'power') lastPowerColor.value = c; else lastColor.value = c }
+// déplacer un câble : forme (point de passage) ou rebranchement d'une extrémité
+function onBend({ id, bend }) {
+  const c = room.value.cables.find((x) => x.id === id)
+  if (!c) return
+  hover.value = null
+  c.bend = bend; selected.value = { type: 'cable', id }
+  changed(600, true)
+}
+function onStraighten(c) { if (c.bend) { c.bend = null; changed() } }
+function onReplug({ cable, end, ep }) {
+  const c = room.value.cables.find((x) => x.id === cable.id)
+  const other = end === 'a' ? c.b : c.a
+  if (epKey(ep) === epKey(c[end])) return
+  if (epKey(ep) === epKey(other)) { toast(t('Les deux extrémités ne peuvent pas être sur la même prise'), 'error'); return }
+  if (cableAt(ep)) { toast(t('Cette prise est déjà câblée'), 'error'); return }
+  const kinds = [epKind(other), epKind(ep)]
+  if (kinds.includes('inlet') && kinds.includes('net')) { toast(t('Une entrée d\'alimentation se relie à une prise électrique (PDU, élément libre), pas à un port réseau'), 'error'); return }
+  c[end] = { item: ep.item, port: ep.port }
+  c.bend = null // la forme précédente n'a plus de sens avec une nouvelle extrémité
+  changed()
+}
 function removeCable(c) { room.value.cables = room.value.cables.filter((x) => x !== c); selected.value = null; changed(200) }
 
 // infos d'un câble pour la fenêtre de trafic (même présentation que les liens des schémas)

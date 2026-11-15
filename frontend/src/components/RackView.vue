@@ -27,16 +27,22 @@
       <div v-if="!room.racks.length" class="empty small">{{ t('Aucune baie dans cette salle.') }}</div>
 
       <!-- câbles, tracés au-dessus des façades -->
-      <svg v-if="cableView !== 'hidden'" class="cables" :width="size.w" :height="size.h">
+      <svg v-if="cableView !== 'hidden'" class="cables" :class="{ editing }" :width="size.w" :height="size.h">
         <g v-for="c in drawn" :key="c.id" class="cable" :class="{ sel: selected?.type === 'cable' && selected.id === c.id, down: c.down }"
           @mouseenter="$emit('hover', { cable: c.raw, event: $event })" @mousemove="$emit('hover', { cable: c.raw, event: $event })" @mouseleave="$emit('unhover')"
-          @click.stop="$emit('cable', { cable: c.raw, event: $event })">
+          @click.stop="onCableClick(c, $event)" @pointerdown="startBend(c, $event)" @dblclick.stop="editing && $emit('straighten', c.raw)">
           <path :d="c.d" class="hit" />
           <path :d="c.d" class="halo" />
           <path :d="c.d" class="wire" :stroke="c.color" :stroke-dasharray="c.down ? '6 5' : null" />
           <circle :cx="c.a.x" :cy="c.a.y" r="2.6" :fill="c.color" class="plug" /><circle :cx="c.b.x" :cy="c.b.y" r="2.6" :fill="c.color" class="plug" />
+          <!-- câble sélectionné (édition) : poignée de forme et extrémités déplaçables -->
+          <template v-if="editing && selected?.type === 'cable' && selected.id === c.id">
+            <circle :cx="c.h.x" :cy="c.h.y" r="6" class="handle"><title>{{ t('Glisser pour déplacer le câble · double-clic : forme automatique') }}</title></circle>
+            <circle v-for="end in ['a', 'b']" :key="end" :cx="c[end].x" :cy="c[end].y" r="6.5" class="grab" @pointerdown.stop="startReplug(c, end, $event)"><title>{{ t('Glisser sur une autre prise pour rebrancher') }}</title></circle>
+          </template>
         </g>
         <path v-if="pending" :d="pending" class="pending" />
+        <path v-if="replug" :d="replug.d" class="pending" />
       </svg>
     </div>
   </div>
@@ -53,7 +59,7 @@ const props = defineProps({
   room: Object, devById: Object, portsByDev: Object, portById: { type: Object, default: () => ({}) }, editing: Boolean, selected: Object,
   zoom: { type: Number, default: 1 }, cableMode: Boolean, cableFrom: Object, cableView: { type: String, default: 'real' },
 })
-const emit = defineEmits(['select', 'drop', 'open', 'invalid', 'socket', 'cable', 'hover', 'unhover'])
+const emit = defineEmits(['select', 'drop', 'open', 'invalid', 'socket', 'cable', 'hover', 'unhover', 'bend', 'straighten', 'replug'])
 
 // --------------------------------------------------------------- câbles
 const rv = ref(null); const refEl = ref(null)
@@ -90,10 +96,21 @@ let ro = null
 onMounted(() => { ro = new ResizeObserver(remeasure); ro.observe(rv.value); remeasure() })
 onBeforeUnmount(() => { ro?.disconnect(); cancelAnimationFrame(raf) })
 
-// courbe d'un câble qui « pend » entre les deux prises
-function curve(a, b) {
-  const sag = 18 + Math.min(150, Math.abs(b.x - a.x) * 0.22 + Math.abs(b.y - a.y) * 0.08)
-  return `M${a.x},${a.y} C${a.x},${a.y + sag} ${b.x},${b.y + sag} ${b.x},${b.y}`
+// courbe d'un câble qui « pend » entre les deux prises ; avec `bend`, elle passe par le point milieu décalé
+const sagOf = (a, b) => 18 + Math.min(150, Math.abs(b.x - a.x) * 0.22 + Math.abs(b.y - a.y) * 0.08)
+function midOf(a, b, bend) {
+  // milieu de la courbe automatique (t = 0,5 de la cubique) + décalage choisi par l'utilisateur
+  const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 + 0.75 * sagOf(a, b) }
+  return bend ? { x: m.x + bend.x, y: m.y + bend.y } : m
+}
+function curve(a, b, bend) {
+  const sag = sagOf(a, b)
+  if (!bend) return `M${a.x},${a.y} C${a.x},${a.y + sag} ${b.x},${b.y + sag} ${b.x},${b.y}`
+  const h = midOf(a, b, bend)
+  const dir = Math.sign(b.x - a.x) || 1
+  const k = Math.max(20, Math.abs(b.x - a.x) / 4)
+  const s1 = Math.max(15, (h.y - a.y) * 0.5); const s2 = Math.max(15, (h.y - b.y) * 0.5)
+  return `M${a.x},${a.y} C${a.x},${a.y + s1} ${h.x - dir * k},${h.y} ${h.x},${h.y} C${h.x + dir * k},${h.y} ${b.x},${b.y + s2} ${b.x},${b.y}`
 }
 const devPortId = (e) => {
   const it = props.room.items.find((i) => i.id === e.item)
@@ -113,13 +130,61 @@ const drawn = computed(() => (props.room.cables || []).map((c) => {
   if (!a || !b) return null
   const st = virtState(c, linkState({ port_a: devPortId(c.a), port_b: devPortId(c.b) }, props.portById, props.room.view || {}))
   const color = props.cableView === 'state' ? (st.known ? st.color : '#64748b') : c.color
-  return { id: c.id, raw: c, a, b, d: curve(a, b), color, down: st.known && st.down }
+  return { id: c.id, raw: c, a, b, h: midOf(a, b, c.bend), d: curve(a, b, c.bend), color, down: st.known && st.down }
 }).filter(Boolean))
-function onMove(e) {
-  if (!props.cableFrom || !refEl.value) { cursor.value = null; return }
+// coordonnées d'un évènement souris dans le repère des câbles (non zoomé)
+function local(e) {
   const k = refEl.value.getBoundingClientRect().width / 1000 || 1
   const base = rv.value.getBoundingClientRect()
-  cursor.value = { x: (e.clientX - base.left) / k, y: (e.clientY - base.top) / k }
+  return { x: (e.clientX - base.left) / k, y: (e.clientY - base.top) / k }
+}
+function onMove(e) {
+  if (!props.cableFrom || !refEl.value) { cursor.value = null; return }
+  cursor.value = local(e)
+}
+
+// --------------------------------------------------------------- déplacer un câble (édition)
+// glisser le câble : décale son point de passage ; glisser une extrémité : la rebrancher sur une autre prise
+let bendDrag = null
+const replug = ref(null) // { id, end, d }
+let moved = false
+function startBend(c, e) {
+  if (!props.editing || e.button !== 0) return
+  moved = false
+  const p = local(e); const h = midOf(c.a, c.b, c.raw.bend)
+  const base = midOf(c.a, c.b, null)
+  bendDrag = { id: c.id, dx: p.x - h.x, dy: p.y - h.y, base, sx: e.clientX, sy: e.clientY }
+  e.currentTarget.setPointerCapture(e.pointerId)
+  e.currentTarget.onpointermove = (ev) => {
+    if (!bendDrag) return
+    if (!moved && Math.abs(ev.clientX - bendDrag.sx) + Math.abs(ev.clientY - bendDrag.sy) < 4) return
+    moved = true
+    const q = local(ev)
+    emit('bend', { id: bendDrag.id, bend: { x: Math.round(q.x - bendDrag.dx - bendDrag.base.x), y: Math.round(q.y - bendDrag.dy - bendDrag.base.y) } })
+  }
+  e.currentTarget.onpointerup = (ev) => { ev.currentTarget.onpointermove = null; ev.currentTarget.onpointerup = null; bendDrag = null }
+}
+function onCableClick(c, e) {
+  if (moved) { moved = false; return } // fin d'un glissement : pas un clic
+  emit('cable', { cable: c.raw, event: e })
+}
+function startReplug(c, end, e) {
+  if (!props.editing) return
+  const fixed = end === 'a' ? c.b : c.a
+  const el = e.currentTarget
+  el.setPointerCapture(e.pointerId)
+  replug.value = { id: c.id, end, d: curve(fixed, local(e)) }
+  el.onpointermove = (ev) => { replug.value = { ...replug.value, d: curve(fixed, local(ev)) } }
+  el.onpointerup = (ev) => {
+    el.onpointermove = null; el.onpointerup = null
+    replug.value = null
+    // prise sous le pointeur (le câble lui-même est ignoré par elementsFromPoint grâce à la recherche de [data-ep])
+    const target = document.elementsFromPoint(ev.clientX, ev.clientY).map((x) => x.closest?.('[data-ep]')).find(Boolean)
+    if (!target) return
+    const [item, ...rest] = target.dataset.ep.split(':'); const raw = rest.join(':')
+    const port = /^-?\d+$/.test(raw) ? +raw : raw
+    emit('replug', { cable: c.raw, end, ep: { item, port } })
+  }
 }
 const pending = computed(() => {
   const a = props.cableFrom && pos.value[key(props.cableFrom)]
@@ -185,6 +250,10 @@ function onItemClick(it, e) {
 .cable:hover .wire, .cable.sel .wire { stroke-width: 3.6; opacity: 1; }
 .cable.sel .halo { stroke: var(--accent); stroke-width: 7; opacity: .6; }
 .cable .plug { stroke: #0b1018; stroke-width: 1; }
+.cables.editing .cable { cursor: move; }
+.cable .handle { fill: var(--panel-solid); stroke: var(--accent); stroke-width: 2.5; cursor: move; }
+.cable .grab { fill: var(--accent); stroke: #fff; stroke-width: 1.5; cursor: grab; opacity: .9; }
+.cable .grab:hover { opacity: 1; r: 8; }
 .pending { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 6 5; pointer-events: none; }
 .rack { flex: none; border-radius: 12px; padding: 8px 8px 10px; background: var(--panel-solid); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0, 0, 0, .18); }
 .rack.sel { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
