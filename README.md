@@ -24,7 +24,7 @@ lecture seule) : rien à modifier ni à installer dans LibreNMS.
 ## Points forts
 
 - **Tableaux de bord à la carte** : widgets à glisser et redimensionner (serveurs, switchs avec façade des
-  ports, NAS, Wi-Fi, onduleurs, imprimantes, températures, disponibilité / SLA, trafic, schémas…),
+  ports, NAS, Wi-Fi, onduleurs, imprimantes, températures, disponibilité / SLA, trafic, schémas, baies…),
   plusieurs tableaux par utilisateur, partage, export / import.
 - **Graphiques interactifs** tracés à partir des RRD : zoom, survol, plages de 1 h à 1 an, statistiques.
 - **Schémas réseau en direct** : état des équipements, alertes, débits ; liens colorés selon la charge ou le
@@ -118,7 +118,8 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   disques), switchs (façade des ports), points d'accès Wi-Fi, imprimantes (consommables lus dans les RRD),
   services LibreNMS, ports en erreur, disponibilité / SLA (24 h à 1 an, coupures), trafic réseau cumulé,
   stockage des disques, mémoire RAM et CPU, graphique RRD interactif, trafic d'un port, graphique LibreNMS,
-  carte géographique, schéma, notes, page web (iframe sandboxée).
+  carte géographique, schéma, baie (une baie ou toute une salle, ajustée à la taille du widget), notes,
+  page web (iframe sandboxée).
   Les données agrégées (CPU, RAM, stockage, disponibilité, Wi-Fi, imprimantes) sont préchauffées au démarrage
   puis servies depuis un cache rafraîchi en arrière-plan ; `AGG_CONCURRENCY` (6 par défaut) limite les
   requêtes simultanées vers LibreNMS. Le propriétaire d'un tableau est le nom d'utilisateur de la session XUI :

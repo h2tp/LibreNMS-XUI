@@ -1179,4 +1179,11 @@ export default {
   "joignable": "reachable",
   "injoignable": "unreachable",
   "{n} · port virtuel {i} (joignabilité : {s})": "{n} · virtual port {i} (reachability: {s})",
+  "Une baie (ou toute une salle) avec ses équipements, l'état des ports et les câbles en direct.": "A rack (or a whole room) with its devices, live port status and cables.",
+  "Couleur réelle": "Real color",
+  "État / charge": "Status / load",
+  "— choisir une baie —": "— choose a rack —",
+  "{n} — toutes les baies": "{n} — all racks",
+  "Ouvrir la salle": "Open room",
+  "Baie introuvable (supprimée ou non partagée)": "Rack not found (deleted or not shared)",
 }

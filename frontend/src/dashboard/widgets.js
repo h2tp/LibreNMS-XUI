@@ -4,7 +4,7 @@
 import { defineAsyncComponent } from 'vue'
 import {
   LayoutGrid, PieChart, Cpu, Timer, ArrowDownUp, Bell, CircleX, MapPin, ScrollText,
-  Grid3x3, LineChart, Cable, Image, Map, StickyNote, Server, Thermometer, Fan, HardDrive, MemoryStick, Activity, ShieldCheck, AppWindow, HeartPulse, TriangleAlert, Plug, BatteryCharging, Printer, Wifi, Network, ServerCog, HardDriveDownload, Workflow,
+  Grid3x3, LineChart, Cable, Image, Map, StickyNote, Server, Thermometer, Fan, HardDrive, MemoryStick, Activity, ShieldCheck, AppWindow, HeartPulse, TriangleAlert, Plug, BatteryCharging, Printer, Wifi, Network, ServerCog, HardDriveDownload, Workflow, Rows3,
 } from 'lucide-vue-next'
 import { session } from '../api'
 import { SENSOR_LABELS } from '../rrdmeta'
@@ -338,6 +338,14 @@ export const WIDGETS = {
     fields: [
       { key: 'diagram', label: t('Schéma'), type: 'diagram', required: true },
       { key: 'rates', label: t('Afficher les débits sur les liens'), type: 'bool', default: true },
+    ],
+  },
+  rack: {
+    label: t('Baie'), icon: Rows3, desc: t('Une baie (ou toute une salle) avec ses équipements, l\'état des ports et les câbles en direct.'),
+    w: 4, h: 18, component: W('WRack'),
+    fields: [
+      { key: 'rack', label: t('Baie'), type: 'rack', required: true },
+      { key: 'cables', label: t('Câbles'), type: 'select', default: 'real', options: [{ v: 'real', l: t('Couleur réelle') }, { v: 'state', l: t('État / charge') }, { v: 'hidden', l: t('Masqués') }] },
     ],
   },
   map: {

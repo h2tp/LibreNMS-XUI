@@ -36,6 +36,13 @@
             <option value="" disabled>{{ t('— choisir un schéma —') }}</option>
             <option v-for="d in diagrams" :key="d.id" :value="d.id">{{ d.name }}{{ d.mine ? '' : ` (${d.owner})` }}</option>
           </select>
+          <select v-else-if="f.type === 'rack'" v-model="cfg[f.key]" class="input">
+            <option value="" disabled>{{ t('— choisir une baie —') }}</option>
+            <optgroup v-for="r in rooms" :key="r.id" :label="`${r.name}${r.mine ? '' : ` (${r.owner})`}`">
+              <option :value="r.id">{{ t('{n} — toutes les baies', { n: r.name }) }}</option>
+              <option v-for="k in r.racks" :key="k.id" :value="`${r.id}:${k.id}`">{{ k.name || t('Baie') }} ({{ k.units }}U)</option>
+            </optgroup>
+          </select>
           <template v-else-if="f.type === 'device'">
             <input v-model="devFilter" class="input" :placeholder="t('Filtrer les équipements…')" style="margin-bottom:6px" />
             <select v-model="cfg[f.key]" class="input" :size="Math.min(7, Math.max(3, devOptions.length + (f.required ? 0 : 1)))">
@@ -89,7 +96,7 @@ import { Check } from 'lucide-vue-next'
 import Modal from './Modal.vue'
 import { WIDGETS, missingConfig } from '../dashboard/widgets'
 import { D } from '../dashboard/data'
-import { api, pick, safeList, rrd, diagApi } from '../api'
+import { api, pick, safeList, rrd, diagApi, rackApi } from '../api'
 import { describe, CATEGORIES, SENSOR_LABELS } from '../rrdmeta'
 import { RANGES, devName } from '../utils'
 import { t } from '../i18n'
@@ -102,6 +109,7 @@ for (const f of def.fields) if (f.type === 'multi' && !Array.isArray(cfg[f.key])
 
 const devices = ref([])
 const diagrams = ref([])
+const rooms = ref([])
 const groups = ref([])
 const devFilter = ref('')
 const rrdFilter = ref('')
@@ -124,6 +132,10 @@ const autoTitle = computed(() => {
   if (props.type === 'sensors' && cfg.cls && cfg.cls !== 'temperature') return SENSOR_LABELS[cfg.cls] || cfg.cls
   if (props.type === 'iframe' && cfg.url) { try { return new URL(cfg.url).host } catch { return '' } }
   if (props.type === 'diagram' && cfg.diagram) return diagrams.value.find((d) => d.id === cfg.diagram)?.name || ''
+  if (props.type === 'rack' && cfg.rack) {
+    const [rid, kid] = cfg.rack.split(':'); const r = rooms.value.find((x) => x.id === rid)
+    return r ? (kid ? r.racks.find((k) => k.id === kid)?.name || r.name : r.name) : ''
+  }
   if (props.type === 'port' && cfg.portName) return `Trafic ${cfg.portName}`
   if (props.type === 'graph' && cfg.graph) return lists.graphs.find((g) => g.name === cfg.graph)?.desc
   return ''
@@ -148,6 +160,10 @@ onMounted(async () => {
   if (needs('device')) devices.value = await D.devices().catch(() => [])
   if (needs('group')) groups.value = await D.groups().catch(() => [])
   if (needs('diagram')) diagrams.value = (await diagApi.list().catch(() => ({ items: [] }))).items
+  if (needs('rack')) {
+    const list = (await rackApi.list().catch(() => ({ items: [] }))).items
+    rooms.value = await Promise.all(list.map((r) => rackApi.get(r.id).catch(() => ({ ...r, racks: [] }))))
+  }
   if (cfg.device) loadDeps(cfg.device, true)
 })
 watch(() => cfg.device, (h) => loadDeps(h, false))
