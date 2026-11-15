@@ -65,7 +65,8 @@ bascule sur les images PNG générées par LibreNMS. Si LibreNMS utilise rrdcach
   lecture / écriture comme les tableaux de bord ; widget « Schéma ». Stockage : `./data/diagrams.json` et
   `./data/diagram-bg/`.
 - **Équipements** : cartes/tableau, filtres (état, OS, type, emplacement, groupe), ajout SNMP v1/v2c/v3 ou ICMP
-- **Fiche équipement** : vue d'ensemble (jauges CPU/RAM/disque/dispo), ports avec sparklines, santé
+- **Fiche équipement** : vue d'ensemble (jauges CPU/RAM/disque/dispo, photos de l'équipement avec légendes et
+  plein écran, stockées dans `./data/device-photos/`), ports avec sparklines, santé
   (processeurs, mémoire, stockage, capteurs + graphiques), explorateur de tous les RRD, inventaire ENTITY-MIB
   en arbre, voisins CDP/LLDP (graphe), IP, VLAN, FDB, ARP, pile de ports, transceivers, BGP/OSPF/VRF/IPsec,
   services, alertes, journaux, disponibilité & coupures, composants, config Oxidized, gestion

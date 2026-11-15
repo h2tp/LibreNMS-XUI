@@ -124,3 +124,17 @@ export function devicesCached(maxAge = 30000) {
   return devCache.p
 }
 export function invalidateDevices() { devCache.t = 0 }
+
+// photos d'un équipement (stockées par XUI, pas dans LibreNMS)
+export const photoApi = {
+  list: (deviceId) => request(`/xui/devices/${enc(deviceId)}/photos`),
+  url: (name) => `/xui/device-photos/${enc(name)}`,
+  async add(deviceId, file) {
+    const r = await fetch(`/xui/devices/${enc(deviceId)}/photos`, { method: 'POST', headers: { 'Content-Type': file.type }, body: file, credentials: 'same-origin' })
+    const j = await r.json().catch(() => ({}))
+    if (!r.ok) throw new ApiError(j.detail || `Erreur HTTP ${r.status}`, r.status)
+    return j
+  },
+  edit: (deviceId, name, body) => request(`/xui/devices/${enc(deviceId)}/photos/${enc(name)}`, { method: 'PATCH', body }),
+  remove: (deviceId, name) => request(`/xui/devices/${enc(deviceId)}/photos/${enc(name)}`, { method: 'DELETE' }),
+}

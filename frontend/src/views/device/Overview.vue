@@ -7,6 +7,7 @@
           <template v-for="[k, v] in info" :key="k"><dt>{{ k }}</dt><dd :class="{ mono: /IP|Nom d'hôte|Série/.test(k) }">{{ v }}</dd></template>
         </dl>
       </div>
+      <DevicePhotos :device="device" />
       <div class="card" v-if="device.sysDescr">
         <div class="card-title"><FileText :size="17" /> Description système</div>
         <div class="small muted mono" style="word-break:break-word">{{ device.sysDescr }}</div>
@@ -97,6 +98,7 @@ import RrdChart from '../../components/RrdChart.vue'
 import MiniMap from '../../components/MiniMap.vue'
 import DeviceTraffic from '../../components/DeviceTraffic.vue'
 import WSwitches from '../../components/widgets/WSwitches.vue'
+import DevicePhotos from '../../components/DevicePhotos.vue'
 import { api, pick, safeList, L } from '../../api'
 import { useLoader } from '../../refresh'
 import { loadHealth } from '../../health'

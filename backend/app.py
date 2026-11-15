@@ -750,6 +750,126 @@ async def diag_img_delete(name: str, request: Request):
     return {"ok": True}
 
 
+# --------------------------------------------------------------------------- photos d'équipements
+# DATA_DIR/device-photos/<fichier> + index DATA_DIR/device-photos.json { device_id: [ {name, caption, added, by} ] }.
+# Indexé par device_id (stable même si l'équipement est renommé).
+
+PHOTO_DIR = DATA_DIR / "device-photos"
+PHOTO_FILE = DATA_DIR / "device-photos.json"
+_photo_lock = asyncio.Lock()
+_PHOTO_NAME_RE = re.compile(r"^\d+-[0-9a-f]{16}\.(png|jpg|webp|gif)$")
+_PHOTO_MAX = 20
+
+
+def _photo_load() -> dict:
+    try:
+        data = json.loads(PHOTO_FILE.read_text())
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _photo_save(data: dict) -> None:
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = PHOTO_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1))
+        tmp.replace(PHOTO_FILE)
+    except OSError as e:
+        raise HTTPException(500, f"Impossible d'enregistrer les photos : {e}") from e
+
+
+def _photo_write_ok(request: Request) -> dict:
+    s = _require(request)
+    if READ_ONLY:
+        raise HTTPException(403, "Interface en lecture seule (READ_ONLY=true)")
+    if s.get("ro"):
+        raise HTTPException(403, "Votre rôle LibreNMS ne permet que la consultation")
+    return s
+
+
+@app.get("/xui/devices/{device_id}/photos")
+async def photos_list(device_id: int, request: Request):
+    _require(request)
+    return _photo_load().get(str(device_id), [])
+
+
+@app.post("/xui/devices/{device_id}/photos")
+async def photos_add(device_id: int, request: Request):
+    """Ajout d'une photo : corps brut PNG/JPEG/WebP/GIF (pas de SVG), 10 Mo max., 20 par équipement."""
+    s = _photo_write_ok(request)
+    ext = _BG_TYPES.get(request.headers.get("content-type", "").split(";")[0].strip().lower())
+    if not ext:
+        raise HTTPException(415, "Formats acceptés : PNG, JPEG, WebP, GIF")
+    raw = await request.body()
+    if not raw or len(raw) > 10 * 1024 * 1024:
+        raise HTTPException(413, "Image vide ou trop volumineuse (10 Mo max.)")
+    name = f"{device_id}-{hashlib.sha256(raw).hexdigest()[:16]}.{ext}"
+    async with _photo_lock:
+        data = _photo_load()
+        lst = data.setdefault(str(device_id), [])
+        if any(p["name"] == name for p in lst):
+            raise HTTPException(409, "Cette photo est déjà associée à l'équipement")
+        if len(lst) >= _PHOTO_MAX:
+            raise HTTPException(400, f"{_PHOTO_MAX} photos maximum par équipement")
+        PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+        (PHOTO_DIR / name).write_bytes(raw)
+        entry = {"name": name, "caption": "", "added": int(time.time()), "by": s.get("user", "")}
+        lst.append(entry)
+        _photo_save(data)
+    return entry
+
+
+@app.patch("/xui/devices/{device_id}/photos/{name}")
+async def photos_edit(device_id: int, name: str, request: Request):
+    """Légende ({caption}) et/ou mise en première position ({first: true})."""
+    _photo_write_ok(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(400, "Corps JSON attendu")
+    async with _photo_lock:
+        data = _photo_load()
+        lst = data.get(str(device_id), [])
+        p = next((x for x in lst if x["name"] == name), None)
+        if not p:
+            raise HTTPException(404, "Photo introuvable")
+        if "caption" in body:
+            p["caption"] = _txt(body.get("caption"), 120)
+        if body.get("first"):
+            lst.remove(p)
+            lst.insert(0, p)
+        _photo_save(data)
+    return lst
+
+
+@app.delete("/xui/devices/{device_id}/photos/{name}")
+async def photos_delete(device_id: int, name: str, request: Request):
+    _photo_write_ok(request)
+    async with _photo_lock:
+        data = _photo_load()
+        lst = data.get(str(device_id), [])
+        p = next((x for x in lst if x["name"] == name), None)
+        if not p:
+            raise HTTPException(404, "Photo introuvable")
+        lst.remove(p)
+        if not lst:
+            data.pop(str(device_id), None)
+        _photo_save(data)
+        if _PHOTO_NAME_RE.match(name):
+            (PHOTO_DIR / name).unlink(missing_ok=True)
+    return {"ok": True}
+
+
+@app.get("/xui/device-photos/{name}")
+async def photos_file(name: str, request: Request):
+    _require(request)
+    f = PHOTO_DIR / name
+    if not _PHOTO_NAME_RE.match(name) or not f.is_file():
+        raise HTTPException(404, "Photo introuvable")
+    mt = next(k for k, v in _BG_TYPES.items() if f.suffix == "." + v)
+    return FileResponse(f, media_type=mt, headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=86400, immutable"})
+
+
 # --------------------------------------------------------------------------- santé agrégée
 # L'API LibreNMS n'a pas d'endpoint global pour le stockage ni la mémoire : on interroge chaque
 # équipement puis chaque élément, en parallèle, avec un cache court par jeton.
