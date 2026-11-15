@@ -1216,4 +1216,13 @@ export default {
   "Jauges": "Gauges",
   "Bandeau compact (une ligne)": "Compact strip (one line)",
   "Afficher les icônes": "Show icons",
+  "Anneau": "Donut",
+  "Camembert": "Pie",
+  "Demi-anneau (jauge)": "Half ring (gauge)",
+  "Barre empilée": "Stacked bar",
+  "Chiffres": "Numbers",
+  "Par catégorie": "By category",
+  "Répartition par (affichage « Par catégorie »)": "Breakdown by (\"By category\" display)",
+  "Masquer les états à zéro": "Hide statuses at zero",
+  "disponibles": "available",
 }

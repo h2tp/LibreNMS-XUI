@@ -42,7 +42,16 @@ export const WIDGETS = {
   },
   'device-status': {
     label: t('État des équipements'), icon: PieChart, desc: t('Anneau en ligne / hors ligne / désactivés.'),
-    w: 4, h: 9, component: W('WDeviceStatus'), fields: [GROUP_FIELD],
+    w: 4, h: 9, component: W('WDeviceStatus'),
+    fields: [
+      GROUP_FIELD,
+      { key: 'mode', label: t('Affichage'), type: 'select', default: 'donut', options: [
+        { v: 'donut', l: t('Anneau') }, { v: 'pie', l: t('Camembert') }, { v: 'half', l: t('Demi-anneau (jauge)') },
+        { v: 'bar', l: t('Barre empilée') }, { v: 'tiles', l: t('Chiffres') }, { v: 'breakdown', l: t('Par catégorie') },
+      ] },
+      { key: 'groupBy', label: t('Répartition par (affichage « Par catégorie »)'), type: 'select', default: 'location', options: [{ v: 'location', l: t('Emplacement') }, { v: 'type', l: t('Type') }, { v: 'os', l: t('OS') }] },
+      { key: 'hideEmpty', label: t('Masquer les états à zéro'), type: 'bool', default: false },
+    ],
   },
   availability: {
     label: t('Carte de disponibilité'), icon: Grid3x3, desc: t('Une tuile colorée par équipement, comme dans LibreNMS.'),
