@@ -80,6 +80,9 @@
             <label v-if="selItem.kind !== 'device' && !['shelf', 'blank', 'cablemgmt'].includes(selItem.kind)" class="field grow"><span>{{ t('Prises / ports') }}</span>
               <input v-model.number="selItem.ports" class="input" type="number" min="0" max="96" @change="selItem.ports = Math.max(0, Math.min(96, selItem.ports || 0)); changed()" /></label>
           </div>
+          <label v-if="selItem.kind === 'custom'" class="field"><span>{{ t('Ports réseau virtuels') }}</span>
+            <select :value="selItem.vports || 0" class="input" @change="setVports($event.target.value)"><option v-for="n in 9" :key="n" :value="n - 1">{{ n - 1 }}</option></select>
+            <span class="small faint">{{ t('Ports réseau pour câbler un élément absent de LibreNMS (pas d\'état en direct).') }}</span></label>
           <label v-if="selItem.kind === 'device'" class="field"><span>{{ t('Ports réseau virtuels') }}</span>
             <select :value="selItem.vports ?? ''" class="input" @change="setVports($event.target.value)">
               <option value="">{{ t('Automatique ({n})', { n: autoV(selItem) }) }}</option><option v-for="n in 9" :key="n" :value="n - 1">{{ n - 1 }}</option>
@@ -433,6 +436,7 @@ function setPsu(n) {
 // nature d'une extrémité : entrée d'alimentation, prise électrique (PDU…), ou port réseau
 function epKind(e) {
   if (e.port < 0) return 'inlet'
+  if (String(e.port).startsWith('v')) return 'net'
   const it = room.value.items.find((i) => i.id === e.item)
   return it?.kind === 'pdu' ? 'outlet' : it?.kind === 'device' || it?.kind === 'patch' ? 'net' : 'any'
 }

@@ -135,7 +135,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   devices and passive items (12/24/48-port patch panels, PDU, shelf, cable manager, blanking panel, custom item)
   dragged into U positions, moved between racks, adjustable height and socket count, front panel drawn from the real
   ports (speed, status, errors, traffic on hover) or a front photo. Power inlets on devices (0 to 4) to cable PDUs;
-  virtual network ports for devices without physical ports (ping-monitored), whose status follows reachability.
+  virtual network ports for devices without physical ports (ping-monitored), whose status follows reachability,
+  and for custom items that are not in LibreNMS.
   Port-to-port cabling in two clicks, including
   between racks and to patch panels: color, type (copper, fiber, DAC, power), length, label; cables shown by their
   color or by status / load (per-room custom thresholds and colors, as for diagrams, with a legend), traffic popup

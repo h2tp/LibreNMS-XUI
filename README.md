@@ -140,7 +140,7 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   élément libre) glissés en U, déplacement entre baies, hauteur et nombre de prises réglables, façade dessinée à partir
   des ports réels (vitesse, état, erreurs, trafic au survol) ou photo de façade. Prises d'alimentation sur les
   équipements (0 à 4) pour câbler les PDU ; ports réseau virtuels pour les équipements sans port physique (supervisés
-  par ping), dont l'état suit la joignabilité. Câblage port à port en deux clics,
+  par ping), dont l'état suit la joignabilité, et pour les éléments libres absents de LibreNMS. Câblage port à port en deux clics,
   y compris entre baies et vers les panneaux de brassage : couleur, type (cuivre, fibre, DAC, alimentation), longueur,
   étiquette ; câbles affichés selon leur couleur ou leur état / charge (paliers et couleurs réglables par salle, comme
   pour les schémas, avec légende), fenêtre de trafic au survol, liste des câbles

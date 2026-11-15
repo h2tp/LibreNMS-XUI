@@ -37,7 +37,7 @@
 
       <!-- ports virtuels : équipement sans port physique (ping…), état = joignabilité de l'équipement -->
       <div v-if="vcount" class="vports">
-        <span v-for="i in vcount" :key="i" class="sock virt" :class="[status === 'up' ? 'up' : 'vdown', sockCls(`v${i}`)]" style="--fill:#22c55e"
+        <span v-for="i in vcount" :key="i" class="sock virt" :class="[item.kind !== 'device' ? 'vfree' : status === 'up' ? 'up' : 'vdown', sockCls(`v${i}`)]" style="--fill:#22c55e"
           :data-ep="`${item.id}:v${i}`" :title="t('{n} · port virtuel {i} (joignabilité : {s})', { n: name, i, s: statusLabel[status] || status })" @click="onSock($event, `v${i}`)">
           <span v-if="hpx >= 30" class="num">{{ vcount > 1 ? `v${i}` : 'LAN' }}</span>
         </span>
@@ -87,7 +87,7 @@ const sub = computed(() => (props.item.kind === 'device' ? (props.dev ? props.de
 const count = computed(() => (props.item.kind === 'device' ? props.ports.length : props.item.ports))
 const psu = computed(() => (['device', 'custom', 'pdu'].includes(props.item.kind) ? props.item.psu ?? (props.item.kind === 'device' ? 1 : 0) : 0))
 const grid = computed(() => faceGrid(count.value, FACE_W - LABEL_W - 34 - (psu.value ? (psu.value > 1 && hpx.value >= 60 ? 22 : psu.value * 19) : 0), hpx.value - 10))
-const vcount = computed(() => (props.item.kind === 'device' ? props.item.vports ?? (props.ports.length ? 0 : 1) : 0))
+const vcount = computed(() => (props.item.kind === 'device' ? props.item.vports ?? (props.ports.length ? 0 : 1) : props.item.kind === 'custom' ? props.item.vports || 0 : 0))
 const anchors = computed(() => [...props.cabled].filter((k) => k.startsWith(`${props.item.id}:`)))
 
 const devPorts = computed(() => props.ports.map((p) => {
@@ -137,6 +137,7 @@ a.sock:hover { border-color: #e2e8f0; text-decoration: none; }
 .vports { flex: none; display: flex; gap: 3px; margin-left: 6px; }
 .sock.virt { width: 26px; height: 15px; border-style: dashed; font-size: 7.5px; }
 .sock.virt.vdown { border-color: #f43f5e; color: #f43f5e; }
+.sock.virt.vfree { border-color: #94a3b8; color: #cbd5e1; }
 .inlets { flex: none; display: flex; gap: 4px; margin-left: 6px; }
 .inlets.col { flex-direction: column; }
 .sock.inlet { width: 15px; height: 13px; border-radius: 3px 3px 5px 5px; background: #0b0d10; border-color: #4b5563; color: #facc15; }

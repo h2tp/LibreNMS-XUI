@@ -918,7 +918,8 @@ def _clean_room(body: dict, d: dict) -> None:
                 # prises d'alimentation (entrées secteur) : 1 par défaut pour un équipement
                 "psu": int(_num(it.get("psu"), 0, 4, 1 if kind == "device" else 0)) if kind in ("device", "custom", "pdu") else 0,
                 # ports réseau virtuels (équipement sans port physique, ex. ping) : None = automatique (1 si aucun port)
-                "vports": int(_num(it.get("vports"), 0, 8, 1)) if kind == "device" and it.get("vports") is not None else None,
+                # (élément libre : 0 par défaut, réglable)
+                "vports": int(_num(it.get("vports"), 0, 8, 1)) if kind in ("device", "custom") and it.get("vports") is not None else None,
                 "image": it.get("image") if isinstance(it.get("image"), str) and _IMG_NAME_RE.match(it["image"]) else None,
                 "display": "image" if it.get("display") == "image" else "face",
             })
@@ -940,8 +941,8 @@ def _clean_room(body: dict, d: dict) -> None:
                 if not it or not re.fullmatch(r"-?\d+|v\d", str(port)):
                     break
                 if str(port).startswith("v"):
-                    vmax = it["vports"] if it.get("vports") is not None else 1
-                    if it["kind"] != "device" or not 1 <= int(port[1:]) <= vmax:
+                    vmax = it["vports"] if it.get("vports") is not None else (1 if it["kind"] == "device" else 0)
+                    if it["kind"] not in ("device", "custom") or not 1 <= int(port[1:]) <= vmax:
                         break
                     ends.append({"item": it["id"], "port": port})
                     continue

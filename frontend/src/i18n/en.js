@@ -1195,4 +1195,5 @@ export default {
   "Les deux extrémités ne peuvent pas être sur la même prise": "Both ends cannot be on the same socket",
   "Glissez le câble pour le déplacer, ou ses extrémités pour le rebrancher ; double-clic : forme automatique.": "Drag the cable to move it, or its ends to re-plug it; double-click: automatic shape.",
   "Forme automatique": "Automatic shape",
+  "Ports réseau pour câbler un élément absent de LibreNMS (pas d'état en direct).": "Network ports to cable an item that is not in LibreNMS (no live status).",
 }
