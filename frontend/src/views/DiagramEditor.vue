@@ -40,6 +40,29 @@
           <div class="insp-title"><component :is="selNode.kind === 'device' ? Server : selNode.kind === 'cloud' ? Cloud : Type" :size="15" /> {{ selNodeName }}</div>
           <label class="field"><span>{{ selNode.kind === 'device' ? 'Libellé (vide : nom de l\'équipement)' : 'Texte' }}</span><input v-model="selNode.label" class="input" maxlength="60" @focus="push()" @input="changed()" /></label>
           <label class="field"><span>Taille</span><input v-model.number="selNode.size" type="range" min="0.6" max="2" step="0.1" @pointerdown="push()" @input="changed()" /></label>
+          <template v-if="selNode.kind === 'device'">
+            <div class="field"><span>Apparence</span>
+              <div class="seg" style="width:100%">
+                <button v-for="b in [['card', 'Carte'], ['icon', 'Carte + image'], ['image', 'Image seule']]" :key="b[0]"
+                  :class="{ on: (selNode.image ? selNode.display || 'card' : 'card') === b[0] }" :disabled="b[0] !== 'card' && !selNode.image"
+                  :title="b[0] !== 'card' && !selNode.image ? 'Choisissez d\'abord une image ci-dessous' : ''" @click="setDisplay(b[0])">{{ b[1] }}</button>
+              </div>
+            </div>
+            <div class="field"><span>Image</span>
+              <div class="gallery">
+                <button class="gimg none" :class="{ on: !selNode.image }" title="Aucune image" @click="setImage(null)">—</button>
+                <div v-for="im in images" :key="im.name" class="gwrap">
+                  <button class="gimg" :class="{ on: selNode.image === im.name }" @click="setImage(im.name)"><img :src="diagApi.imgUrl(im.name)" alt="" loading="lazy" /></button>
+                  <button class="gdel" title="Supprimer de la bibliothèque" @click.stop="deleteImage(im.name)">×</button>
+                </div>
+                <label class="gimg add" title="Importer une image (PNG, JPEG, WebP, GIF, 2 Mo max.)">
+                  <Loader2 v-if="imgBusy" :size="15" class="spin" /><ImageUp v-else :size="15" />
+                  <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden @change="uploadImage" />
+                </label>
+              </div>
+              <span class="small faint">Bibliothèque partagée entre tous les schémas. Une image PNG à fond transparent rend le mieux.</span>
+            </div>
+          </template>
           <div class="row wrap" style="gap:6px">
             <router-link v-if="selDev" :to="`/device/${encodeURIComponent(selDev.hostname)}`" class="btn sm"><ExternalLink :size="13" /> Fiche</router-link>
             <button class="btn sm danger" @click="removeSelected"><Trash2 :size="13" /> Retirer</button>
@@ -89,7 +112,8 @@
           @move="onMove" @moved="changed()" @connect="connect" @drop-device="(e) => addDevice(e.device_id, e.x, e.y)"
           @edit-node="(n) => (selected = { type: 'node', id: n.id })" @edit-link="(l) => (selected = { type: 'link', id: l.id })" />
         <div class="legend small muted">
-          <span><i style="background:#22c55e"></i>&lt; 40 %</span><span><i style="background:#facc15"></i>40-70 %</span><span><i style="background:#fb923c"></i>70-90 %</span><span><i style="background:#f43f5e"></i>&gt; 90 % ou coupé</span>
+          <span v-for="(s, i) in legend" :key="i"><i :style="{ background: s.color }"></i>{{ s.label }}</span>
+          <span><i :style="{ background: scale.down }"></i>coupé</span>
           <span><i class="dash"></i>ports non renseignés</span>
           <span v-if="!editing" class="faint">Clic sur un équipement : sa fiche · molette : zoom · glisser : déplacer la vue</span>
         </div>
@@ -122,6 +146,31 @@
         <label class="check"><input v-model="sform.showRates" type="checkbox" :disabled="!diag.can_edit" /> Afficher les débits sur les liens</label>
         <label class="check"><input v-model="sform.showPorts" type="checkbox" :disabled="!diag.can_edit" /> Afficher les noms de ports</label>
         <div class="hr"></div>
+        <div class="field"><span>Couleur des liens selon</span>
+          <div class="seg">
+            <button v-for="b in [['util', 'Charge (%)'], ['rate', 'Débit']]" :key="b[0]" :class="{ on: sform.colorMode === b[0] }" :disabled="!diag.can_edit" @click="sform.colorMode = b[0]">{{ b[1] }}</button>
+          </div>
+        </div>
+        <div class="steps">
+          <div v-for="(st, i) in curSteps" :key="i" class="step row">
+            <input v-model="st.color" type="color" class="swatch" :disabled="!diag.can_edit" />
+            <span class="small muted">à partir de</span>
+            <input v-model.number="st.min" type="number" class="input num" min="0" :step="sform.colorMode === 'rate' ? 'any' : 1" :disabled="!diag.can_edit || i === 0" />
+            <span class="small muted">{{ sform.colorMode === 'rate' ? 'Mbit/s' : '%' }}</span>
+            <span v-if="sform.colorMode === 'rate'" class="small faint">{{ fmtBits(st.min * 1e6) }}</span>
+            <button v-if="diag.can_edit && i > 0" class="btn ghost sm icon" title="Supprimer ce palier" @click="curSteps.splice(i, 1)"><Minus :size="13" /></button>
+          </div>
+          <div class="step row">
+            <input v-model="sform.downColor" type="color" class="swatch" :disabled="!diag.can_edit" />
+            <span class="small muted">lien coupé</span>
+          </div>
+          <div v-if="diag.can_edit" class="row wrap" style="gap:8px">
+            <button class="btn sm" :disabled="curSteps.length >= 10" @click="addStep"><Plus :size="13" /> Ajouter un palier</button>
+            <button class="btn sm ghost" @click="resetSteps">Couleurs par défaut</button>
+          </div>
+          <span class="small faint">{{ sform.colorMode === 'rate' ? 'Débit le plus élevé des deux sens (1 Gbit/s = 1000 Mbit/s).' : 'Charge la plus élevée des deux extrémités, rapportée à la vitesse du port.' }}</span>
+        </div>
+        <div class="hr"></div>
         <div class="row wrap">
           <button class="btn sm" @click="exportSvg"><Download :size="13" /> Exporter en image (SVG)</button>
           <button v-if="diag.mine" class="btn sm danger" @click="removeDiagram"><Trash2 :size="13" /> Supprimer ce schéma</button>
@@ -145,15 +194,45 @@ import {
 import DiagramCanvas from '../components/DiagramCanvas.vue'
 import Modal from '../components/Modal.vue'
 import { diagApi } from '../api'
-import { useDiagramLive, lldpLinks, lldpLinksBetween, uid } from '../diagram/core'
+import { useDiagramLive, lldpLinks, lldpLinksBetween, uid, colorScale, DEFAULT_UTIL_STEPS, DEFAULT_RATE_STEPS, DEFAULT_DOWN_COLOR } from '../diagram/core'
 import { clock } from '../refresh'
-import { devName, devStatus, fmtSpeed, timeAgo, toast, toastError, confirmAction } from '../utils'
+import { devName, devStatus, fmtBits, fmtSpeed, timeAgo, toast, toastError, confirmAction } from '../utils'
 
 const ACCESS = { private: 'Privé', read: 'Partagé (lecture)', edit: 'Partagé (écriture)' }
 const route = useRoute(); const router = useRouter()
 const live = useDiagramLive()
 const diag = ref(null); const error = ref(null)
 const editing = ref(false); const tool = ref('select'); const selected = ref(null)
+
+// --------------------------------------------------------------- images d'équipements
+const images = ref([])
+const imgBusy = ref(false)
+async function loadImages() { try { images.value = await diagApi.images() } catch { images.value = [] } }
+watch(() => editing.value, (v) => { if (v) loadImages() }, { immediate: true })
+function setImage(name) {
+  push()
+  selNode.value.image = name
+  if (!name) selNode.value.display = 'card'
+  else if (!selNode.value.display || selNode.value.display === 'card') selNode.value.display = 'image'
+  changed()
+}
+function setDisplay(mode) { push(); selNode.value.display = mode; changed() }
+async function uploadImage(e) {
+  const f = e.target.files?.[0]
+  e.target.value = ''
+  if (!f) return
+  imgBusy.value = true
+  try {
+    const r = await diagApi.uploadImage(f)
+    await loadImages()
+    if (selNode.value) setImage(r.name)
+  } catch (err) { toastError(err) } finally { imgBusy.value = false }
+}
+async function deleteImage(name) {
+  if (!confirmAction('Supprimer cette image de la bibliothèque ?')) return
+  try { await diagApi.removeImage(name); await loadImages(); toast('Image supprimée', 'success') } catch (err) { toastError(err) }
+}
+
 const canvas = ref(null)
 const q = ref('')
 const lldp = ref([])
@@ -308,14 +387,47 @@ onBeforeUnmount(() => {
 
 // --------------------------------------------------------------- paramètres
 const settingsOpen = ref(false)
-const sform = reactive({ name: '', access: 'private', background: 'grid', bgOpacity: 0.6, showRates: true, showPorts: true })
+const sform = reactive({
+  name: '', access: 'private', background: 'grid', bgOpacity: 0.6, showRates: true, showPorts: true,
+  colorMode: 'util', utilSteps: [], rateSteps: [], downColor: DEFAULT_DOWN_COLOR,
+})
+const copySteps = (l) => l.map((s) => ({ ...s }))
 function openSettings() {
-  Object.assign(sform, { name: diag.value.name, access: diag.value.access, ...diag.value.view })
+  const v = diag.value.view || {}
+  Object.assign(sform, {
+    name: diag.value.name, access: diag.value.access, ...v,
+    colorMode: colorScale(v).mode, downColor: colorScale(v).down,
+    utilSteps: copySteps(colorScale({ ...v, colorMode: 'util' }).steps), rateSteps: copySteps(colorScale({ ...v, colorMode: 'rate' }).steps),
+  })
   settingsOpen.value = true
 }
+const curSteps = computed(() => (sform.colorMode === 'rate' ? sform.rateSteps : sform.utilSteps))
+function addStep() {
+  const last = curSteps.value.at(-1)
+  curSteps.value.push({ min: last ? (sform.colorMode === 'rate' ? last.min * 10 || 1 : Math.min(100, last.min + 10)) : 0, color: '#a855f7' })
+}
+function resetSteps() {
+  const def = copySteps(sform.colorMode === 'rate' ? DEFAULT_RATE_STEPS : DEFAULT_UTIL_STEPS)
+  if (sform.colorMode === 'rate') sform.rateSteps = def; else sform.utilSteps = def
+  sform.downColor = DEFAULT_DOWN_COLOR
+}
+// légende sous le schéma, d'après l'échelle enregistrée
+const scale = computed(() => colorScale(diag.value?.view))
+const legend = computed(() => {
+  const { mode, steps } = scale.value
+  const f = (v) => (mode === 'rate' ? fmtBits(v * 1e6, 1) : `${v} %`)
+  return steps.map((s, i) => ({
+    color: s.color,
+    label: i === steps.length - 1 ? `≥ ${f(s.min)}` : i === 0 ? `< ${f(steps[1].min)}` : `${f(s.min)} – ${f(steps[i + 1].min)}`,
+  }))
+})
 async function saveSettings() {
   try {
-    const view = { ...diag.value.view, background: sform.background, bgOpacity: sform.bgOpacity, showRates: sform.showRates, showPorts: sform.showPorts }
+    const clean = (l) => l.map((s, i) => ({ min: i === 0 ? 0 : Math.max(0, +s.min || 0), color: s.color })).sort((a, b) => a.min - b.min)
+    const view = {
+      ...diag.value.view, background: sform.background, bgOpacity: sform.bgOpacity, showRates: sform.showRates, showPorts: sform.showPorts,
+      colorMode: sform.colorMode, utilSteps: clean(sform.utilSteps), rateSteps: clean(sform.rateSteps), downColor: sform.downColor,
+    }
     const body = { name: sform.name.trim(), view }
     if (diag.value.mine) body.access = sform.access
     const d = await diagApi.update(diag.value.id, body)
@@ -379,6 +491,18 @@ function exportSvg() {
 .canvas-card { padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 0 6px; font-size: 11.5px; }
 .legend i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 5px; vertical-align: 2px; }
+.gallery { display: flex; flex-wrap: wrap; gap: 6px; }
+.gwrap { position: relative; }
+.gimg { width: 52px; height: 52px; border-radius: 9px; border: 1px solid var(--border); background: var(--panel-2); display: grid; place-items: center; padding: 3px; cursor: pointer; color: var(--muted); font: inherit; }
+.gimg img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.gimg.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
+.gimg:hover { border-color: var(--accent); }
+.gdel { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; border: 0; background: #f43f5e; color: #fff; font-size: 12px; line-height: 1; cursor: pointer; display: none; }
+.gwrap:hover .gdel { display: block; }
+.steps { display: flex; flex-direction: column; gap: 8px; }
+.step { gap: 8px; align-items: center; }
+.swatch { width: 34px; height: 28px; padding: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2); cursor: pointer; }
+.input.num { width: 96px; }
 .legend i.dash { background: repeating-linear-gradient(90deg, #64748b 0 2px, transparent 2px 5px); }
 @media (max-width: 900px) { .layout.editing { grid-template-columns: 1fr; height: auto; } .layout.editing .canvas-card { height: 70vh; } .layout { height: 70vh; } }
 </style>

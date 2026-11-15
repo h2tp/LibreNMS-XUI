@@ -60,7 +60,8 @@ bascule sur les images PNG générées par LibreNMS. Si LibreNMS utilise rrdcach
   liens tracés entre deux éléments avec choix des ports (pré-remplis par LLDP), nuages et textes libres,
   liens courbables, fond uni / grille / image (plan, photo de baie ; PNG, JPEG, WebP, GIF, 8 Mo max.),
   annuler / rétablir, export SVG. En direct : état des équipements, alertes, couleur et épaisseur des liens selon
-  charge et vitesse, débits. Création possible depuis la topologie LLDP (disposition en arbre). Partage privé /
+  charge (%) ou débit, avec paliers et couleurs personnalisables par schéma, débits. Image personnalisée par
+  équipement (dans la carte ou à la place de la carte), bibliothèque partagée `./data/diagram-img/`. Création possible depuis la topologie LLDP (disposition en arbre). Partage privé /
   lecture / écriture comme les tableaux de bord ; widget « Schéma ». Stockage : `./data/diagrams.json` et
   `./data/diagram-bg/`.
 - **Équipements** : cartes/tableau, filtres (état, OS, type, emplacement, groupe), ajout SNMP v1/v2c/v3 ou ICMP

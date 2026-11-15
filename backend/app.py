@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import hmac
 import json
 import os
@@ -471,6 +472,9 @@ async def dash_default(dash_id: str, request: Request):
 
 DIAG_FILE = DATA_DIR / "diagrams.json"
 DIAG_BG_DIR = DATA_DIR / "diagram-bg"
+DIAG_IMG_DIR = DATA_DIR / "diagram-img"  # bibliothèque d'images d'équipements (partagée)
+_IMG_NAME_RE = re.compile(r"^[0-9a-f]{16}\.(png|jpg|webp|gif)$")
+_NODE_DISPLAYS = ("card", "icon", "image")
 _diag_lock = asyncio.Lock()
 _BG_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}
 _NODE_KINDS = ("device", "text", "cloud")
@@ -524,6 +528,8 @@ def _clean_diagram(body: dict, d: dict) -> None:
                 "id": nid, "kind": kind, "x": _num(n.get("x"), -20000, 20000, 0), "y": _num(n.get("y"), -20000, 20000, 0),
                 "device_id": int(dev) if kind == "device" and str(dev).isdigit() else None,
                 "label": _txt(n.get("label")), "size": _num(n.get("size"), 0.5, 3, 1),
+                "image": n.get("image") if isinstance(n.get("image"), str) and _IMG_NAME_RE.match(n["image"]) else None,
+                "display": n.get("display") if n.get("display") in _NODE_DISPLAYS else "card",
             })
         d["nodes"] = nodes
     if "links" in body:
@@ -548,7 +554,26 @@ def _clean_diagram(body: dict, d: dict) -> None:
             "showRates": bool(v.get("showRates", True)), "showPorts": bool(v.get("showPorts", True)),
             "bgOpacity": _num(v.get("bgOpacity"), 0.05, 1, 0.6),
             "bgW": _num(v.get("bgW"), 0, 20000, 0), "bgH": _num(v.get("bgH"), 0, 20000, 0),
+            "colorMode": "rate" if v.get("colorMode") == "rate" else "util",
+            "utilSteps": _color_steps(v.get("utilSteps"), 100), "rateSteps": _color_steps(v.get("rateSteps"), 1e7),
+            "downColor": _hex(v.get("downColor")) or None,
         }
+
+
+_HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _hex(v) -> str:
+    return v if isinstance(v, str) and _HEX_RE.match(v) else ""
+
+
+def _color_steps(steps, hi: float):
+    """Paliers de couleur d'un schéma : [{min, color}], 10 max. ; None = valeurs par défaut."""
+    if not isinstance(steps, list):
+        return None
+    out = [{"min": _num(s.get("min"), 0, hi, 0), "color": _hex(s.get("color"))}
+           for s in steps[:10] if isinstance(s, dict) and _hex(s.get("color"))]
+    return sorted(out, key=lambda s: s["min"]) or None
 
 
 def _diag_summary(d: dict, user: str) -> dict:
@@ -672,6 +697,57 @@ async def diag_bg_get(diag_id: str, request: Request):
         raise HTTPException(404, "Pas d'image de fond")
     mt = next((k for k, v in _BG_TYPES.items() if f.suffix == "." + v), "application/octet-stream")
     return FileResponse(f, media_type=mt, headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=3600"})
+
+
+@app.get("/xui/diagram-images")
+async def diag_img_list(request: Request):
+    _require(request)
+    if not DIAG_IMG_DIR.is_dir():
+        return []
+    files = [f for f in DIAG_IMG_DIR.iterdir() if _IMG_NAME_RE.match(f.name)]
+    return [{"name": f.name, "size": f.stat().st_size, "mtime": int(f.stat().st_mtime)}
+            for f in sorted(files, key=lambda f: f.stat().st_mtime, reverse=True)]
+
+
+@app.post("/xui/diagram-images")
+async def diag_img_put(request: Request):
+    """Image d'équipement : corps brut, PNG/JPEG/WebP/GIF (pas de SVG), 2 Mo max. Dédupliquée par contenu."""
+    _require(request)
+    ext = _BG_TYPES.get(request.headers.get("content-type", "").split(";")[0].strip().lower())
+    if not ext:
+        raise HTTPException(415, "Formats acceptés : PNG, JPEG, WebP, GIF")
+    raw = await request.body()
+    if not raw or len(raw) > 2 * 1024 * 1024:
+        raise HTTPException(413, "Image vide ou trop volumineuse (2 Mo max.)")
+    name = f"{hashlib.sha256(raw).hexdigest()[:16]}.{ext}"
+    DIAG_IMG_DIR.mkdir(parents=True, exist_ok=True)
+    f = DIAG_IMG_DIR / name
+    if not f.exists():
+        f.write_bytes(raw)
+    return {"name": name}
+
+
+@app.get("/xui/diagram-images/{name}")
+async def diag_img_get(name: str, request: Request):
+    _require(request)
+    f = DIAG_IMG_DIR / name
+    if not _IMG_NAME_RE.match(name) or not f.is_file():
+        raise HTTPException(404, "Image introuvable")
+    mt = next(k for k, v in _BG_TYPES.items() if f.suffix == "." + v)
+    return FileResponse(f, media_type=mt, headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=86400, immutable"})
+
+
+@app.delete("/xui/diagram-images/{name}")
+async def diag_img_delete(name: str, request: Request):
+    _require(request)
+    if not _IMG_NAME_RE.match(name):
+        raise HTTPException(404, "Image introuvable")
+    async with _diag_lock:
+        used = [d for d in _diag_load()["diagrams"] if any(n.get("image") == name for n in d.get("nodes", []))]
+        if used:
+            raise HTTPException(409, "Image utilisée dans : " + ", ".join(d.get("name", "?") for d in used[:5]))
+        (DIAG_IMG_DIR / name).unlink(missing_ok=True)
+    return {"ok": True}
 
 
 # --------------------------------------------------------------------------- santé agrégée

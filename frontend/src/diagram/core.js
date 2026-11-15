@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { safeList } from '../api'
 import { D, cached } from '../dashboard/data'
 import { useLoader } from '../refresh'
-import { devStatus, portUtil, utilColor } from '../utils'
+import { devStatus, portUtil } from '../utils'
 
 export const lldpLinks = () => cached('lldp', () => safeList('resources/links', null, 'links'), 60000)
 
@@ -26,8 +26,28 @@ export function useDiagramLive() {
 
 export const UTIL_HEX = { 'var(--red)': '#f43f5e', 'var(--orange)': '#fb923c', 'var(--yellow)': '#facc15', 'var(--green)': '#22c55e' }
 
-/** État visuel d'un lien d'après ses ports (charge max des deux extrémités). */
-export function linkState(link, portById) {
+/** Paliers par défaut : `min` en % (mode charge) ou en Mbit/s (mode débit). */
+export const DEFAULT_UTIL_STEPS = [
+  { min: 0, color: '#22c55e' }, { min: 40, color: '#facc15' }, { min: 70, color: '#fb923c' }, { min: 90, color: '#f43f5e' },
+]
+export const DEFAULT_RATE_STEPS = [
+  { min: 0, color: '#22c55e' }, { min: 10, color: '#facc15' }, { min: 100, color: '#fb923c' }, { min: 1000, color: '#f43f5e' },
+]
+export const DEFAULT_DOWN_COLOR = '#f43f5e'
+
+/** Échelle de couleurs effective d'un schéma (mode, paliers triés, couleur « coupé »). */
+export function colorScale(view = {}) {
+  const mode = view.colorMode === 'rate' ? 'rate' : 'util'
+  const raw = mode === 'rate' ? view.rateSteps : view.utilSteps
+  const steps = (Array.isArray(raw) && raw.length ? raw : mode === 'rate' ? DEFAULT_RATE_STEPS : DEFAULT_UTIL_STEPS)
+    .map((s) => ({ min: +s.min || 0, color: s.color })).sort((a, b) => a.min - b.min)
+  return { mode, steps, down: view.downColor || DEFAULT_DOWN_COLOR }
+}
+
+const pickColor = (steps, v) => { let c = steps[0]?.color || '#22c55e'; for (const s of steps) if (v >= s.min) c = s.color; return c }
+
+/** État visuel d'un lien d'après ses ports (charge / débit max des deux extrémités). */
+export function linkState(link, portById, view) {
   const pa = link.port_a ? portById[link.port_a] : null
   const pb = link.port_b ? portById[link.port_b] : null
   const known = [pa, pb].filter(Boolean)
@@ -39,7 +59,9 @@ export function linkState(link, portById) {
   // débits vus depuis l'extrémité A (entrant = vers A)
   const rin = (+ref.ifInOctets_rate || 0) * 8; const rout = (+ref.ifOutOctets_rate || 0) * 8
   const width = speed >= 1e10 ? 6 : speed >= 1e9 ? 4 : speed >= 1e8 ? 2.5 : 2
-  return { known: true, down, util, speed, rin: pa ? rin : rout, rout: pa ? rout : rin, width, color: down ? '#f43f5e' : UTIL_HEX[utilColor(util)] || '#22c55e' }
+  const sc = colorScale(view)
+  const color = down ? sc.down : pickColor(sc.steps, sc.mode === 'rate' ? Math.max(rin, rout) / 1e6 : util)
+  return { known: true, down, util, speed, rin: pa ? rin : rout, rout: pa ? rout : rin, width, color }
 }
 
 export function nodeStatus(node, devById) {

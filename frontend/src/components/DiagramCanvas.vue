@@ -30,10 +30,21 @@
         class="node" :class="[nd.kind, nd.status, { sel: selected?.type === 'node' && selected.id === nd.id, from: linkFrom === nd.id }]"
         @pointerdown.stop="onNodeDown(nd, $event)" @dblclick.stop="$emit('edit-node', nd.raw)" @click.stop="onNodeClick(nd)">
         <title>{{ nd.tip }}</title>
-        <template v-if="nd.kind === 'device'">
+        <template v-if="nd.kind === 'device' && nd.mode === 'image'">
+          <rect x="-64" y="-46" width="128" height="72" rx="10" class="img-frame" />
+          <image :href="nd.img" x="-60" y="-42" width="120" height="64" preserveAspectRatio="xMidYMid meet" filter="url(#dshadow)" />
+          <g transform="translate(0,40)">
+            <circle :cx="-(nd.nameW + 13) / 2 + 4.5" cy="0" r="4.5" class="dot" />
+            <text :x="-(nd.nameW + 13) / 2 + 13" y="0" dominant-baseline="central" class="name halo">{{ nd.name }}</text>
+          </g>
+          <g v-if="nd.alerts" transform="translate(62,-44)"><circle r="10" class="abadge" /><text text-anchor="middle" dominant-baseline="central" class="atxt">{{ nd.alerts > 9 ? '9+' : nd.alerts }}</text></g>
+          <circle v-if="nd.status === 'down'" cx="0" cy="-10" r="0" class="pulse" />
+        </template>
+        <template v-else-if="nd.kind === 'device'">
           <rect x="-82" y="-27" width="164" height="54" rx="12" class="card" filter="url(#dshadow)" />
           <rect x="-82" y="-27" width="5" height="54" rx="2" class="bar" />
-          <image v-if="nd.icon" :href="nd.icon" x="-70" y="-14" width="28" height="28" />
+          <image v-if="nd.mode === 'icon'" :href="nd.img" x="-72" y="-16" width="32" height="32" preserveAspectRatio="xMidYMid meet" />
+          <image v-else-if="nd.icon" :href="nd.icon" x="-70" y="-14" width="28" height="28" />
           <g v-else transform="translate(-70,-14)"><rect width="28" height="28" rx="7" class="ico-bg" /><text x="14" y="15" text-anchor="middle" dominant-baseline="middle" class="ico-txt">{{ nd.initial }}</text></g>
           <text x="-34" y="-5" class="name">{{ nd.name }}</text>
           <text x="-34" y="12" class="sub">{{ nd.sub }}</text>
@@ -79,6 +90,7 @@ import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } 
 import { useRouter } from 'vue-router'
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-vue-next'
 import { linkState, nodeStatus } from '../diagram/core'
+import { diagApi } from '../api'
 import LinkHover from './LinkHover.vue'
 import { devName, fmtBits, fmtSpeed, osIcon, statusLabel } from '../utils'
 
@@ -97,21 +109,37 @@ const nodeById = computed(() => Object.fromEntries((props.diagram?.nodes || []).
 // débit compact pour les étiquettes : « 11M », « 328K »
 const compact = (v) => fmtBits(v, v >= 1e9 ? 1 : 0).replace(/\s*([KMGT]?)bps$/i, (m, u) => u || 'b').replace(/\s+/g, '')
 const short = (p) => (p ? String(p.ifName || '').replace(/^(gigabitethernet|tengigabitethernet|ethernet|port)/i, '').slice(0, 14) || p.ifName : '')
+// tronque un texte à une largeur donnée (mesurée avec la police de la page) en ajoutant « … »
+let ctx2d = null
+const fontFamily = () => getComputedStyle(document.body).fontFamily || 'sans-serif'
+const measure = (t, font) => { ctx2d ||= document.createElement('canvas').getContext('2d'); ctx2d.font = font; return ctx2d.measureText(t).width }
+function fitText(text, max, size, weight = 400) {
+  const font = `${weight} ${size}px ${fontFamily()}`
+  text = String(text || '')
+  if (measure(text, font) <= max) return text
+  let lo = 0; let hi = text.length
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (measure(text.slice(0, m).trimEnd() + '…', font) <= max) lo = m; else hi = m - 1 }
+  return text.slice(0, lo).trimEnd() + '…'
+}
 const drawnNodes = computed(() => (props.diagram?.nodes || []).map((n) => {
   const d = n.kind === 'device' ? props.live.devById.value[n.device_id] : null
   const status = nodeStatus(n, props.live.devById.value)
-  const name = n.label || (d ? devName(d) : n.kind === 'device' ? `#${n.device_id}` : n.kind === 'cloud' ? 'Internet' : 'Texte')
-  const sub = d ? (d.hardware || d.os || d.hostname || '').slice(0, 24) : n.kind === 'device' ? 'équipement inconnu' : ''
+  const full = n.label || (d ? devName(d) : n.kind === 'device' ? `#${n.device_id}` : n.kind === 'cloud' ? 'Internet' : 'Texte')
+  const mode = n.kind === 'device' && n.image && (n.display === 'icon' || n.display === 'image') ? n.display : 'card'
+  // largeur utile : carte = de x -34 au badge d'alerte (≈ 106 px) ; image seule = 170 px ; nuage ≈ 110 px
+  const name = n.kind === 'text' ? full : fitText(full, mode === 'image' ? 170 : n.kind === 'cloud' ? 110 : 106, 13, 700)
+  const sub = d ? fitText(d.hardware || d.os || d.hostname || '', 106, 10.5) : n.kind === 'device' ? 'équipement inconnu' : ''
   return {
-    ...n, raw: n, name: name.length > 20 ? name.slice(0, 19) + '…' : name, sub, status,
+    ...n, raw: n, name, sub, status, mode, img: mode !== 'card' ? diagApi.imgUrl(n.image) : null,
+    nameW: mode === 'image' ? measure(name, `700 13px ${fontFamily()}`) : 0,
     icon: d ? osIcon(d) : null, initial: (name[0] || '?').toUpperCase(), alerts: d ? props.live.alertsByDev.value[n.device_id] || 0 : 0,
-    tip: d ? `${devName(d)} (${d.hostname})\n${statusLabel[status] || status}${d.hardware ? '\n' + d.hardware : ''}` : name,
+    tip: d ? `${devName(d)} (${d.hostname})\n${statusLabel[status] || status}${d.hardware ? '\n' + d.hardware : ''}` : full,
   }
 }))
 const drawnLinks = computed(() => (props.diagram?.links || []).map((l) => {
   const A = nodeById.value[l.a]; const B = nodeById.value[l.b]
   if (!A || !B) return null
-  const st = linkState(l, props.live.portById.value)
+  const st = linkState(l, props.live.portById.value, view.value)
   const dx = B.x - A.x; const dy = B.y - A.y; const len = Math.hypot(dx, dy) || 1
   const nx = -dy / len; const ny = dx / len
   const bend = l.bend || 0
@@ -122,7 +150,8 @@ const drawnLinks = computed(() => (props.diagram?.links || []).map((l) => {
     : { x: A.x + dx * t, y: A.y + dy * t })
   const pa = props.live.portById.value[l.port_a]; const pb = props.live.portById.value[l.port_b]
   // noms de ports juste au bord de la carte (164 × 54) : distance au bord le long du lien
-  const edge = (n) => Math.min(Math.abs(dx) > 0.01 ? (82 * (n.size || 1)) / Math.abs(dx) : Infinity, Math.abs(dy) > 0.01 ? (27 * (n.size || 1)) / Math.abs(dy) : Infinity)
+  const box = (n) => (n.kind === 'device' && n.image && n.display === 'image' ? [64, 50] : [82, 27])
+  const edge = (n) => Math.min(Math.abs(dx) > 0.01 ? (box(n)[0] * (n.size || 1)) / Math.abs(dx) : Infinity, Math.abs(dy) > 0.01 ? (box(n)[1] * (n.size || 1)) / Math.abs(dy) : Infinity)
   const offA = Math.min(0.4, edge(A) + 16 / len); const offB = Math.min(0.4, edge(B) + 16 / len)
   const text = l.label && !(view.value.showRates !== false && st.known && !st.down) ? l.label
     : `${l.label ? l.label + ' · ' : ''}↓${compact(st.rin)} ↑${compact(st.rout)}`
@@ -295,6 +324,13 @@ onBeforeUnmount(() => ro && ro.disconnect())
 .node.sel .card, .node.sel .cloud { stroke: var(--accent); stroke-width: 2.5; }
 .node.from .card { stroke: var(--accent); stroke-dasharray: 5 4; stroke-width: 2.5; }
 .node .name { font-size: 13px; font-weight: 700; fill: var(--text); }
+.node .name.halo { paint-order: stroke; stroke: var(--panel-2); stroke-width: 4px; }
+.img-frame { fill: transparent; stroke: transparent; stroke-width: 2; }
+.node.down .img-frame { stroke: #f43f5e; }
+.node.sel .img-frame { stroke: var(--accent); stroke-width: 2.5; }
+.node.from .img-frame { stroke: var(--accent); stroke-dasharray: 5 4; }
+.node .dot { fill: #64748b; }
+.node.up .dot { fill: #22c55e; } .node.down .dot { fill: #f43f5e; }
 .node .sub { font-size: 10.5px; fill: var(--muted); }
 .ico-bg { fill: color-mix(in srgb, var(--accent) 20%, transparent); }
 .ico-txt { font-size: 13px; font-weight: 800; fill: var(--accent); }

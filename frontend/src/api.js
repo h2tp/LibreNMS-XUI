@@ -96,6 +96,16 @@ export const diagApi = {
     return j
   },
   removeBackground: (id) => request(`/xui/diagrams/${enc(id)}/background`, { method: 'DELETE' }),
+  // bibliothèque d'images d'équipements (partagée entre schémas)
+  images: () => request('/xui/diagram-images'),
+  imgUrl: (name) => `/xui/diagram-images/${enc(name)}`,
+  async uploadImage(file) {
+    const r = await fetch('/xui/diagram-images', { method: 'POST', headers: { 'Content-Type': file.type }, body: file, credentials: 'same-origin' })
+    const j = await r.json().catch(() => ({}))
+    if (!r.ok) throw new ApiError(j.detail || `Erreur HTTP ${r.status}`, r.status)
+    return j
+  },
+  removeImage: (name) => request(`/xui/diagram-images/${enc(name)}`, { method: 'DELETE' }),
 }
 
 export const storageApi = { all: () => request('/xui/storage'), memory: () => request('/xui/memory'), cpu: () => request('/xui/cpu'), availability: () => request('/xui/availability'), printers: () => request('/xui/printers'), wireless: () => request('/xui/wireless') }
