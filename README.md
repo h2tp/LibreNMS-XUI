@@ -134,7 +134,8 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   RRD, inventaire ENTITY-MIB en arbre, voisins CDP/LLDP (graphe), IP, VLAN, FDB, ARP, pile de ports,
   transceivers, BGP / OSPF / VRF / IPsec, services, alertes, journaux, disponibilité & coupures, composants,
   config Oxidized, gestion (propriétés, maintenance, renommage, redécouverte, suppression).
-- **Port** : trafic, paquets, broadcast / multicast, erreurs, IP, MAC apprises, édition de la description.
+- **Port** : trafic, paquets, broadcast / multicast, erreurs, avec 4 graphiques côte à côte (24 h, 7 j, 30 j, 1 an)
+  comme dans LibreNMS — un clic affiche la période en grand ; IP, MAC apprises, édition de la description.
 - **Ports / Santé** globaux, **Alertes** (acquittement, règles avec assistant, historique, modèles).
 - **Journaux** : évènements, syslog, alertes, authentification (filtres de dates, export CSV).
 - **Carte** géographique, **Topologie** colorée selon la charge des liens.

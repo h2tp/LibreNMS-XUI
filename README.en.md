@@ -132,7 +132,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   ENTITY-MIB inventory tree, CDP/LLDP neighbours (graph), IP, VLAN, FDB, ARP, port stack, transceivers,
   BGP / OSPF / VRF / IPsec, services, alerts, logs, availability & outages, components, Oxidized config,
   management (properties, maintenance, rename, rediscovery, deletion).
-- **Port**: traffic, packets, broadcast / multicast, errors, IP, learned MACs, description editing.
+- **Port**: traffic, packets, broadcast / multicast, errors, with 4 side-by-side graphs (24 h, 7 d, 30 d, 1 y)
+  as in LibreNMS — click one to enlarge that period; IP, learned MACs, description editing.
 - Global **Ports / Health** views, **Alerts** (acknowledgement, rules with a wizard, history, templates).
 - **Logs**: events, syslog, alerts, authentication (date filters, CSV export).
 - Geographic **map**, **Topology** colored by link load.
