@@ -3,20 +3,25 @@
   <div v-else-if="!room" class="skeleton" :style="{ height: `${size.h}px` }"></div>
   <div v-else class="wr" :style="{ height: `${size.h}px` }">
     <RackView :room="shown" :dev-by-id="devById" :ports-by-dev="portsByDev" :port-by-id="portById" :zoom="zoom"
-      :cable-view="config.cables || 'real'" @open="openItem" />
+      :cable-view="config.cables || 'real'" @open="openItem" @hover="onHover" @unhover="onUnhover" @cable="onCable" @select="hover = null" />
+    <!-- hors du cadre du widget (sinon la fenêtre serait coupée) : positionnée par rapport à la fenêtre du navigateur -->
+    <Teleport to="body">
+      <div v-if="hover && hoverInfo" class="wr-pop"><LinkHover :link="hoverInfo" :x="hover.x" :y="hover.y" :pinned="hover.pinned" @close="hover = null" /></div>
+    </Teleport>
     <router-link :to="`/racks/${room.id}`" class="btn ghost sm icon open" :title="t('Ouvrir la salle')"><Maximize2 :size="14" /></router-link>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { Rows3, Maximize2 } from 'lucide-vue-next'
 import RackView from '../RackView.vue'
+import LinkHover from '../LinkHover.vue'
 import { rackApi } from '../../api'
 import { D } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
-import { UH, FACE_W, physPorts } from '../../rack/core'
+import { UH, FACE_W, physPorts, cableHelpers } from '../../rack/core'
 import { t } from '../../i18n'
 
 // config.rack : « idSalle » (toutes les baies) ou « idSalle:idBaie » (une seule baie)
@@ -62,6 +67,26 @@ const zoom = computed(() => {
   const h = Math.max(...racks.map((r) => r.units)) * UH + 70
   return Math.max(0.25, Math.min(1.5, (props.size.w - 8) / w, (props.size.h - 8) / h))
 })
+// fenêtre de trafic d'un câble : survol = graphe, clic = fenêtre épinglée avec liens vers les ports
+const { cableInfo } = cableHelpers(shown, devById, portById)
+const hover = ref(null) // { id, x, y, pinned }
+const hoverInfo = computed(() => { const c = hover.value && shown.value?.cables.find((x) => x.id === hover.value.id); return c ? cableInfo(c) : null })
+function popupAt(c, ev, pinned) {
+  const W = 324; const H = pinned ? 260 : 200; const vw = window.innerWidth; const vh = window.innerHeight
+  const x = ev.clientX + 16 + W > vw ? Math.max(4, ev.clientX - 16 - W) : ev.clientX + 16
+  const y = Math.max(4, Math.min(ev.clientY + 16, vh - H - 4))
+  hover.value = { id: c.id, x, y, pinned }
+}
+function onHover({ cable, event }) { if (!hover.value?.pinned) popupAt(cable, event, false) }
+function onUnhover() { if (!hover.value?.pinned) hover.value = null }
+function onCable({ cable, event }) { popupAt(cable, event, true) }
+function onKey(e) { if (e.key === 'Escape') hover.value = null }
+// fenêtre épinglée : un clic ailleurs la ferme
+function onDown(e) { if (hover.value?.pinned && !e.target.closest('.lh') && !e.target.closest('.cable')) hover.value = null }
+const onScroll = () => { if (hover.value && !hover.value.pinned) hover.value = null }
+onMounted(() => { window.addEventListener('keydown', onKey); window.addEventListener('mousedown', onDown); window.addEventListener('scroll', onScroll, true) })
+onBeforeUnmount(() => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onDown); window.removeEventListener('scroll', onScroll, true) })
+
 function openItem(it) {
   const d = it.device_id && devById.value[it.device_id]
   if (d) router.push(`/device/${encodeURIComponent(d.hostname)}`)
@@ -69,8 +94,9 @@ function openItem(it) {
 </script>
 
 <style scoped>
-.wr { position: relative; overflow: hidden; display: flex; justify-content: center; }
+.wr { position: relative; display: flex; justify-content: center; }
 .wr :deep(.rv-scroll) { padding: 0; overflow: hidden; }
+.wr-pop { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
 .wr :deep(.rack) { box-shadow: none; }
 .open { position: absolute; top: 4px; right: 4px; z-index: 6; background: var(--panel-solid); border: 1px solid var(--border); }
 </style>

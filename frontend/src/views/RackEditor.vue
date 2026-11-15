@@ -200,7 +200,7 @@ import Modal from '../components/Modal.vue'
 import { rackApi, diagApi } from '../api'
 import { D } from '../dashboard/data'
 import { uid } from '../diagram/core'
-import { PASSIVE, KIND_LABEL, dragPayload, fits, firstFree, topUsed, physPorts } from '../rack/core'
+import { PASSIVE, KIND_LABEL, CABLE_TYPES, cableHelpers, dragPayload, fits, firstFree, topUsed, physPorts } from '../rack/core'
 import { clock, useLoader } from '../refresh'
 import { devName, devStatus, timeAgo, toast, toastError, confirmAction, prefs, save, fmtBits, fmtSpeed } from '../utils'
 import { linkState } from '../diagram/core'
@@ -244,7 +244,7 @@ const selRack = computed(() => (selected.value?.type === 'rack' ? room.value.rac
 const rackIndex = computed(() => room.value.racks.findIndex((r) => r.id === selected.value?.id))
 const selDev = computed(() => (selItem.value?.device_id ? devById.value[selItem.value.device_id] : null))
 const rackName = (id) => room.value.racks.find((r) => r.id === id)?.name || t('Baie')
-const itemName = (it) => it.label || (it.device_id && devById.value[it.device_id] ? devName(devById.value[it.device_id]) : KIND_LABEL[it.kind])
+const { itemName, epName, cableInfo } = cableHelpers(room, devById, portById)
 const placed = computed(() => new Set(room.value.items.filter((i) => i.device_id).map((i) => +i.device_id)))
 
 const q = ref('')
@@ -366,7 +366,6 @@ async function uploadImage(e) {
 
 // --------------------------------------------------------------- câbles
 const CABLE_COLORS = ['#3b82f6', '#22c55e', '#facc15', '#f97316', '#ef4444', '#a855f7', '#ec4899', '#06b6d4', '#e2e8f0', '#94a3b8', '#1f2937']
-const CABLE_TYPES = { copper: t('Cuivre (RJ45)'), fiber: t('Fibre'), dac: t('DAC / Twinax'), power: t('Alimentation'), other: t('Autre') }
 const tool = ref('place')
 const cableFrom = ref(null)
 const lastColor = ref('#3b82f6'); const lastType = ref('copper'); const lastPowerColor = ref('#94a3b8')
@@ -394,14 +393,6 @@ const cableView = ref(prefs.cableView || 'real')
 function setCableView(v) { cableView.value = v; prefs.cableView = v; save('cableView', v) }
 function setTool(v) { tool.value = v; cableFrom.value = null; if (v === 'cable' && cableView.value === 'hidden') setCableView('real') }
 const epKey = (e) => `${e.item}:${e.port}`
-function epName(e) {
-  const it = room.value.items.find((i) => i.id === e.item)
-  if (!it) return '?'
-  const p = it.kind === 'device' ? portById.value[e.port] : null
-  if (e.port < 0) return `${itemName(it)} · ${t('alimentation {n}', { n: -e.port })}`
-  if (String(e.port).startsWith('v')) return `${itemName(it)} · ${t('port virtuel {n}', { n: String(e.port).slice(1) })}`
-  return `${itemName(it)} · ${it.kind === 'device' ? (p ? p.ifName : `#${e.port}`) : t('prise {n}', { n: e.port })}`
-}
 function cableAt(e) { const k = epKey(e); return room.value.cables.find((c) => epKey(c.a) === k || epKey(c.b) === k) }
 function onSocket(e) {
   const existing = cableAt(e)
@@ -425,28 +416,6 @@ function rememberColor(c) { if (selCable.value?.type === 'power') lastPowerColor
 function removeCable(c) { room.value.cables = room.value.cables.filter((x) => x !== c); selected.value = null; changed(200) }
 
 // infos d'un câble pour la fenêtre de trafic (même présentation que les liens des schémas)
-function cableInfo(c) {
-  const side = (e) => {
-    const it = room.value.items.find((i) => i.id === e.item)
-    const p = it?.kind === 'device' && e.port > 0 ? portById.value[e.port] : null
-    return { it, p, dev: p ? devById.value[p.device_id] : null }
-  }
-  const A = side(c.a); const B = side(c.b)
-  let st = linkState({ port_a: A.p ? +A.p.port_id : null, port_b: B.p ? +B.p.port_id : null }, portById.value, { colorMode: 'util' })
-  // port virtuel : état = joignabilité (ping) de l'équipement
-  const vdev = [c.a, c.b].filter((e) => String(e.port).startsWith('v')).map((e) => devById.value[room.value.items.find((i) => i.id === e.item)?.device_id]).filter(Boolean)
-  const vtxt = vdev.map((d) => `${devName(d)} : ${+d.status === 1 ? t('joignable') : t('injoignable')}${d.last_ping_timetaken ? ` (${(+d.last_ping_timetaken).toFixed(1)} ms)` : ''}`).join(' · ')
-  if (vdev.length && !st.known) st = { ...st, known: true, virtual: true, down: vdev.some((d) => +d.status !== 1) }
-  const rp = A.p || B.p; const rdev = rp && devById.value[rp.device_id]
-  const extra = [c.label, c.length, CABLE_TYPES[c.type]].filter(Boolean).join(' · ')
-  return {
-    titleA: epName(c.a), titleB: epName(c.b), nameA: A.it ? itemName(A.it) : 'A',
-    status: st.virtual ? (st.down ? `${t('Lien coupé')} — ${vtxt}` : vtxt) : (st.known ? (st.down ? t('Lien coupé') : `${fmtSpeed(st.speed)} · ${t('charge {p} %', { p: Math.round(st.util) })} · ↓ ${fmtBits(st.rin)} ↑ ${fmtBits(st.rout)}`) : t('Câble passif : pas d\'état en direct')) + (extra ? ` — ${extra}` : ''),
-    host: rdev?.hostname || null, portId: rp ? +rp.port_id : null, flip: !A.p && !!B.p,
-    ports: [A.p, B.p].filter(Boolean).map((p) => ({ id: +p.port_id, name: p.ifName, alias: p.ifAlias && p.ifAlias !== p.ifName ? p.ifAlias : '', dev: devById.value[p.device_id] ? devName(devById.value[p.device_id]) : '' })),
-    st,
-  }
-}
 const cardEl = ref(null)
 const hover = ref(null) // { id, x, y, pinned }
 const hoverInfo = computed(() => { const c = hover.value && room.value.cables.find((x) => x.id === hover.value.id); return c ? cableInfo(c) : null })

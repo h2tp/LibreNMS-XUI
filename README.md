@@ -118,7 +118,8 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   disques), switchs (façade des ports), points d'accès Wi-Fi, imprimantes (consommables lus dans les RRD),
   services LibreNMS, ports en erreur, disponibilité / SLA (24 h à 1 an, coupures), trafic réseau cumulé,
   stockage des disques, mémoire RAM et CPU, graphique RRD interactif, trafic d'un port, graphique LibreNMS,
-  carte géographique, schéma, baie (une baie ou toute une salle, ajustée à la taille du widget), notes,
+  carte géographique, schéma, baie (une baie ou toute une salle, ajustée à la taille du widget, fenêtre de trafic
+  au survol des câbles), notes,
   page web (iframe sandboxée).
   Les données agrégées (CPU, RAM, stockage, disponibilité, Wi-Fi, imprimantes) sont préchauffées au démarrage
   puis servies depuis un cache rafraîchi en arrière-plan ; `AGG_CONCURRENCY` (6 par défaut) limite les
