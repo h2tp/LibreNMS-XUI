@@ -22,6 +22,8 @@
             <Loader2 v-if="saveState === 'saving'" class="spin" :size="14" /><CircleAlert v-else-if="saveState === 'error'" :size="14" color="var(--red)" /><CircleCheck v-else :size="14" color="var(--green)" />
             {{ { saving: t('Enregistrement…'), error: t('Échec de l\'enregistrement'), saved: t('Enregistré') }[saveState] }}
           </span>
+          <button class="btn ghost icon" :title="t('Annuler (Ctrl+Z)')" :disabled="!undoStack.length" @click="undo"><Undo2 /></button>
+          <button class="btn ghost icon" :title="t('Rétablir (Ctrl+Y)')" :disabled="!redoStack.length" @click="redo"><Redo2 /></button>
           <button class="btn" @click="openSettings"><Settings /> {{ t('Paramètres') }}</button>
           <button class="btn primary" @click="stopEdit"><Check /> {{ t('Terminer') }}</button>
         </template>
@@ -57,9 +59,9 @@
           <div class="row" style="gap:10px">
             <label class="field grow"><span>{{ t('Type') }}</span>
               <select v-model="selCable.type" class="input" @change="onTypeChange"><option v-for="(l, v) in CABLE_TYPES" :key="v" :value="v">{{ l }}</option></select></label>
-            <label class="field grow"><span>{{ t('Longueur') }}</span><input v-model="selCable.length" class="input" maxlength="20" placeholder="1 m" @input="changed()" /></label>
+            <label class="field grow"><span>{{ t('Longueur') }}</span><input v-model="selCable.length" class="input" maxlength="20" placeholder="1 m" @input="typed()" /></label>
           </div>
-          <label class="field"><span>{{ t('Étiquette') }}</span><input v-model="selCable.label" class="input" maxlength="40" :placeholder="t('Ex. C-042, bureau 3…')" @input="changed()" /></label>
+          <label class="field"><span>{{ t('Étiquette') }}</span><input v-model="selCable.label" class="input" maxlength="40" :placeholder="t('Ex. C-042, bureau 3…')" @input="typed()" /></label>
           <div class="row wrap" style="gap:6px">
             <button class="btn sm danger" @click="removeCable(selCable)"><Trash2 :size="13" /> {{ t('Supprimer le câble') }}</button>
           </div>
@@ -69,7 +71,7 @@
         <div v-else-if="selItem" class="insp">
           <div class="insp-title"><component :is="selItem.kind === 'device' ? Server : Box" :size="15" /> {{ itemName(selItem) }}</div>
           <div class="small faint">{{ KIND_LABEL[selItem.kind] }} · {{ t('U {a} à {b}', { a: selItem.u, b: selItem.u + selItem.h - 1 }) }} · {{ rackName(selItem.rack) }}</div>
-          <label class="field"><span>{{ selItem.kind === 'device' ? t('Libellé (vide : nom de l\'équipement)') : t('Libellé') }}</span><input v-model="selItem.label" class="input" maxlength="60" @input="changed()" /></label>
+          <label class="field"><span>{{ selItem.kind === 'device' ? t('Libellé (vide : nom de l\'équipement)') : t('Libellé') }}</span><input v-model="selItem.label" class="input" maxlength="60" @input="typed()" /></label>
           <div class="row" style="gap:10px">
             <label class="field grow"><span>{{ t('Hauteur') }}</span>
               <select :value="selItem.h" class="input" @change="setHeight(+$event.target.value)"><option v-for="h in 12" :key="h" :value="h">{{ h }} U</option></select></label>
@@ -109,7 +111,7 @@
         <!-- inspecteur : baie sélectionnée -->
         <div v-else-if="selRack" class="insp">
           <div class="insp-title"><Rows3 :size="15" /> {{ selRack.name || t('Baie') }}</div>
-          <label class="field"><span>{{ t('Nom') }}</span><input v-model="selRack.name" class="input" maxlength="40" @input="changed()" /></label>
+          <label class="field"><span>{{ t('Nom') }}</span><input v-model="selRack.name" class="input" maxlength="40" @input="typed()" /></label>
           <label class="field"><span>{{ t('Hauteur (U)') }}</span>
             <input :value="selRack.units" class="input" type="number" min="1" max="60" @change="setUnits(+$event.target.value, $event)" /></label>
           <div class="row wrap" style="gap:6px">
@@ -191,7 +193,7 @@ import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ChevronLeft, Pencil, Check, Settings, Loader2, CircleCheck, CircleAlert, Plus, Server, Box, Rows3, Trash2, ExternalLink,
-  ImageUp, ZoomIn, ZoomOut, ArrowLeft, ArrowRight, Cable, Move,
+  ImageUp, ZoomIn, ZoomOut, ArrowLeft, ArrowRight, Cable, Move, Undo2, Redo2,
 } from 'lucide-vue-next'
 import RackView from '../components/RackView.vue'
 import LinkHover from '../components/LinkHover.vue'
@@ -232,6 +234,7 @@ async function load() {
     const d = await rackApi.get(route.params.id)
     d.racks ||= []; d.items ||= []; d.cables ||= []
     room.value = d
+    base = snap(); undoStack.value = []; redoStack.value = []
     document.title = `${d.name} · ${t('Baies')} · LibreNMS XUI`
   } catch (e) { error.value = e.message }
 }
@@ -257,10 +260,43 @@ const devList = computed(() => {
 
 // --------------------------------------------------------------- enregistrement
 const saveState = ref('saved'); let timer = null
-function changed(delay = 600) {
+function changed(delay = 600, coalesce = false) {
   if (!room.value?.can_edit) return
+  record(coalesce)
   saveState.value = 'saving'; clearTimeout(timer); timer = setTimeout(flush, delay)
 }
+const typed = () => changed(600, true)
+
+// --------------------------------------------------------------- historique (annuler / rétablir)
+// Chaque modification passe par changed() : l'état précédent (base) est alors empilé.
+// Les frappes successives dans un champ texte (< 1,2 s d'écart) ne font qu'une étape.
+const undoStack = ref([]); const redoStack = ref([])
+let base = null; let lastTyped = 0
+const snap = () => JSON.stringify({ racks: room.value.racks, items: room.value.items, cables: room.value.cables })
+function record(coalesce) {
+  const cur = snap()
+  if (base === null || cur === base) { base = cur; return }
+  const now = Date.now()
+  if (!(coalesce && now - lastTyped < 1200 && undoStack.value.length)) {
+    undoStack.value.push(base)
+    if (undoStack.value.length > 80) undoStack.value.shift()
+  }
+  lastTyped = coalesce ? now : 0
+  redoStack.value = []
+  base = cur
+}
+function restore(state) {
+  const o = JSON.parse(state)
+  room.value.racks = o.racks; room.value.items = o.items; room.value.cables = o.cables
+  base = state; lastTyped = 0
+  // la sélection peut désigner un élément qui n'existe plus
+  const sel = selected.value
+  if (sel && !(sel.type === 'item' ? o.items : sel.type === 'rack' ? o.racks : o.cables).some((x) => x.id === sel.id)) selected.value = null
+  cableFrom.value = null
+  saveState.value = 'saving'; clearTimeout(timer); timer = setTimeout(flush, 400)
+}
+function undo() { if (!undoStack.value.length) return; redoStack.value.push(snap()); restore(undoStack.value.pop()) }
+function redo() { if (!redoStack.value.length) return; undoStack.value.push(snap()); restore(redoStack.value.pop()) }
 async function flush() {
   clearTimeout(timer); timer = null
   try {
@@ -472,6 +508,8 @@ async function removeRoom() {
 function onKey(e) {
   if (e.key === 'Escape' && hover.value?.pinned) { hover.value = null; return }
   if (!editing.value || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return }
   if ((e.key === 'Delete' || e.key === 'Backspace') && selCable.value) { e.preventDefault(); removeCable(selCable.value) }
   else if ((e.key === 'Delete' || e.key === 'Backspace') && selItem.value) { e.preventDefault(); removeItem(selItem.value) }
   else if (e.key === 'Escape') { if (cableFrom.value) cableFrom.value = null; else selected.value = null }

@@ -138,7 +138,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   virtual network ports for devices without physical ports (ping-monitored), whose status follows reachability.
   Port-to-port cabling in two clicks, including
   between racks and to patch panels: color, type (copper, fiber, DAC, power), length, label; cables shown by their
-  color or by status / load, traffic popup on hover, cable list exportable to CSV. Shared like diagrams. Storage:
+  color or by status / load, traffic popup on hover, cable list exportable to CSV. Undo / redo (Ctrl+Z / Ctrl+Y).
+  Shared like diagrams. Storage:
   `./data/racks.json`.
 - **Devices**: cards / table, filters (status, OS, type, location, group), SNMP v1/v2c/v3 or ICMP onboarding.
 - **Device page**: overview (CPU / RAM / disk / availability gauges, photos with captions and full-screen view),
