@@ -15,6 +15,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -48,6 +49,8 @@ SESSION_HOURS = float(os.getenv("SESSION_HOURS", "12"))
 COOKIE_SECURE = env_bool("COOKIE_SECURE", False)
 
 RRD_DIR = Path(os.getenv("RRD_DIR", "/rrd"))
+# temps réel : XUI lit lui-même les compteurs du port en SNMP (identifiants fournis par l'API LibreNMS)
+REALTIME = env_bool("REALTIME", True) and bool(shutil.which("snmpget"))
 RRDCACHED = os.getenv("RRDCACHED", "").strip()  # ex. unix:/run/rrdcached.sock ou host:42217
 
 DATA_DIR = Path(os.getenv("DATA_DIR", "/data"))
@@ -80,6 +83,12 @@ client: httpx.AsyncClient | None = None
 # envoyé par le frontend, à défaut Accept-Language), ils sont traduits au moment de la réponse.
 # Les clés peuvent contenir des {champs} : la partie variable est reprise dans la traduction.
 _MSG_EN = {
+    "L'équipement ne répond pas en SNMP": "The device does not answer SNMP",
+    "Temps réel désactivé (REALTIME=false ou snmpget absent)": "Real time disabled (REALTIME=false or snmpget missing)",
+    "Port introuvable": "Port not found",
+    "Équipement introuvable": "Device not found",
+    "SNMP désactivé pour cet équipement (supervision par ping)": "SNMP disabled for this device (ping-only monitoring)",
+    "Compteurs du port non disponibles en SNMP": "Port counters not available over SNMP",
     "Non authentifié": "Not authenticated",
     "Aucun jeton LibreNMS configuré (LIBRENMS_TOKEN)": "No LibreNMS token configured (LIBRENMS_TOKEN)",
     "Formulaire de connexion LibreNMS introuvable": "LibreNMS login form not found",
@@ -140,6 +149,7 @@ _MSG_EN = {
     "Trop de salles (100 max.)": "Too many rooms (100 max.)",
     "Nouvelle salle": "New room",
     "Seul le propriétaire peut supprimer cette salle": "Only the owner can delete this room",
+    "Erreur SNMP : {e}": "SNMP error: {e}",
 }
 _MSG_RE = [(re.compile("^" + re.sub(r"\\\{(\w+)\\\}", r"(?P<\1>.*)", re.escape(fr)) + "$", re.S), en)
            for fr, en in _MSG_EN.items()]
@@ -282,6 +292,7 @@ async def config(request: Request):
         "role": (s or {}).get("role", ""),
         "librenms_url": LIBRENMS_PUBLIC_URL,
         "rrd": RRD_DIR.is_dir(),
+        "realtime": REALTIME,
     }
 
 
@@ -1445,6 +1456,118 @@ async def availability_all(request: Request, fresh: bool = False):
 @app.get("/xui/cpu")
 async def cpu_all(request: Request, fresh: bool = False):
     return await _aggregate(request, "cpu", fresh)
+
+
+# ---------------------------------------------------------------- temps réel (SNMP)
+# Comme la vue « Real time » de LibreNMS : lecture directe des compteurs d'octets du port
+# (ifHCInOctets / ifHCOutOctets, à défaut les compteurs 32 bits), le navigateur calcule le débit.
+_RT_DEV: dict[str, tuple[float, dict]] = {}     # token|device_id -> (expiration, device)
+_RT_PORT: dict[str, tuple[float, dict]] = {}    # token|port_id -> (expiration, port)
+_RT_LAST: dict[int, tuple[float, dict]] = {}    # port_id -> (instant, mesure) : partage entre onglets
+_RT_LOCK: dict[int, asyncio.Lock] = {}
+_OID = {"hcin": ".1.3.6.1.2.1.31.1.1.1.6", "hcout": ".1.3.6.1.2.1.31.1.1.1.10",
+        "in": ".1.3.6.1.2.1.2.2.1.10", "out": ".1.3.6.1.2.1.2.2.1.16"}
+
+
+async def _rt_cached(store: dict, key: str, fetch, ttl: float = 300):
+    hit = store.get(key)
+    if hit and hit[0] > time.time():
+        return hit[1]
+    val = await fetch()
+    if val:
+        store[key] = (time.time() + ttl, val)
+    return val
+
+
+def _snmp_args(d: dict) -> list[str]:
+    ver = str(d.get("snmpver") or "v2c").lower()
+    if ver == "v3":
+        level = d.get("authlevel") or "noAuthNoPriv"
+        a = ["-v3", "-l", level, "-u", str(d.get("authname") or "")]
+        if level in ("authNoPriv", "authPriv"):
+            a += ["-a", str(d.get("authalgo") or "MD5"), "-A", str(d.get("authpass") or "")]
+        if level == "authPriv":
+            # LibreNMS : AES-192 / AES-256-C ; net-snmp : AES192 / AES256C
+            crypto = str(d.get("cryptoalgo") or "AES")
+            if crypto.upper().startswith("AES"):
+                crypto = crypto.replace("-", "")
+            a += ["-x", crypto, "-X", str(d.get("cryptopass") or "")]
+        return a
+    return ["-v1" if ver == "v1" else "-v2c", "-c", str(d.get("community") or "public")]
+
+
+async def _snmp_get(d: dict, oids: list[str], timeout: float) -> dict[str, str]:
+    host = d.get("overwrite_ip") or d.get("hostname")
+    transport = str(d.get("transport") or "udp")
+    target = f"{transport}:{'[' + host + ']' if ':' in host else host}:{int(d.get('port') or 161)}"
+    cmd = ["snmpget", *_snmp_args(d), "-On", "-Oq", "-t", str(timeout), "-r", "0", target, *oids]
+    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    try:
+        out, err = await asyncio.wait_for(proc.communicate(), timeout + 2)
+    except asyncio.TimeoutError:
+        proc.kill()
+        raise HTTPException(504, "L'équipement ne répond pas en SNMP")
+    res = {}
+    for line in out.decode(errors="replace").splitlines():
+        oid, _, val = line.partition(" ")
+        val = val.strip()
+        if val.isdigit():
+            res[oid] = val
+    if not res and proc.returncode:
+        msg = err.decode(errors="replace").strip().splitlines()
+        if any("Timeout" in m for m in msg):
+            raise HTTPException(504, "L'équipement ne répond pas en SNMP")
+        raise HTTPException(502, f"Erreur SNMP : {msg[-1] if msg else 'réponse vide'}")
+    return res
+
+
+@app.get("/xui/realtime/port/{port_id}")
+async def realtime_port(port_id: int, request: Request):
+    s = _require(request, need_token=True)
+    if not REALTIME:
+        raise HTTPException(404, "Temps réel désactivé (REALTIME=false ou snmpget absent)")
+    tok = s["token"]
+
+    async def get_port():
+        j = await _lnms_get(tok, f"ports/{port_id}?columns=port_id,device_id,ifIndex,ifName,ifSpeed")
+        lst = (j or {}).get("port") or []
+        return lst[0] if lst else None
+
+    port = await _rt_cached(_RT_PORT, f"{tok}|{port_id}", get_port)
+    if not port or port.get("ifIndex") is None:
+        raise HTTPException(404, "Port introuvable")
+    dev_id = int(port["device_id"])
+
+    async def get_dev():
+        j = await _lnms_get(tok, f"devices/{dev_id}")
+        lst = (j or {}).get("devices") or []
+        return lst[0] if lst else None
+
+    dev = await _rt_cached(_RT_DEV, f"{tok}|{dev_id}", get_dev)
+    if not dev:
+        raise HTTPException(404, "Équipement introuvable")
+    if int(dev.get("snmp_disable") or 0):
+        raise HTTPException(409, "SNMP désactivé pour cet équipement (supervision par ping)")
+
+    # une seule interrogation à la fois par port ; un résultat de moins de 0,8 s est réutilisé
+    lock = _RT_LOCK.setdefault(port_id, asyncio.Lock())
+    async with lock:
+        hit = _RT_LAST.get(port_id)
+        if hit and time.time() - hit[0] < 0.8:
+            return hit[1]
+        idx = int(port["ifIndex"])
+        v1 = str(dev.get("snmpver") or "").lower() == "v1"
+        oids = ([] if v1 else [f"{_OID['hcin']}.{idx}", f"{_OID['hcout']}.{idx}"]) + [f"{_OID['in']}.{idx}", f"{_OID['out']}.{idx}"]
+        r = await _snmp_get(dev, oids, 2)
+        hc = not v1 and f"{_OID['hcin']}.{idx}" in r
+        vin = r.get(f"{_OID['hcin']}.{idx}") if hc else r.get(f"{_OID['in']}.{idx}")
+        vout = r.get(f"{_OID['hcout']}.{idx}") if hc else r.get(f"{_OID['out']}.{idx}")
+        if vin is None or vout is None:
+            raise HTTPException(502, "Compteurs du port non disponibles en SNMP")
+        data = {"ts": time.time(), "in": int(vin), "out": int(vout), "bits": 64 if hc else 32,
+                "speed": int(port.get("ifSpeed") or 0)}
+        _RT_LAST[port_id] = (time.time(), data)
+        return data
 
 
 @app.get("/xui/memory")

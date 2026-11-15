@@ -5,8 +5,9 @@
 **A modern web interface for [LibreNMS](https://www.librenms.org/).**
 
 LibreNMS keeps doing what it does well (discovery, SNMP polling, alerting); XUI adds a fast, clean interface
-on top of it: customizable dashboards, interactive graphs, live network diagrams, dark theme… It relies only on
-the **LibreNMS API** and its **RRD files** (mounted read-only): nothing to change or install in LibreNMS.
+on top of it: customizable dashboards, interactive graphs, live network diagrams, dark theme… It relies on
+the **LibreNMS API** and its **RRD files** (mounted read-only): nothing to change or install in LibreNMS. The only,
+optional, exception: a port's "Real time" graph polls the device over SNMP, using the credentials from the API.
 
 > The interface is available in **English and French** (FR / EN button in the top bar; defaults to the browser language).
 > Screenshots show the French version.
@@ -72,6 +73,7 @@ Everything is set in `.env` (see the commented `.env.example`). Main variables:
 | `UI_USERNAME` / `UI_PASSWORD` | Local account (or fallback account in `librenms` mode) |
 | `RRD_PATH` | LibreNMS `rrd` directory on the host (mounted read-only) |
 | `RRDCACHED` | rrdcached address if LibreNMS uses it (e.g. `rrdcached:42217`) |
+| `REALTIME` | `true` (default) = ports' "Real time" graph; the container must reach devices over SNMP (UDP 161) |
 | `READ_ONLY` | `true` = no changes allowed from XUI |
 | `XUI_PORT` | Published port (default 8095) |
 | `COOKIE_SECURE` | `true` behind an HTTPS reverse proxy |
@@ -159,7 +161,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   BGP / OSPF / VRF / IPsec, services, alerts, logs, availability & outages, components, Oxidized config,
   management (properties, maintenance, rename, rediscovery, deletion).
 - **Port**: traffic, packets, broadcast / multicast, errors, with 4 side-by-side graphs (24 h, 7 d, 30 d, 1 y)
-  as in LibreNMS — click one to enlarge that period; IP, learned MACs, description editing.
+  as in LibreNMS — click one to enlarge that period; **Real time** as in LibreNMS (throughput polled over SNMP
+  every 1 to 10 s, 1 to 15 min window, average / max); IP, learned MACs, description editing.
 - Global **Ports / Health** views, **Alerts** (acknowledgement, rules with a wizard, history, templates).
 - **Logs**: events, syslog, alerts, authentication (date filters, CSV export).
 - Geographic **map**, **Topology** colored by link load.
@@ -171,5 +174,5 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
 ## Tech stack
 
 - **Frontend**: Vue 3, Vite, ECharts, Leaflet, Lucide
-- **Backend**: FastAPI (Python) — LibreNMS API proxy, RRD reading via `rrdtool`, sessions and local storage
+- **Backend**: FastAPI (Python) — LibreNMS API proxy, RRD reading via `rrdtool`, real time via `snmpget`, sessions and local storage
 - **Deployment**: a single Docker image (multi-stage build), non-root user, healthcheck

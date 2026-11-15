@@ -145,6 +145,8 @@ export const prefs = reactive({
   devView: load('devView', 'cards'),
   range: load('range', '-1d'),
   rackZoom: load('rackZoom', 1),
+  rtInterval: load('rtInterval', 2), // temps réel : intervalle (s)
+  rtWindow: load('rtWindow', 300), // temps réel : fenêtre affichée (s)
   wide: load('wide', false), // contenu sur toute la largeur de la fenêtre
   cableView: load('cableView', 'real'),
 })

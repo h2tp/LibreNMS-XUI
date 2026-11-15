@@ -10,7 +10,7 @@ RUN npm run build
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 STATIC_DIR=/app/static RRD_DIR=/rrd DATA_DIR=/data
 RUN apt-get update \
- && apt-get install -y --no-install-recommends rrdtool tini \
+ && apt-get install -y --no-install-recommends rrdtool tini snmp \
  && rm -rf /var/lib/apt/lists/* \
  && useradd -r -u 10001 -d /app xui \
  && mkdir -p /data && chown xui /data

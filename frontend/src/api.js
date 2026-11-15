@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 import { t, lang } from './i18n'
 
-export const session = reactive({ loaded: false, authenticated: false, user: null, auth_mode: 'password', read_only: false, role: '', librenms_url: '', rrd: false })
+export const session = reactive({ loaded: false, authenticated: false, user: null, auth_mode: 'password', read_only: false, role: '', librenms_url: '', rrd: false, realtime: false })
 
 export class ApiError extends Error {
   constructor(message, status) { super(message); this.status = status }
@@ -72,6 +72,10 @@ export const rrd = {
   info: (host, name) => request(`/xui/rrd/${enc(host)}/${enc(name)}/info`),
   data: (host, name, params) => request(`/xui/rrd/${enc(host)}/${enc(name)}/data${qs(params)}`),
   batch: (items) => request('/xui/rrd/batch', { method: 'POST', body: { items } }),
+}
+
+export const realtimeApi = {
+  port: (id) => request(`/xui/realtime/port/${enc(id)}`),
 }
 
 export const dashApi = {

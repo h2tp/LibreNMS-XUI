@@ -9,6 +9,7 @@
           <h1 class="row"><span class="dot" :class="portStatus(port)"></span>{{ port.ifName || port.ifDescr }} <span class="muted" style="font-weight:500;font-size:16px">{{ port.ifAlias }}</span></h1>
         </div>
         <div class="right">
+          <button v-if="canRealtime" class="btn" :class="{ primary: rtOpen }" :title="t('Débit mesuré en direct en SNMP, comme « Real time » dans LibreNMS')" @click="rtOpen = !rtOpen"><Radio /> {{ t('Temps réel') }}</button>
           <button v-if="!session.read_only && device" class="btn" @click="editDesc"><Pencil /> {{ t('Description') }}</button>
           <a v-if="device" class="btn" target="_blank" :href="`${session.librenms_url}/device/device=${device.device_id}/tab=port/port=${port.port_id}/`"><ExternalLink /> {{ t('LibreNMS') }}</a>
         </div>
@@ -20,6 +21,8 @@
         <div class="card big-stat"><span class="muted small">{{ t('Paquets in / out') }}</span><b>{{ fmtNum(port.ifInUcastPkts_rate) }} / {{ fmtNum(port.ifOutUcastPkts_rate) }}</b><span class="small faint">{{ t('pps unicast') }}</span></div>
         <div class="card big-stat"><span class="muted small">{{ t('Erreurs in / out') }}</span><b :style="{ color: errs ? 'var(--red)' : '' }">{{ fmtNum(port.ifInErrors_rate) }} / {{ fmtNum(port.ifOutErrors_rate) }}</b><span class="small faint">{{ t('par seconde · discards {i}/{o}', { i: fmtNum(port.ifInDiscards_rate), o: fmtNum(port.ifOutDiscards_rate) }) }}</span></div>
       </div>
+
+      <RealtimePort v-if="rtOpen && canRealtime" :key="port.port_id" :port-id="port.port_id" class="mt" @close="rtOpen = false" />
 
       <div class="card mt">
         <div class="card-title"><Activity :size="17" /> {{ t('Graphiques') }}
@@ -72,7 +75,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { ChevronRight, Pencil, ExternalLink, Activity, Info, Globe, Table2, Save } from 'lucide-vue-next'
+import { ChevronRight, Pencil, ExternalLink, Activity, Info, Globe, Table2, Save, Radio } from 'lucide-vue-next'
+import RealtimePort from '../components/RealtimePort.vue'
 import RrdChart from '../components/RrdChart.vue'
 import ApiGraph from '../components/ApiGraph.vue'
 import RangePicker from '../components/RangePicker.vue'
@@ -92,6 +96,9 @@ const device = ref(null)
 const ips = ref([])
 const fdb = ref([])
 const hasRrd = ref(false)
+// temps réel : lecture SNMP directe, impossible sur un équipement supervisé par ping
+const rtOpen = ref(route.query.realtime === '1')
+const canRealtime = computed(() => session.realtime && device.value && !+device.value.snmp_disable)
 const range = ref(prefs.range)
 const view = ref('bits')
 const views = [
