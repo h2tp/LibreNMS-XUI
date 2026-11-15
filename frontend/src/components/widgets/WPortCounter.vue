@@ -4,7 +4,7 @@
 
     <!-- anneaux d'utilisation -->
     <div v-else-if="mode === 'rings'" class="rings">
-      <div v-for="d in dirs" :key="d.k" class="ring-col">
+      <div v-for="d in dirs" :key="d.k" class="ring-col go" :title="portTip" @click="open">
         <Ring :value="d.pct ?? 0" :size="ringSize" :stroke="Math.max(6, ringSize / 10)" :text="d.val" :label="d.unit" :colors="[d.color, d.color]" />
         <div class="lbl"><component :is="d.icon" :size="14" :style="{ color: d.color }" /> {{ d.label }}<span v-if="d.pct !== null" class="faint"> · {{ fmtP(d.pct) }} %</span></div>
       </div>
@@ -12,7 +12,7 @@
 
     <!-- ligne compacte -->
     <div v-else-if="mode === 'line'" class="line">
-      <div v-for="d in dirs" :key="d.k" class="l-item" :style="{ '--c': d.color }">
+      <div v-for="d in dirs" :key="d.k" class="l-item go" :style="{ '--c': d.color }" :title="portTip" @click="open">
         <component :is="d.icon" :size="Math.min(28, valSize * .7)" class="l-ico" />
         <b :style="{ fontSize: `${valSize}px` }">{{ d.val }}</b><span class="unit">{{ d.unit }}</span>
       </div>
@@ -20,7 +20,7 @@
 
     <!-- tuiles (par défaut) -->
     <div v-else class="tiles">
-      <div v-for="d in dirs" :key="d.k" class="tile" :style="{ '--c': d.color }">
+      <div v-for="d in dirs" :key="d.k" class="tile go" :style="{ '--c': d.color }" :title="portTip" @click="open">
         <svg v-if="d.spark" class="spark" viewBox="0 0 100 40" preserveAspectRatio="none">
           <path :d="d.spark.area" class="sp-area" /><path :d="d.spark.line" class="sp-line" />
         </svg>
@@ -38,6 +38,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ArrowDown, ArrowUp, ArrowDownToLine, ArrowUpFromLine } from 'lucide-vue-next'
 import Ring from '../Ring.vue'
 import { D } from '../../dashboard/data'
@@ -47,6 +48,10 @@ import { fmtBits, fmtBytes } from '../../utils'
 import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
+const router = useRouter()
+// clic sur une valeur : page du port
+const open = () => port.value && router.push(`/port/${port.value.port_id}`)
+const portTip = computed(() => (port.value ? t('Ouvrir le port {p}', { p: [port.value.ifName, port.value.ifAlias].filter((x, i, a) => x && a.indexOf(x) === i).join(' — ') }) : ''))
 const port = ref(null); const loaded = ref(false)
 const hist = ref(null) // { in: [], out: [] } en octets/s
 const mode = computed(() => props.config.mode || 'tiles')
@@ -157,4 +162,8 @@ useLoader(async () => {
 .rings { flex: 1; display: flex; align-items: center; justify-content: space-around; gap: 10px; min-height: 0; }
 .ring-col { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
 .lbl { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.go { cursor: pointer; }
+.tile.go { transition: border-color .15s, transform .15s; }
+.tile.go:hover { border-color: color-mix(in srgb, var(--c) 60%, var(--border)); transform: translateY(-1px); }
+.l-item.go:hover b, .ring-col.go:hover .lbl { color: var(--c, var(--text)); }
 </style>

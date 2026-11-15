@@ -1289,4 +1289,5 @@ export default {
   "Descendant": "Download",
   "Montant": "Upload",
   "Port introuvable": "Port not found",
+  "Ouvrir le port {p}": "Open port {p}",
 }
