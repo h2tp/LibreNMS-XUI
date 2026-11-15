@@ -144,6 +144,7 @@ export const prefs = reactive({
   sidebar: load('sidebar', true),
   devView: load('devView', 'cards'),
   range: load('range', '-1d'),
+  rackZoom: load('rackZoom', 1),
 })
 
 export const RANGES = [

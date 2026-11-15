@@ -39,7 +39,7 @@ const searching = ref(false)
 const pages = [
   ['/', t('Tableau de bord')], ['/devices', t('Équipements')], ['/ports', t('Ports')], ['/health', t('Santé & capteurs')], ['/alerts', t('Alertes')],
   ['/alerts/rules', t('Règles d\'alerte')], ['/logs', t('Journal des évènements')], ['/logs/syslog', 'Syslog'], ['/map', t('Carte')],
-  ['/topology', t('Topologie')], ['/groups', t('Groupes')], ['/locations', t('Emplacements')], ['/services', 'Services'], ['/routing', t('Routage BGP')],
+  ['/racks', t('Baies')], ['/topology', t('Topologie')], ['/groups', t('Groupes')], ['/locations', t('Emplacements')], ['/services', 'Services'], ['/routing', t('Routage BGP')],
   ['/routing/ospf', 'OSPF'], ['/resources', 'Adresses IP'], ['/resources/arp', 'Table ARP'], ['/resources/fdb', 'Table FDB / MAC'],
   ['/resources/vlans', 'VLANs'], ['/bills', t('Facturation')], ['/system', t('Système')], ['/explorer', t('Explorateur API')],
 ]

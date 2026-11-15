@@ -139,3 +139,12 @@ export const photoApi = {
   edit: (deviceId, name, body) => request(`/xui/devices/${enc(deviceId)}/photos/${enc(name)}`, { method: 'PATCH', body }),
   remove: (deviceId, name) => request(`/xui/devices/${enc(deviceId)}/photos/${enc(name)}`, { method: 'DELETE' }),
 }
+
+// baies : salles contenant une ou plusieurs baies, éléments placés en U
+export const rackApi = {
+  list: () => request('/xui/racks'),
+  get: (id) => request(`/xui/racks/${enc(id)}`),
+  create: (body) => request('/xui/racks', { method: 'POST', body }),
+  update: (id, body) => request(`/xui/racks/${enc(id)}`, { method: 'PUT', body }),
+  remove: (id) => request(`/xui/racks/${enc(id)}`, { method: 'DELETE' }),
+}

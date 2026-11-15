@@ -133,6 +133,13 @@ _MSG_EN = {
     "Temps invalide : {v}": "Invalid time: {v}",
     "Aucune source de données": "No data source",
     "CF invalide": "Invalid CF",
+    "Impossible d'enregistrer les baies : {e}": "Unable to save racks: {e}",
+    "racks doit être une liste": "racks must be a list",
+    "Salle introuvable": "Room not found",
+    "Cette salle est en lecture seule pour vous": "This room is read-only for you",
+    "Trop de salles (100 max.)": "Too many rooms (100 max.)",
+    "Nouvelle salle": "New room",
+    "Seul le propriétaire peut supprimer cette salle": "Only the owner can delete this room",
 }
 _MSG_RE = [(re.compile("^" + re.sub(r"\\\{(\w+)\\\}", r"(?P<\1>.*)", re.escape(fr)) + "$", re.S), en)
            for fr, en in _MSG_EN.items()]
@@ -829,9 +836,152 @@ async def diag_img_delete(name: str, request: Request):
         raise HTTPException(404, "Image introuvable")
     async with _diag_lock:
         used = [d for d in _diag_load()["diagrams"] if any(n.get("image") == name for n in d.get("nodes", []))]
+        used += [d for d in _rack_load()["rooms"] if any(i.get("image") == name for i in d.get("items", []))]
         if used:
             raise HTTPException(409, "Image utilisée dans : " + ", ".join(d.get("name", "?") for d in used[:5]))
         (DIAG_IMG_DIR / name).unlink(missing_ok=True)
+    return {"ok": True}
+
+
+# --------------------------------------------------------------------------- baies (racks)
+# DATA_DIR/racks.json : des « salles » contenant une ou plusieurs baies côte à côte, les éléments
+# placés en U (équipements LibreNMS ou éléments passifs) et, plus tard, les câbles entre ports.
+# Même modèle de propriétaire / partage que les tableaux de bord et les schémas.
+
+RACK_FILE = DATA_DIR / "racks.json"
+_rack_lock = asyncio.Lock()
+_RACK_KINDS = ("device", "patch", "pdu", "shelf", "blank", "cablemgmt", "custom")
+
+
+def _rack_load() -> dict:
+    try:
+        data = json.loads(RACK_FILE.read_text())
+    except (OSError, ValueError):
+        data = {}
+    data.setdefault("rooms", [])
+    return data
+
+
+def _rack_save(data: dict) -> None:
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = RACK_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1))
+        tmp.replace(RACK_FILE)
+    except OSError as e:
+        raise HTTPException(500, f"Impossible d'enregistrer les baies : {e}") from e
+
+
+def _clean_room(body: dict, d: dict) -> None:
+    if "location" in body:
+        d["location"] = _txt(body.get("location"), 120)
+    if "racks" in body:
+        if not isinstance(body["racks"], list):
+            raise HTTPException(400, "racks doit être une liste")
+        racks, ids = [], set()
+        for r in body["racks"][:20]:
+            if not isinstance(r, dict):
+                continue
+            rid = _txt(r.get("id"), 40) or secrets.token_hex(5)
+            if rid in ids:
+                continue
+            ids.add(rid)
+            racks.append({"id": rid, "name": _txt(r.get("name"), 40), "units": int(_num(r.get("units"), 1, 60, 42))})
+        d["racks"] = racks
+    if "items" in body or "racks" in body:
+        units = {r["id"]: r["units"] for r in d.get("racks", [])}
+        items, ids = [], set()
+        for it in (body["items"] if "items" in body else d.get("items", []))[:1000]:
+            if not isinstance(it, dict) or it.get("rack") not in units:
+                continue
+            iid = _txt(it.get("id"), 40) or secrets.token_hex(5)
+            if iid in ids:
+                continue
+            ids.add(iid)
+            kind = it.get("kind") if it.get("kind") in _RACK_KINDS else "custom"
+            h = int(_num(it.get("h"), 1, 20, 1))
+            u = int(_num(it.get("u"), 1, units[it["rack"]], 1))
+            dev = it.get("device_id")
+            items.append({
+                "id": iid, "rack": it["rack"], "kind": kind, "u": min(u, max(1, units[it["rack"]] - h + 1)), "h": h,
+                "device_id": int(dev) if kind == "device" and str(dev).isdigit() else None,
+                "label": _txt(it.get("label"), 60), "ports": int(_num(it.get("ports"), 0, 96, 0)),
+                "image": it.get("image") if isinstance(it.get("image"), str) and _IMG_NAME_RE.match(it["image"]) else None,
+                "display": "image" if it.get("display") == "image" else "face",
+            })
+        d["items"] = items
+
+
+def _rack_summary(d: dict, user: str) -> dict:
+    v = _dash_view(d, user)
+    return {k: v[k] for k in ("id", "name", "owner", "access", "mine", "can_edit", "updated")} | {
+        "location": d.get("location", ""), "racks": len(d.get("racks", [])), "items": len(d.get("items", [])),
+        "units": sum(r["units"] for r in d.get("racks", [])), "cables": len(d.get("cables", []))}
+
+
+def _rack_find(data: dict, room_id: str, user: str, write: bool = False) -> dict:
+    d = next((x for x in data["rooms"] if x["id"] == room_id), None)
+    if not d or not _dash_visible(d, user):
+        raise HTTPException(404, "Salle introuvable")
+    if write and d["owner"] != user and d["access"] != "edit":
+        raise HTTPException(403, "Cette salle est en lecture seule pour vous")
+    return d
+
+
+@app.get("/xui/racks")
+async def rack_list(request: Request):
+    user = _require(request)["user"]
+    items = [_rack_summary(d, user) for d in _rack_load()["rooms"] if _dash_visible(d, user)]
+    items.sort(key=lambda d: (not d["mine"], d["name"].lower()))
+    return {"items": items, "user": user}
+
+
+@app.get("/xui/racks/{room_id}")
+async def rack_get(room_id: str, request: Request):
+    user = _require(request)["user"]
+    return _dash_view(_rack_find(_rack_load(), room_id, user), user)
+
+
+@app.post("/xui/racks")
+async def rack_create(request: Request):
+    user = _require(request)["user"]
+    body = await request.json()
+    async with _rack_lock:
+        data = _rack_load()
+        if len([d for d in data["rooms"] if d["owner"] == user]) >= 100:
+            raise HTTPException(400, "Trop de salles (100 max.)")
+        d = {"id": secrets.token_hex(8), "name": _tr(request, "Nouvelle salle"), "owner": user, "access": "private",
+             "location": "", "racks": [], "items": [], "cables": [], "created": int(time.time())}
+        _apply_fields(d, {k: v for k, v in body.items() if k in ("name", "access")}, owner=True)
+        _clean_room(body, d)
+        data["rooms"].append(d)
+        _rack_save(data)
+    return _dash_view(d, user)
+
+
+@app.put("/xui/racks/{room_id}")
+async def rack_update(room_id: str, request: Request):
+    user = _require(request)["user"]
+    body = await request.json()
+    async with _rack_lock:
+        data = _rack_load()
+        d = _rack_find(data, room_id, user, write=True)
+        _apply_fields(d, {k: v for k, v in body.items() if k in ("name", "access")}, owner=d["owner"] == user)
+        _clean_room(body, d)
+        _rack_save(data)
+    return _dash_view(d, user)
+
+
+@app.delete("/xui/racks/{room_id}")
+async def rack_delete(room_id: str, request: Request):
+    user = _require(request)["user"]
+    async with _rack_lock:
+        data = _rack_load()
+        d = _rack_find(data, room_id, user)
+        if d["owner"] != user:
+            raise HTTPException(403, "Seul le propriétaire peut supprimer cette salle")
+        data["rooms"].remove(d)
+        _rack_save(data)
     return {"ok": True}
 
 

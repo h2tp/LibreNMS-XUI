@@ -78,7 +78,7 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import {
   Activity, LayoutDashboard, Server, Network, Bell, ScrollText, Map, Share2, Boxes, MapPin, HeartPulse,
   Route, Database, Receipt, Settings2, Search, PanelLeft, Sun, Moon, ExternalLink, LogOut, UserRound, RefreshCw,
-  Loader2, CircleCheck, CircleAlert, Info, Lock, Thermometer, Code2, X, Workflow,
+  Loader2, CircleCheck, CircleAlert, Info, Lock, Thermometer, Code2, X, Workflow, Rows3,
 } from 'lucide-vue-next'
 import { session, auth, api, pick } from './api'
 import { prefs, save, toasts } from './utils'
@@ -102,6 +102,7 @@ const nav = [
     { to: '/map', label: t('Carte'), icon: Map },
     { to: '/topology', label: t('Topologie'), icon: Share2 },
     { to: '/diagrams', label: t('Schémas'), icon: Workflow },
+    { to: '/racks', label: t('Baies'), icon: Rows3 },
   ] },
   { title: t('Inventaire'), items: [
     { to: '/groups', label: t('Groupes'), icon: Boxes },
