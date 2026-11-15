@@ -75,7 +75,7 @@
       </g>
     </svg>
 
-    <LinkHover v-if="hover && hoverData" :link="hoverData" :x="hover.x" :y="hover.y" />
+    <LinkHover v-if="hover && hoverData" :link="hoverData" :x="hover.x" :y="hover.y" :pinned="hover.pinned" @close="closePopup" />
 
     <div class="zoom">
       <button class="btn ghost sm icon" title="Zoom +" @click="zoomBy(0.8)"><ZoomIn /></button>
@@ -163,22 +163,33 @@ const drawnLinks = computed(() => (props.diagram?.links || []).map((l) => {
     titleA: `${nameA}${pa ? ` (${pa.ifName})` : ''}`, titleB: `${devB ? devName(devB) : B.label || 'B'}${pb ? ` (${pb.ifName})` : ''}`, nameA,
     status: st.known ? (st.down ? 'Lien coupé' : `${fmtSpeed(st.speed)} · charge ${Math.round(st.util)} % · ↓ ${fmtBits(st.rin)} ↑ ${fmtBits(st.rout)}`) : 'Ports non renseignés : état inconnu',
     host: rdev?.hostname || null, portId: rp ? +rp.port_id : null, flip: !pa && !!pb,
+    // liens vers les fiches des ports (affichés quand la fenêtre est épinglée)
+    ports: [[pa, A, devA], [pb, B, devB]].filter(([p]) => p).map(([p, n, dv]) => ({
+      id: +p.port_id, name: p.ifName, alias: p.ifAlias && p.ifAlias !== p.ifName ? p.ifAlias : '', dev: dv ? devName(dv) : n.label || '',
+    })),
   }
   return { id: l.id, raw: l, d, st, mid: at(0.5), pA: at(offA), pB: at(1 - offB), pa: short(pa), pb: short(pb), text, lw: text.length * 7.2 + 18, info }
 }).filter(Boolean))
 
 // --------------------------------------------------------------- survol d'un lien : graphe de trafic
-const hover = ref(null) // { id, x, y } en pixels dans le canevas
+// clic sur un lien (hors édition) : la fenêtre est épinglée, cliquable, avec les liens vers les ports
+const hover = ref(null) // { id, x, y, pinned } en pixels dans le canevas
 const hoverData = computed(() => hover.value && drawnLinks.value.find((l) => l.id === hover.value.id)?.info)
-function hoverLink(l, e) {
-  if (drag.value || (props.editing && props.tool === 'link')) { hover.value = null; return }
+function popupAt(l, e, pinned = false) {
   const r = wrap.value.getBoundingClientRect()
-  const W = 324; const H = 200; const px = e.clientX - r.left; const py = e.clientY - r.top
+  const W = 324; const H = pinned ? 260 : 200; const px = e.clientX - r.left; const py = e.clientY - r.top
   const x = px + 16 + W > r.width ? Math.max(4, px - 16 - W) : px + 16
   const y = Math.max(4, Math.min(py + 16, r.height - H - 4))
-  hover.value = { id: l.id, x, y }
+  hover.value = { id: l.id, x, y, pinned }
 }
-function unhover() { hover.value = null }
+function hoverLink(l, e) {
+  if (hover.value?.pinned) return
+  if (drag.value || (props.editing && props.tool === 'link')) { hover.value = null; return }
+  popupAt(l, e)
+}
+function unhover() { if (!hover.value?.pinned) hover.value = null }
+function closePopup() { hover.value = null }
+function onEsc(e) { if (e.key === 'Escape' && hover.value?.pinned) hover.value = null }
 
 // --------------------------------------------------------------- vue (zoom / déplacement)
 function toSvg(e) {
@@ -237,7 +248,7 @@ function onNodeDown(nd, e) {
   svg.value.setPointerCapture(e.pointerId)
 }
 function onLinkDown(l, e) {
-  if (!props.editing) return
+  if (!props.editing) { if (e.button === 0) popupAt(l, e, true); return }
   emit('update:selected', { type: 'link', id: l.id })
   const p = toSvg(e)
   drag.value = { kind: 'bend', id: l.id, sx: p.x, sy: p.y, b0: l.raw.bend || 0, moved: false }
@@ -294,7 +305,8 @@ onMounted(() => {
   ro.observe(wrap.value)
 })
 watch(() => props.diagram?.id, () => nextTick(fit))
-onBeforeUnmount(() => ro && ro.disconnect())
+onMounted(() => window.addEventListener('keydown', onEsc))
+onBeforeUnmount(() => { ro && ro.disconnect(); window.removeEventListener('keydown', onEsc) })
 </script>
 
 <style scoped>

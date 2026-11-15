@@ -1,5 +1,6 @@
 <template>
-  <div class="lh" :style="{ left: `${x}px`, top: `${y}px` }">
+  <div class="lh" :class="{ pinned }" :style="{ left: `${x}px`, top: `${y}px` }" @pointerdown.stop @wheel.stop>
+    <button v-if="pinned" class="lh-close" title="Fermer (Échap)" @click="$emit('close')"><X :size="14" /></button>
     <div class="lh-title">{{ link.titleA }} <span class="muted">↔</span> {{ link.titleB }}</div>
     <div class="small muted">{{ link.status }}</div>
     <template v-if="host">
@@ -18,17 +19,25 @@
         <span class="muted">24 dernières heures</span>
       </div>
     </template>
+    <div v-if="pinned && link.ports?.length" class="lh-ports">
+      <router-link v-for="p in link.ports" :key="p.id" :to="`/port/${p.id}`" class="lh-port" :title="`Ouvrir la fiche du port ${p.name}`">
+        <Cable :size="13" /><span class="ellipsis"><b>{{ p.name }}</b> · {{ p.dev }}<span v-if="p.alias" class="muted"> · {{ p.alias }}</span></span><ArrowRight :size="13" class="go" />
+      </router-link>
+    </div>
+    <div v-else-if="!pinned && link.ports?.length" class="small faint lh-hint">Cliquez sur le lien pour accéder aux ports</div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { X, Cable, ArrowRight } from 'lucide-vue-next'
 import { rrd, session } from '../api'
 import { cached } from '../dashboard/data'
 import { fmtBits } from '../utils'
 
 // link : { titleA, titleB, nameA, status, host, portId, flip } — flip : le RRD est celui de l'extrémité B (entrant/sortant inversés)
-const props = defineProps({ link: Object, x: Number, y: Number })
+const props = defineProps({ link: Object, x: Number, y: Number, pinned: Boolean })
+defineEmits(['close'])
 const W = 300; const H = 90
 const data = ref(null); const err = ref('')
 const host = computed(() => (session.rrd && props.link.host && props.link.portId ? props.link.host : null))
@@ -73,6 +82,17 @@ const pts = computed(() => {
 <style scoped>
 .lh { position: absolute; z-index: 5; pointer-events: none; width: 324px; padding: 10px 12px; border-radius: 12px;
   background: var(--panel-solid); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+.lh.pinned { pointer-events: auto; cursor: default; border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.lh-close { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+.lh-close:hover { background: var(--panel-2); color: var(--text); }
+.lh.pinned .lh-title { padding-right: 24px; }
+.lh-ports { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.lh-port { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 8px; color: var(--text); font-size: 12px; text-decoration: none; background: var(--panel-2); min-width: 0; }
+.lh-port:hover { background: color-mix(in srgb, var(--accent) 14%, var(--panel-2)); }
+.lh-port svg { color: var(--accent); flex: none; }
+.lh-port .ellipsis { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lh-port .go { opacity: .6; }
+.lh-hint { margin-top: 6px; font-size: 11px; }
 .lh-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
 .lh-empty { margin-top: 8px; }
 .lh-chart { display: block; margin-top: 8px; overflow: visible; }
