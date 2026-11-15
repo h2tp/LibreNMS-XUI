@@ -28,13 +28,14 @@ export function useDiagramLive() {
 export const UTIL_HEX = { 'var(--red)': '#f43f5e', 'var(--orange)': '#fb923c', 'var(--yellow)': '#facc15', 'var(--green)': '#22c55e' }
 
 /** Paliers par défaut : `min` en % (mode charge) ou en Mbit/s (mode débit). */
+// échelle par défaut (charge %) : reprise de la salle « Homelab SebW »
 export const DEFAULT_UTIL_STEPS = [
-  { min: 0, color: '#22c55e' }, { min: 40, color: '#facc15' }, { min: 70, color: '#fb923c' }, { min: 90, color: '#f43f5e' },
+  { min: 0, color: '#87cefa' }, { min: 1, color: '#0000ff' }, { min: 10, color: '#228b22' }, { min: 40, color: '#fcbd00' }, { min: 70, color: '#ff0000' },
 ]
 export const DEFAULT_RATE_STEPS = [
   { min: 0, color: '#22c55e' }, { min: 10, color: '#facc15' }, { min: 100, color: '#fb923c' }, { min: 1000, color: '#f43f5e' },
 ]
-export const DEFAULT_DOWN_COLOR = '#f43f5e'
+export const DEFAULT_DOWN_COLOR = '#000000'
 
 /** Échelle de couleurs effective d'un schéma (mode, paliers triés, couleur « coupé »). */
 export function colorScale(view = {}) {

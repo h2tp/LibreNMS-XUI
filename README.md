@@ -131,7 +131,8 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   d'un lien vers un équipement est lu sur le port côté équipement), liens courbables, fond uni / grille /
   image (PNG, JPEG, WebP, GIF, 8 Mo max.), annuler / rétablir, export SVG. En direct : état des équipements,
   alertes, débits, couleur et épaisseur des liens selon la charge (%) ou le débit, avec paliers et couleurs
-  personnalisables par schéma. Survol d'un lien : graphe de trafic 24 h ; clic : fenêtre épinglée avec liens
+  personnalisables par schéma (par défaut, charge : bleu clair < 1 %, bleu < 10 %, vert < 40 %, ambre < 70 %,
+  rouge au-delà, noir si coupé). Survol d'un lien : graphe de trafic 24 h ; clic : fenêtre épinglée avec liens
   vers les fiches des ports. Image personnalisée par équipement ou élément (dans la carte ou à la place de la carte),
   bibliothèque d'images partagée. Création depuis la topologie LLDP (disposition en arbre). Partage comme les
   tableaux de bord.

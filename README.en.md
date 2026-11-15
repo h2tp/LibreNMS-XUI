@@ -128,7 +128,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   (ISP router, camera, unmonitored device…: name, subtitle, image; no status or alerts, traffic on a link to a
   device is read from the device-side port), curved links, plain / grid / image background (PNG, JPEG, WebP,
   GIF, 8 MB max.), undo / redo, SVG export. Live: device status, alerts, throughput, link color and width by
-  load (%) or throughput, with per-diagram custom thresholds and colors. Hovering a link shows a 24 h traffic
+  load (%) or throughput, with per-diagram custom thresholds and colors (default load scale: light blue < 1%,
+  blue < 10%, green < 40%, amber < 70%, red above, black when down). Hovering a link shows a 24 h traffic
   graph; clicking pins it with links to the port pages. Custom image per device or element (inside the card or
   instead of it), shared image library. Generation from the LLDP topology (tree layout). Shared like dashboards.
 - **Racks** (Visualization › Racks): rooms holding one or more racks (4 to 48 U) shown side by side; LibreNMS
