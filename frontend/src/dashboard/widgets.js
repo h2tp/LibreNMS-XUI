@@ -31,7 +31,14 @@ export const WIDGETS = {
   stats: {
     label: t('Compteurs'), icon: LayoutGrid, desc: t('Tuiles de synthèse : équipements, ports, alertes, trafic.'),
     w: 12, h: 4, minH: 3, frameless: true, component: W('WStats'),
-    fields: [{ key: 'items', label: t('Compteurs affichés'), type: 'multi', options: STAT_ITEMS, default: STAT_ITEMS.map((x) => x.v) }, GROUP_FIELD],
+    fields: [
+      { key: 'items', label: t('Compteurs affichés'), type: 'multi', options: STAT_ITEMS, default: STAT_ITEMS.map((x) => x.v) }, GROUP_FIELD,
+      { key: 'mode', label: t('Affichage'), type: 'select', default: 'cards', options: [
+        { v: 'cards', l: t('Cartes') }, { v: 'tinted', l: t('Tuiles teintées') }, { v: 'big', l: t('Grands chiffres (écran mural)') },
+        { v: 'rings', l: t('Jauges') }, { v: 'compact', l: t('Bandeau compact (une ligne)') }, { v: 'list', l: t('Liste') },
+      ] },
+      { key: 'icons', label: t('Afficher les icônes'), type: 'bool', default: true },
+    ],
   },
   'device-status': {
     label: t('État des équipements'), icon: PieChart, desc: t('Anneau en ligne / hors ligne / désactivés.'),

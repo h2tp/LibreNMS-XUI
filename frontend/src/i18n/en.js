@@ -1211,4 +1211,9 @@ export default {
   "Aucun câble déclaré pour cet équipement.": "No cable declared for this device.",
   "Pleine largeur": "Full width",
   "Largeur normale": "Normal width",
+  "Tuiles teintées": "Tinted tiles",
+  "Grands chiffres (écran mural)": "Large numbers (wall screen)",
+  "Jauges": "Gauges",
+  "Bandeau compact (une ligne)": "Compact strip (one line)",
+  "Afficher les icônes": "Show icons",
 }

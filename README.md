@@ -112,7 +112,7 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
 
 - **Tableaux de bord** : plusieurs tableaux par utilisateur, widgets à glisser / redimensionner (bouton
   « Personnaliser »), partage privé / lecture / écriture, tableau par défaut (★), duplication, export / import JSON.
-  Widgets : compteurs, état du parc, carte de disponibilité (tuiles, carrés, hexagones, cartes détaillées, liste ou
+  Widgets : compteurs (cartes, tuiles teintées, grands chiffres, jauges, bandeau compact ou liste), état du parc, carte de disponibilité (tuiles, carrés, hexagones, cartes détaillées, liste ou
   synthèse ; regroupement par emplacement / type / OS, couleur selon l'état ou la latence), OS, latence, ports les plus chargés, alertes,
   équipements hors ligne, emplacements, journaux (évènements / syslog / alertes), fiche équipement,
   températures / capteurs, ventilateurs, alimentation (PSU, PoE), onduleurs, serveurs, NAS (RAID, santé des
