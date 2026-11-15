@@ -42,7 +42,12 @@ export const WIDGETS = {
     w: 6, h: 6, component: W('WAvailability'),
     fields: [
       GROUP_FIELD,
-      { key: 'mode', label: t('Affichage'), type: 'select', default: 'tiles', options: [{ v: 'tiles', l: t('Tuiles avec nom') }, { v: 'compact', l: t('Carrés compacts') }] },
+      { key: 'mode', label: t('Affichage'), type: 'select', default: 'tiles', options: [
+        { v: 'tiles', l: t('Tuiles avec nom') }, { v: 'compact', l: t('Carrés compacts') }, { v: 'hex', l: t('Hexagones') },
+        { v: 'cards', l: t('Cartes détaillées (IP, latence, uptime)') }, { v: 'list', l: t('Liste') }, { v: 'summary', l: t('Synthèse (barre + hors ligne)') },
+      ] },
+      { key: 'groupBy', label: t('Regrouper par'), type: 'select', default: '', options: [{ v: '', l: t('Aucun') }, { v: 'location', l: t('Emplacement') }, { v: 'type', l: t('Type') }, { v: 'os', l: t('OS') }] },
+      { key: 'color', label: t('Couleur des équipements en ligne'), type: 'select', default: 'status', options: [{ v: 'status', l: t('État (vert)') }, { v: 'latency', l: t('Latence (vert → rouge)') }] },
       { key: 'hideUp', label: t('Masquer les équipements en ligne'), type: 'bool', default: false },
     ],
   },

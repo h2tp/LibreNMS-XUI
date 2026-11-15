@@ -112,7 +112,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
 
 - **Dashboards**: several dashboards per user, drag-and-drop / resizable widgets ("Customize" button),
   private / read / write sharing, default dashboard (★), duplication, JSON export / import.
-  Widgets: counters, fleet status, availability map, OS, latency, busiest ports, alerts, offline devices,
+  Widgets: counters, fleet status, availability map (tiles, squares, hexagons, detailed cards, list or summary;
+  grouping by location / type / OS, colored by status or latency), OS, latency, busiest ports, alerts, offline devices,
   locations, logs (events / syslog / alerts), device card, temperatures / sensors, fans, power (PSU, PoE), UPS,
   servers, NAS (RAID, disk health), switches (front-panel ports), Wi-Fi access points, printers (supplies read
   from RRD), LibreNMS services, ports with errors, availability / SLA (24 h to 1 year, outages), aggregated
