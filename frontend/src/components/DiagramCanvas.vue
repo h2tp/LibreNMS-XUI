@@ -30,17 +30,18 @@
         class="node" :class="[nd.kind, nd.status, { sel: selected?.type === 'node' && selected.id === nd.id, from: linkFrom === nd.id }]"
         @pointerdown.stop="onNodeDown(nd, $event)" @dblclick.stop="$emit('edit-node', nd.raw)" @click.stop="onNodeClick(nd)">
         <title>{{ nd.tip }}</title>
-        <template v-if="nd.kind === 'device' && nd.mode === 'image'">
+        <template v-if="nd.boxed && nd.mode === 'image'">
           <rect x="-64" y="-46" width="128" height="72" rx="10" class="img-frame" />
           <image :href="nd.img" x="-60" y="-42" width="120" height="64" preserveAspectRatio="xMidYMid meet" filter="url(#dshadow)" />
           <g transform="translate(0,40)">
-            <circle :cx="-(nd.nameW + 13) / 2 + 4.5" cy="0" r="4.5" class="dot" />
-            <text :x="-(nd.nameW + 13) / 2 + 13" y="0" dominant-baseline="central" class="name halo">{{ nd.name }}</text>
+            <circle v-if="nd.kind === 'device'" :cx="-(nd.nameW + 13) / 2 + 4.5" cy="0" r="4.5" class="dot" />
+            <text :x="nd.kind === 'device' ? -(nd.nameW + 13) / 2 + 13 : -nd.nameW / 2" y="0" dominant-baseline="central" class="name halo">{{ nd.name }}</text>
+            <text v-if="nd.kind === 'custom' && nd.sub" y="16" text-anchor="middle" dominant-baseline="central" class="sub halo">{{ nd.sub }}</text>
           </g>
           <g v-if="nd.alerts" transform="translate(62,-44)"><circle r="10" class="abadge" /><text text-anchor="middle" dominant-baseline="central" class="atxt">{{ nd.alerts > 9 ? '9+' : nd.alerts }}</text></g>
           <circle v-if="nd.status === 'down'" cx="0" cy="-10" r="0" class="pulse" />
         </template>
-        <template v-else-if="nd.kind === 'device'">
+        <template v-else-if="nd.boxed">
           <rect x="-82" y="-27" width="164" height="54" rx="12" class="card" filter="url(#dshadow)" />
           <rect x="-82" y="-27" width="5" height="54" rx="2" class="bar" />
           <image v-if="nd.mode === 'icon'" :href="nd.img" x="-72" y="-16" width="32" height="32" preserveAspectRatio="xMidYMid meet" />
@@ -124,16 +125,18 @@ function fitText(text, max, size, weight = 400) {
 const drawnNodes = computed(() => (props.diagram?.nodes || []).map((n) => {
   const d = n.kind === 'device' ? props.live.devById.value[n.device_id] : null
   const status = nodeStatus(n, props.live.devById.value)
-  const full = n.label || (d ? devName(d) : n.kind === 'device' ? `#${n.device_id}` : n.kind === 'cloud' ? 'Internet' : 'Texte')
-  const mode = n.kind === 'device' && n.image && (n.display === 'icon' || n.display === 'image') ? n.display : 'card'
+  const boxed = n.kind === 'device' || n.kind === 'custom' // rendu en carte (équipement LibreNMS ou élément libre)
+  const full = n.label || (d ? devName(d) : n.kind === 'device' ? `#${n.device_id}` : n.kind === 'cloud' ? 'Internet' : n.kind === 'custom' ? 'Élément' : 'Texte')
+  const mode = boxed && n.image && (n.display === 'icon' || n.display === 'image') ? n.display : 'card'
   // largeur utile : carte = de x -34 au badge d'alerte (≈ 106 px) ; image seule = 170 px ; nuage ≈ 110 px
   const name = n.kind === 'text' ? full : fitText(full, mode === 'image' ? 170 : n.kind === 'cloud' ? 110 : 106, 13, 700)
-  const sub = d ? fitText(d.hardware || d.os || d.hostname || '', 106, 10.5) : n.kind === 'device' ? 'équipement inconnu' : ''
+  const sub = d ? fitText(d.hardware || d.os || d.hostname || '', 106, 10.5) : n.kind === 'device' ? 'équipement inconnu'
+    : n.kind === 'custom' ? fitText(n.sub || '', mode === 'image' ? 170 : 106, 10.5) : ''
   return {
-    ...n, raw: n, name, sub, status, mode, img: mode !== 'card' ? diagApi.imgUrl(n.image) : null,
+    ...n, raw: n, name, sub, status, mode, boxed, img: mode !== 'card' ? diagApi.imgUrl(n.image) : null,
     nameW: mode === 'image' ? measure(name, `700 13px ${fontFamily()}`) : 0,
     icon: d ? osIcon(d) : null, initial: (name[0] || '?').toUpperCase(), alerts: d ? props.live.alertsByDev.value[n.device_id] || 0 : 0,
-    tip: d ? `${devName(d)} (${d.hostname})\n${statusLabel[status] || status}${d.hardware ? '\n' + d.hardware : ''}` : full,
+    tip: d ? `${devName(d)} (${d.hostname})\n${statusLabel[status] || status}${d.hardware ? '\n' + d.hardware : ''}` : n.kind === 'custom' && n.sub ? `${full}\n${n.sub}` : full,
   }
 }))
 const drawnLinks = computed(() => (props.diagram?.links || []).map((l) => {
@@ -150,7 +153,7 @@ const drawnLinks = computed(() => (props.diagram?.links || []).map((l) => {
     : { x: A.x + dx * t, y: A.y + dy * t })
   const pa = props.live.portById.value[l.port_a]; const pb = props.live.portById.value[l.port_b]
   // noms de ports juste au bord de la carte (164 × 54) : distance au bord le long du lien
-  const box = (n) => (n.kind === 'device' && n.image && n.display === 'image' ? [64, 50] : [82, 27])
+  const box = (n) => ((n.kind === 'device' || n.kind === 'custom') && n.image && n.display === 'image' ? [64, 50] : [82, 27])
   const edge = (n) => Math.min(Math.abs(dx) > 0.01 ? (box(n)[0] * (n.size || 1)) / Math.abs(dx) : Infinity, Math.abs(dy) > 0.01 ? (box(n)[1] * (n.size || 1)) / Math.abs(dy) : Infinity)
   const offA = Math.min(0.4, edge(A) + 16 / len); const offB = Math.min(0.4, edge(B) + 16 / len)
   const text = l.label && !(view.value.showRates !== false && st.known && !st.down) ? l.label
@@ -331,6 +334,7 @@ onBeforeUnmount(() => { ro && ro.disconnect(); window.removeEventListener('keydo
 .editing .node { cursor: move; }
 .node .card { fill: var(--panel-solid); stroke: var(--border); stroke-width: 1.5; }
 .node .bar { fill: #64748b; }
+.node.custom .bar { fill: var(--accent); opacity: .7; }
 .node.up .bar { fill: #22c55e; } .node.down .bar { fill: #f43f5e; } .node.disabled .bar, .node.ignored .bar { fill: #64748b; }
 .node.down .card { stroke: #f43f5e; stroke-width: 2; }
 .node.sel .card, .node.sel .cloud { stroke: var(--accent); stroke-width: 2.5; }

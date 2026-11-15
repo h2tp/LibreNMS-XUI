@@ -37,10 +37,12 @@
 
         <!-- inspecteur -->
         <div v-if="selNode" class="insp">
-          <div class="insp-title"><component :is="selNode.kind === 'device' ? Server : selNode.kind === 'cloud' ? Cloud : Type" :size="15" /> {{ selNodeName }}</div>
-          <label class="field"><span>{{ selNode.kind === 'device' ? 'Libellé (vide : nom de l\'équipement)' : 'Texte' }}</span><input v-model="selNode.label" class="input" maxlength="60" @focus="push()" @input="changed()" /></label>
+          <div class="insp-title"><component :is="selNode.kind === 'device' ? Server : selNode.kind === 'custom' ? Box : selNode.kind === 'cloud' ? Cloud : Type" :size="15" /> {{ selNodeName }}</div>
+          <label class="field"><span>{{ selNode.kind === 'device' ? 'Libellé (vide : nom de l\'équipement)' : selNode.kind === 'custom' ? 'Nom' : 'Texte' }}</span><input v-model="selNode.label" class="input" maxlength="60" @focus="push()" @input="changed()" /></label>
+          <label v-if="selNode.kind === 'custom'" class="field"><span>Sous-titre</span><input v-model="selNode.sub" class="input" maxlength="60" placeholder="Ex. box opérateur, 192.0.2.1, baie B2…" @focus="push()" @input="changed()" /></label>
+          <div v-if="selNode.kind === 'custom'" class="small faint">Élément hors LibreNMS : pas d'état ni de trafic. Ses liens avec un équipement affichent le trafic du port côté équipement.</div>
           <label class="field"><span>Taille</span><input v-model.number="selNode.size" type="range" min="0.6" max="2" step="0.1" @pointerdown="push()" @input="changed()" /></label>
-          <template v-if="selNode.kind === 'device'">
+          <template v-if="selNode.kind === 'device' || selNode.kind === 'custom'">
             <div class="field"><span>Apparence</span>
               <div class="seg" style="width:100%">
                 <button v-for="b in [['card', 'Carte'], ['icon', 'Carte + image'], ['image', 'Image seule']]" :key="b[0]"
@@ -70,12 +72,12 @@
         </div>
         <div v-else-if="selLink" class="insp">
           <div class="insp-title"><Spline :size="15" /> Lien</div>
-          <label class="field"><span>Port côté {{ nodeName(selLink.a) }}</span>
+          <label v-if="isDev(selLink.a)" class="field"><span>Port côté {{ nodeName(selLink.a) }}</span>
             <select v-model="selLink.port_a" class="input" @focus="push()" @change="changed()">
               <option :value="null">— non précisé —</option>
               <option v-for="p in portsOf(selLink.a)" :key="p.port_id" :value="+p.port_id">{{ portOpt(p) }}</option>
             </select></label>
-          <label class="field"><span>Port côté {{ nodeName(selLink.b) }}</span>
+          <label v-if="isDev(selLink.b)" class="field"><span>Port côté {{ nodeName(selLink.b) }}</span>
             <select v-model="selLink.port_b" class="input" @focus="push()" @change="changed()">
               <option :value="null">— non précisé —</option>
               <option v-for="p in portsOf(selLink.b)" :key="p.port_id" :value="+p.port_id">{{ portOpt(p) }}</option>
@@ -91,6 +93,7 @@
         <div class="insp">
           <div class="insp-title"><Plus :size="15" /> Ajouter</div>
           <div class="row wrap" style="gap:6px">
+            <button class="btn sm" title="Élément qui n'existe pas dans LibreNMS (box, caméra, équipement non supervisé…)" @click="addFree('custom')"><Box :size="13" /> Élément</button>
             <button class="btn sm" @click="addFree('cloud')"><Cloud :size="13" /> Nuage</button>
             <button class="btn sm" @click="addFree('text')"><Type :size="13" /> Texte</button>
             <button class="btn sm" :title="`${missingLldp.length} lien(s) LLDP entre éléments du schéma`" :disabled="!missingLldp.length" @click="addLldp"><Network :size="13" /> Liens LLDP ({{ missingLldp.length }})</button>
@@ -189,7 +192,7 @@ import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ChevronLeft, Pencil, Check, Settings, Loader2, CircleCheck, CircleAlert, Undo2, Redo2, MousePointer2, Spline, Plus, Cloud, Type,
-  Network, Server, Trash2, ExternalLink, Minus, ImageUp, Download,
+  Network, Server, Trash2, ExternalLink, Minus, ImageUp, Download, Box,
 } from 'lucide-vue-next'
 import DiagramCanvas from '../components/DiagramCanvas.vue'
 import Modal from '../components/Modal.vue'
@@ -257,8 +260,9 @@ function nodeName(id) {
   const n = diag.value.nodes.find((x) => x.id === id)
   if (!n) return '?'
   const d = live.devById.value[n.device_id]
-  return n.label || (d ? devName(d) : n.kind === 'cloud' ? 'Nuage' : 'Texte')
+  return n.label || (d ? devName(d) : n.kind === 'cloud' ? 'Nuage' : n.kind === 'custom' ? 'Élément' : 'Texte')
 }
+const isDev = (nodeId) => diag.value.nodes.find((x) => x.id === nodeId)?.kind === 'device'
 function portsOf(nodeId) {
   const n = diag.value.nodes.find((x) => x.id === nodeId)
   if (!n || n.kind !== 'device') return []
@@ -332,7 +336,8 @@ function addDevice(device_id, x, y) {
 }
 function addFree(kind) {
   const pos = freeSpot()
-  addNode({ id: uid(), kind, device_id: null, x: pos.x, y: pos.y, label: kind === 'cloud' ? 'Internet' : 'Texte', size: 1 })
+  const label = { cloud: 'Internet', custom: 'Nouvel élément' }[kind] || 'Texte'
+  addNode({ id: uid(), kind, device_id: null, x: pos.x, y: pos.y, label, size: 1, ...(kind === 'custom' ? { sub: '' } : {}) })
 }
 function connect({ a, b }) {
   const A = diag.value.nodes.find((n) => n.id === a); const B = diag.value.nodes.find((n) => n.id === b)

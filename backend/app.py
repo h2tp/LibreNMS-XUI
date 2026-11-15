@@ -477,7 +477,7 @@ _IMG_NAME_RE = re.compile(r"^[0-9a-f]{16}\.(png|jpg|webp|gif)$")
 _NODE_DISPLAYS = ("card", "icon", "image")
 _diag_lock = asyncio.Lock()
 _BG_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}
-_NODE_KINDS = ("device", "text", "cloud")
+_NODE_KINDS = ("device", "text", "cloud", "custom")
 
 
 def _diag_load() -> dict:
@@ -528,6 +528,7 @@ def _clean_diagram(body: dict, d: dict) -> None:
                 "id": nid, "kind": kind, "x": _num(n.get("x"), -20000, 20000, 0), "y": _num(n.get("y"), -20000, 20000, 0),
                 "device_id": int(dev) if kind == "device" and str(dev).isdigit() else None,
                 "label": _txt(n.get("label")), "size": _num(n.get("size"), 0.5, 3, 1),
+                "sub": _txt(n.get("sub"), 60) if kind == "custom" else "",
                 "image": n.get("image") if isinstance(n.get("image"), str) and _IMG_NAME_RE.match(n["image"]) else None,
                 "display": n.get("display") if n.get("display") in _NODE_DISPLAYS else "card",
             })
