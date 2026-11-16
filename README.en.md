@@ -6,8 +6,9 @@
 
 LibreNMS keeps doing what it does well (discovery, SNMP polling, alerting); XUI adds a fast, clean interface
 on top of it: customizable dashboards, interactive graphs, live network diagrams, dark theme… It relies on
-the **LibreNMS API** and its **RRD files** (mounted read-only): nothing to change or install in LibreNMS. The only,
-optional, exception: a port's "Real time" graph polls the device over SNMP, using the credentials from the API.
+the **LibreNMS API** and its **RRD files** (mounted read-only): nothing to change or install in LibreNMS. Two
+optional exceptions: a port's "Real time" graph polls the device over SNMP, using the credentials from the API; the
+list of deleted ports is read from the LibreNMS MySQL database (read-only account), since the API does not expose them.
 
 > The interface is available in **English and French** (FR / EN button in the top bar; defaults to the browser language).
 > Screenshots show the French version.
@@ -74,6 +75,7 @@ Everything is set in `.env` (see the commented `.env.example`). Main variables:
 | `RRD_PATH` | LibreNMS `rrd` directory on the host (mounted read-only) |
 | `RRDCACHED` | rrdcached address if LibreNMS uses it (e.g. `rrdcached:42217`) |
 | `REALTIME` | `true` (default) = ports' "Real time" graph; the container must reach devices over SNMP (UDP 161) |
+| `LIBRENMS_DB_HOST` / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Optional: read-only LibreNMS MySQL database, for the list of deleted ports (see below) |
 | `READ_ONLY` | `true` = no changes allowed from XUI |
 | `XUI_PORT` | Published port (default 8095) |
 | `COOKIE_SECURE` | `true` behind an HTTPS reverse proxy |
@@ -101,6 +103,19 @@ passwords) are masked before being sent to the browser.
 
 With the `rrd` directory mounted, graphs are drawn from the real data. Without it, the interface falls back to
 the PNG images rendered by LibreNMS.
+
+### Deleted ports (optional)
+
+The LibreNMS API never returns deleted ports. To show the **Deleted** filter on the Ports page, XUI reads the
+LibreNMS `ports` table directly. Create a MySQL account limited to reading that table:
+
+```sql
+CREATE USER 'xui'@'<XUI IP>' IDENTIFIED BY '...';
+GRANT SELECT ON librenms.ports TO 'xui'@'<XUI IP>';
+```
+
+then set `LIBRENMS_DB_HOST`, `LIBRENMS_DB_USER` and `LIBRENMS_DB_PASSWORD` in `.env` (MySQL must listen on the
+network and port 3306 must be reachable from the container). Without these variables, the filter is hidden.
 
 ### Kiosk mode (wall display)
 
@@ -183,7 +198,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
 - **Port**: traffic, packets, broadcast / multicast, errors, with 4 side-by-side graphs (24 h, 7 d, 30 d, 1 y)
   as in LibreNMS — click one to enlarge that period; **Real time** as in LibreNMS (throughput polled over SNMP
   every 1 to 10 s, 1 to 15 min window, average / max); IP, learned MACs, description editing.
-- Global **Ports / Health** views, **Alerts** (acknowledgement, rules with a wizard, history, templates).
+- Global **Ports** view (active / up / down / errors filters, interface type, **deleted** ports when the database is
+  configured), global **Health** view, **Alerts** (acknowledgement, rules with a wizard, history, templates).
 - **Logs**: events, syslog, alerts, authentication (date filters, CSV export).
 - Geographic **map**, **Topology** colored by link load.
 - **Groups**, **Locations** (placed by click / drag on the map), **Services**, **Routing**,
@@ -194,5 +210,5 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
 ## Tech stack
 
 - **Frontend**: Vue 3, Vite, ECharts, Leaflet, Lucide
-- **Backend**: FastAPI (Python) — LibreNMS API proxy, RRD reading via `rrdtool`, real time via `snmpget`, sessions and local storage
+- **Backend**: FastAPI (Python) — LibreNMS API proxy, RRD reading via `rrdtool`, real time via `snmpget`, deleted ports via MySQL (optional), sessions and local storage
 - **Deployment**: a single Docker image (multi-stage build), non-root user, healthcheck

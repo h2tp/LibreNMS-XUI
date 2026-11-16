@@ -7,8 +7,9 @@
 LibreNMS continue de faire ce qu'il fait bien (découverte, collecte SNMP, alertes) ; XUI propose par-dessus
 une interface rapide et claire : tableaux de bord personnalisables, graphiques interactifs, schémas réseau en
 direct, thème sombre… Il s'appuie sur l'**API de LibreNMS** et sur ses **fichiers RRD** (montés en lecture
-seule) : rien à modifier ni à installer dans LibreNMS. Seule exception, facultative : le graphique « Temps réel »
-d'un port interroge l'équipement en SNMP, avec les identifiants fournis par l'API.
+seule) : rien à modifier ni à installer dans LibreNMS. Deux exceptions, facultatives : le graphique « Temps réel »
+d'un port interroge l'équipement en SNMP, avec les identifiants fournis par l'API ; la liste des ports supprimés
+est lue dans la base MySQL de LibreNMS (compte en lecture seule), car l'API ne les expose pas.
 
 ![Tableau de bord](img/tdb.png)
 
@@ -73,6 +74,7 @@ Tout se règle dans `.env` (voir `.env.example`, commenté). Principales variabl
 | `RRD_PATH` | Dossier `rrd` de LibreNMS sur l'hôte (monté en lecture seule) |
 | `RRDCACHED` | Adresse de rrdcached si LibreNMS l'utilise (ex. `rrdcached:42217`) |
 | `REALTIME` | `true` (défaut) = graphique « Temps réel » des ports ; le conteneur doit joindre les équipements en SNMP (UDP 161) |
+| `LIBRENMS_DB_HOST` / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Facultatif : base MySQL de LibreNMS en lecture seule, pour la liste des ports supprimés (voir ci-dessous) |
 | `READ_ONLY` | `true` = aucune modification possible depuis XUI |
 | `XUI_PORT` | Port publié (8095 par défaut) |
 | `COOKIE_SECURE` | `true` derrière un reverse-proxy HTTPS |
@@ -100,6 +102,19 @@ Le jeton ne quitte jamais le serveur (sessions côté serveur, cookie HttpOnly) 
 
 Avec le dossier `rrd` monté, les courbes sont tracées à partir des données réelles. Sans montage,
 l'interface se rabat sur les images PNG générées par LibreNMS.
+
+### Ports supprimés (facultatif)
+
+L'API LibreNMS ne renvoie jamais les ports supprimés. Pour afficher le filtre **Supprimés** de la page Ports,
+XUI lit directement la table `ports` de LibreNMS. Créer un compte MySQL limité à la lecture de cette table :
+
+```sql
+CREATE USER 'xui'@'<IP de XUI>' IDENTIFIED BY '...';
+GRANT SELECT ON librenms.ports TO 'xui'@'<IP de XUI>';
+```
+
+puis renseigner `LIBRENMS_DB_HOST`, `LIBRENMS_DB_USER` et `LIBRENMS_DB_PASSWORD` dans `.env` (MySQL doit écouter
+sur le réseau et le port 3306 être accessible depuis le conteneur). Sans ces variables, le filtre est masqué.
 
 ### Mode kiosque (écran mural)
 
@@ -185,7 +200,8 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   comme dans LibreNMS — un clic affiche la période en grand ; **Temps réel** comme dans LibreNMS (débit
   mesuré en SNMP toutes les 1 à 10 s, fenêtre de 1 à 15 min, moyenne / max) ; IP, MAC apprises, édition de la
   description.
-- **Ports / Santé** globaux, **Alertes** (acquittement, règles avec assistant, historique, modèles).
+- **Ports** globaux (filtres actifs / up / down / erreurs, type d'interface, ports **supprimés** si la base est
+  configurée), **Santé** globale, **Alertes** (acquittement, règles avec assistant, historique, modèles).
 - **Journaux** : évènements, syslog, alertes, authentification (filtres de dates, export CSV).
 - **Carte** géographique, **Topologie** colorée selon la charge des liens.
 - **Groupes**, **Emplacements** (placement par clic / glisser sur la carte), **Services**, **Routage**,
@@ -196,5 +212,5 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
 ## Technique
 
 - **Frontend** : Vue 3, Vite, ECharts, Leaflet, Lucide
-- **Backend** : FastAPI (Python) — proxy de l'API LibreNMS, lecture des RRD via `rrdtool`, temps réel via `snmpget`, sessions et stockage local
+- **Backend** : FastAPI (Python) — proxy de l'API LibreNMS, lecture des RRD via `rrdtool`, temps réel via `snmpget`, ports supprimés via MySQL (facultatif), sessions et stockage local
 - **Déploiement** : une seule image Docker (build multi-étapes), utilisateur non root, healthcheck
