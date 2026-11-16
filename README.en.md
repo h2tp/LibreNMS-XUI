@@ -173,7 +173,7 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   Undo / redo (Ctrl+Z / Ctrl+Y).
   Shared like diagrams. Storage:
   `./data/racks.json`.
-- **Devices**: cards / table, filters (status, OS, type, location, group), SNMP v1/v2c/v3 or ICMP onboarding.
+- **Devices**: cards / table, LibreNMS-style filters (status, OS, version, platform, featureset, location, type, group) with cascading lists and device counts, kept in the URL; SNMP v1/v2c/v3 or ICMP onboarding.
 - **Device page**: overview (CPU / RAM / disk / availability gauges, photos with captions and full-screen view,
   rack placement with a rack extract and the list of its cables),
   ports with sparklines, health (processors, memory, storage, sensors + graphs), browser for every RRD file,
