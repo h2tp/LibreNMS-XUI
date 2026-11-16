@@ -16,6 +16,24 @@
           </div>
         </div>
 
+        <div v-else-if="f.type === 'devices'" class="field full">
+          <span>{{ f.label }}</span>
+          <div v-if="cfg[f.key].length" class="dsel">
+            <div v-for="(x, i) in cfg[f.key]" :key="x.h" class="dsel-row">
+              <span class="ellipsis dsel-host" :title="x.h">{{ devLabel(x.h) }}</span>
+              <input v-model="x.n" class="input" :placeholder="t('Nom affiché (facultatif)')" maxlength="60" />
+              <button class="btn icon sm" :disabled="i === 0" :title="t('Monter')" @click="move(f.key, i, -1)"><ChevronUp :size="14" /></button>
+              <button class="btn icon sm" :disabled="i === cfg[f.key].length - 1" :title="t('Descendre')" @click="move(f.key, i, 1)"><ChevronDown :size="14" /></button>
+              <button class="btn icon sm" :title="t('Retirer')" @click="cfg[f.key].splice(i, 1)"><X :size="14" /></button>
+            </div>
+          </div>
+          <input v-model="pickFilter" class="input" :placeholder="t('Filtrer les équipements…')" />
+          <select class="input" size="6" @change="(e) => { addPick(f.key, e.target.value); e.target.value = '' }">
+            <option v-for="d in pickOptions(f)" :key="d.device_id" :value="d.hostname">{{ devName(d) }}{{ devName(d) !== d.hostname ? ` (${d.hostname})` : '' }}</option>
+          </select>
+          <small v-if="f.help" class="faint">{{ f.help }}</small>
+        </div>
+
         <label v-else class="field" :class="{ full: ['textarea', 'device', 'rrd', 'port', 'graph'].includes(f.type) }">
           <span>{{ f.label }}<b v-if="f.required" style="color:var(--red)"> *</b></span>
 
@@ -92,7 +110,7 @@
 
 <script setup>
 import { reactive, ref, computed, watch, onMounted } from 'vue'
-import { Check } from 'lucide-vue-next'
+import { Check, ChevronUp, ChevronDown, X } from 'lucide-vue-next'
 import Modal from './Modal.vue'
 import { WIDGETS, missingConfig } from '../dashboard/widgets'
 import { D } from '../dashboard/data'
@@ -105,7 +123,7 @@ const props = defineProps({ type: String, config: Object, isNew: Boolean })
 const emit = defineEmits(['save', 'close'])
 const def = WIDGETS[props.type]
 const cfg = reactive(JSON.parse(JSON.stringify(props.config || {})))
-for (const f of def.fields) if (f.type === 'multi' && !Array.isArray(cfg[f.key])) cfg[f.key] = []
+for (const f of def.fields) if ((f.type === 'multi' || f.type === 'devices') && !Array.isArray(cfg[f.key])) cfg[f.key] = []
 
 const devices = ref([])
 const diagrams = ref([])
@@ -120,6 +138,19 @@ const devOptions = computed(() => {
   const all = [...devices.value].sort((a, b) => devName(a).localeCompare(devName(b)))
   return q ? all.filter((d) => `${devName(d)} ${d.hostname} ${d.ip || ''}`.toLowerCase().includes(q) || d.hostname === cfg.device) : all
 })
+// champ « devices » : sélection explicite, ordonnée, avec un nom d'affichage par équipement ([{ h, n }])
+const pickFilter = ref('')
+function pickOptions(f) {
+  const q = pickFilter.value.trim().toLowerCase()
+  const chosen = new Set(cfg[f.key].map((x) => x.h))
+  const type = f.typeKey ? cfg[f.typeKey] : ''
+  return [...devices.value].filter((d) => !chosen.has(d.hostname) && (!type || d.type === type)
+    && (!q || `${devName(d)} ${d.hostname} ${d.ip || ''}`.toLowerCase().includes(q)))
+    .sort((a, b) => devName(a).localeCompare(devName(b)))
+}
+function addPick(key, h) { if (h && !cfg[key].some((x) => x.h === h)) cfg[key].push({ h, n: '' }) }
+function move(key, i, d) { const l = cfg[key]; [l[i], l[i + d]] = [l[i + d], l[i]] }
+function devLabel(h) { const d = devices.value.find((x) => x.hostname === h); return d ? devName(d) : h }
 const rrdGroups = computed(() => {
   const q = rrdFilter.value.trim().toLowerCase()
   const items = lists.files.map((name) => ({ name, ...describe(name) }))
@@ -158,7 +189,7 @@ async function loadDeps(host, first) {
 function setPortName() { cfg.portName = lists.ports.find((p) => +p.port_id === +cfg.port)?.ifName || '' }
 
 onMounted(async () => {
-  if (needs('device')) devices.value = await D.devices().catch(() => [])
+  if (needs('device') || needs('devices')) devices.value = await D.devices().catch(() => [])
   if (needs('group')) groups.value = await D.groups().catch(() => [])
   if (needs('diagram')) diagrams.value = (await diagApi.list().catch(() => ({ items: [] }))).items
   if (needs('rack')) {
@@ -172,8 +203,16 @@ watch(() => cfg.device, (h) => loadDeps(h, false))
 function save() {
   if (missing.value) return
   const out = { ...cfg }
+  for (const f of def.fields) if (f.type === 'devices') out[f.key] = cfg[f.key].map((x) => ({ h: x.h, n: String(x.n || '').trim() }))
   if (!out.title?.trim()) delete out.title
   if (autoTitle.value) out.autoTitle = autoTitle.value
   emit('save', out)
 }
 </script>
+
+<style scoped>
+.dsel { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.dsel-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto auto auto; gap: 6px; align-items: center; }
+.dsel-host { font-size: 13px; font-weight: 600; }
+@media (max-width: 560px) { .dsel-row { grid-template-columns: minmax(0, 1fr) auto auto auto; } .dsel-row .input { grid-column: 1 / -1; grid-row: 2; } }
+</style>

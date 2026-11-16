@@ -1366,4 +1366,9 @@ export default {
   'Tableau croisé (équipements × capteurs)': 'Matrix (devices × sensors)',
   'Tuiles compactes (écran mural)': 'Compact tiles (wall display)',
   'Liste (une ligne par capteur)': 'List (one row per sensor)',
+  'Équipements affichés': 'Displayed devices',
+  'Nom affiché (facultatif)': 'Display name (optional)',
+  'Monter': 'Move up',
+  'Descendre': 'Move down',
+  'Vide : tous les équipements du type et du groupe choisis. Sinon, uniquement ceux-ci, dans cet ordre, avec leur nom affiché (la liste proposée suit le type choisi).': 'Empty: all devices of the selected type and group. Otherwise only these, in this order, with their display name (the list offered follows the selected type).',
 }

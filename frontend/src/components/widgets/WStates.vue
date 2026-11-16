@@ -7,7 +7,7 @@
       <thead><tr><th>{{ t('Équipement') }}</th><th v-for="c in columns" :key="c" :title="c">{{ short(c) }}</th></tr></thead>
       <tbody>
         <tr v-for="c in cards" :key="c.dev.device_id">
-          <td><router-link :to="link(c.dev)" class="dev"><span class="dot" :class="c.dev.status ? c.worst : 'crit'"></span><span class="ellipsis">{{ devName(c.dev) }}</span></router-link></td>
+          <td><router-link :to="link(c.dev)" class="dev"><span class="dot" :class="c.dev.status ? c.worst : 'crit'"></span><span class="ellipsis">{{ name(c.dev) }}</span></router-link></td>
           <td v-for="col in columns" :key="col">
             <span v-if="c.by[col]" class="pill" :class="c.by[col].st" :title="tip(c.by[col])">{{ c.by[col].label }}</span>
             <span v-else class="faint">—</span>
@@ -21,7 +21,7 @@
   <div v-else-if="mode === 'list'" class="list">
     <router-link v-for="s in flat" :key="s.sensor_id" :to="link(s.dev)" class="list-row" :title="tip(s)">
       <span class="dot" :class="s.st === 'crit' || s.st === 'warn' ? s.st : s.dev.status ? 'ok' : 'crit'"></span>
-      <b class="ellipsis dev-n">{{ devName(s.dev) }}</b>
+      <b class="ellipsis dev-n">{{ name(s.dev) }}</b>
       <span class="ellipsis muted grow">{{ s.sensor_descr }}</span>
       <span class="pill" :class="s.st">{{ s.label }}</span>
     </router-link>
@@ -30,7 +30,7 @@
   <!-- tuiles compactes (écran mural) : nom de l'équipement et ses états abrégés -->
   <div v-else-if="mode === 'tiles'" class="tiles">
     <router-link v-for="c in cards" :key="c.dev.device_id" :to="link(c.dev)" class="tile" :class="c.dev.status ? c.worst : 'crit'">
-      <b class="ellipsis">{{ devName(c.dev) }}</b>
+      <b class="ellipsis">{{ name(c.dev) }}</b>
       <div class="chips">
         <span v-for="s in c.rows" :key="s.sensor_id" class="chip" :class="s.st" :title="tip(s)"><small>{{ short(s.sensor_descr) }}</small> {{ s.label }}</span>
       </div>
@@ -42,7 +42,7 @@
     <div v-for="c in cards" :key="c.dev.device_id" class="card-st" :class="c.dev.status ? c.worst : 'crit'">
       <router-link :to="link(c.dev)" class="head">
         <span class="dot" :class="c.dev.status ? c.worst : 'crit'"></span>
-        <b class="ellipsis">{{ devName(c.dev) }}</b>
+        <b class="ellipsis">{{ name(c.dev) }}</b>
         <span v-if="!c.dev.status" class="badge critical">{{ t('Hors ligne') }}</span>
       </router-link>
       <div v-for="s in c.rows" :key="s.sensor_id" class="row-st" :title="tip(s)">
@@ -70,7 +70,12 @@ const RANK = { crit: 0, warn: 1, unk: 2, stby: 3, ok: 4 }
 const bad = (st) => st === 'crit' || st === 'warn'
 
 const mode = computed(() => props.config.mode || 'cards')
-const filtered = computed(() => !!(props.config.device || props.config.group || props.config.devtype || props.config.filter))
+// sélection explicite [{ h: hostname, n: nom affiché }] ; ancienne config : un seul équipement (device)
+const picks = computed(() => (props.config.devices?.length ? props.config.devices : props.config.device ? [{ h: props.config.device, n: '' }] : []))
+const order = computed(() => Object.fromEntries(picks.value.map((x, i) => [x.h, i])))
+const alias = computed(() => Object.fromEntries(picks.value.filter((x) => x.n).map((x) => [x.h, x.n])))
+const name = (d) => alias.value[d.hostname] || devName(d)
+const filtered = computed(() => !!(picks.value.length || props.config.group || props.config.devtype || props.config.filter))
 const re = computed(() => {
   const f = String(props.config.filter || '').trim()
   if (!f) return null
@@ -84,8 +89,8 @@ const cards = computed(() => {
   const byDev = {}
   for (const d of devs.value) {
     if (+d.disabled) continue
-    if (props.config.device && d.hostname !== props.config.device) continue
-    if (props.config.devtype && d.type !== props.config.devtype) continue
+    if (picks.value.length) { if (!(d.hostname in order.value)) continue }
+    else if (props.config.devtype && d.type !== props.config.devtype) continue
     byDev[d.device_id] = { dev: d, rows: [] }
   }
   for (const s of all.value) {
@@ -102,7 +107,9 @@ const cards = computed(() => {
       return { ...c, rows, worst, by: Object.fromEntries(rows.map((r) => [r.sensor_descr, r])) }
     })
     .filter((c) => c.rows.length && (!props.config.onlyAlarm || !c.dev.status || c.worst !== 'ok'))
-    .sort((a, b) => (+!!a.dev.status - +!!b.dev.status) || RANK[a.worst] - RANK[b.worst] || devName(a.dev).localeCompare(devName(b.dev)))
+    .sort(picks.value.length
+      ? (a, b) => order.value[a.dev.hostname] - order.value[b.dev.hostname]  // ordre choisi
+      : (a, b) => (+!!a.dev.status - +!!b.dev.status) || RANK[a.worst] - RANK[b.worst] || name(a.dev).localeCompare(name(b.dev)))
 })
 
 const columns = computed(() => [...new Set(cards.value.flatMap((c) => c.rows.map((r) => r.sensor_descr)))]
@@ -110,12 +117,13 @@ const columns = computed(() => [...new Set(cards.value.flatMap((c) => c.rows.map
 
 const flat = computed(() => cards.value.flatMap((c) => c.rows)
   .filter((s) => !props.config.onlyAlarm || bad(s.st) || !s.dev.status)
-  .sort((a, b) => (bad(a.st) ? 0 : 1) - (bad(b.st) ? 0 : 1) || RANK[a.st] - RANK[b.st] || devName(a.dev).localeCompare(devName(b.dev)) || String(a.sensor_descr).localeCompare(String(b.sensor_descr))))
+  .sort((a, b) => (bad(a.st) ? 0 : 1) - (bad(b.st) ? 0 : 1) || RANK[a.st] - RANK[b.st] || (picks.value.length ? order.value[a.dev.hostname] - order.value[b.dev.hostname] : name(a.dev).localeCompare(name(b.dev))) || String(a.sensor_descr).localeCompare(String(b.sensor_descr))))
 
 const link = (d) => `/device/${encodeURIComponent(d.hostname)}/health`
 
 useLoader(async () => {
-  const [s, d, x] = await Promise.all([D.sensors(), devicesFor(props.config), stateTrApi.get()])
+  // équipements choisis un par un : le filtre de groupe ne s'applique pas
+  const [s, d, x] = await Promise.all([D.sensors(), picks.value.length ? D.devices() : devicesFor(props.config), stateTrApi.get()])
   all.value = s; devs.value = d; tr.value = x
   loaded.value = true
 })

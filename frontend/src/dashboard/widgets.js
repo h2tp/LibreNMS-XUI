@@ -277,7 +277,7 @@ export const WIDGETS = {
         { v: 'storage', l: t('Stockage') }, { v: 'wireless', l: t('Sans fil') }, { v: 'power', l: t('Énergie') }, { v: 'appliance', l: t('Appliance') },
         { v: 'collaboration', l: t('Collaboration') }, { v: 'printer', l: t('Imprimante') }, { v: 'environment', l: t('Environnement') },
       ] },
-      { key: 'device', label: t('Équipement'), type: 'device', default: '' },
+      { key: 'devices', label: t('Équipements affichés'), type: 'devices', typeKey: 'devtype', default: [], help: t('Vide : tous les équipements du type et du groupe choisis. Sinon, uniquement ceux-ci, dans cet ordre, avec leur nom affiché (la liste proposée suit le type choisi).') },
       GROUP_FIELD,
       { key: 'filter', label: t('Filtrer les capteurs'), type: 'text', default: '', help: t('Texte ou expression régulière sur la description, ex. « High Availability|Panorama »') },
       { key: 'onlyAlarm', label: t('Seulement les équipements avec un état anormal'), type: 'bool', default: false },
