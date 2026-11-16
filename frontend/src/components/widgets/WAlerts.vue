@@ -4,7 +4,7 @@
     <router-link v-for="a in shown" :key="a.id" class="alert-row" :class="severityClass(a.sev)" :to="devById[a.device_id] ? `/device/${encodeURIComponent(devById[a.device_id].hostname)}/alerts` : '/alerts'">
       <span class="dot" :class="severityClass(a.sev)"></span>
       <div class="grow" style="min-width:0">
-        <div class="ellipsis"><b>{{ a.rule }}</b></div>
+        <div class="ellipsis"><b>{{ a.rule }}</b><span v-if="targets[a.id]" class="muted"> · {{ targets[a.id] }}</span></div>
         <div class="small muted ellipsis">{{ devName(devById[a.device_id]) || a.hostname }} · {{ timeAgo(a.timestamp) }}</div>
       </div>
       <span class="badge" :class="severityClass(a.sev)">{{ a.sev || 'alerte' }}</span>
@@ -16,12 +16,13 @@
 import { ref, computed } from 'vue'
 import { ShieldCheck } from 'lucide-vue-next'
 import { D, devicesFor } from '../../dashboard/data'
+import { alertDetails, alertTargets } from '../../api'
 import { useLoader } from '../../refresh'
 import { devName, timeAgo, severityClass } from '../../utils'
 import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
-const devices = ref([]); const alerts = ref([]); const rules = ref({})
+const devices = ref([]); const alerts = ref([]); const rules = ref({}); const targets = ref({})
 const devById = computed(() => Object.fromEntries(devices.value.map((d) => [d.device_id, d])))
 const filtered = computed(() => alerts.value
   .filter((a) => !props.config.group || devById.value[a.device_id])
@@ -30,6 +31,8 @@ const filtered = computed(() => alerts.value
 const shown = computed(() => filtered.value.slice(0, props.config.limit || 10))
 useLoader(async () => {
   [devices.value, alerts.value, rules.value] = await Promise.all([devicesFor(props.config), D.alerts(), D.rules().catch(() => ({}))])
+  Promise.all(shown.value.map((a) => alertDetails(a).then((d) => [a.id, alertTargets(d).join(', ')]).catch(() => [a.id, ''])))
+    .then((l) => { targets.value = Object.fromEntries(l) })
 })
 </script>
 <style scoped>

@@ -13,7 +13,7 @@
       </template>
       <template #c-severity="{ row }"><span class="badge" :class="severityClass(row.severity)"><span class="dot" :class="severityClass(row.severity)"></span>{{ row.severity }}</span></template>
       <template #c-device_id="{ row }"><DeviceCell :device="devById[row.device_id]" :sub="false" :fallback="row.hostname" /></template>
-      <template #c-rule="{ row }"><b>{{ row.rule }}</b></template>
+      <template #c-rule="{ row }"><b>{{ row.rule }}</b><div v-if="row.target" class="small muted ellipsis" :title="row.target">{{ row.target }}</div></template>
       <template #c-timestamp="{ row }"><span class="nowrap small" :title="fmtDate(row.timestamp)">{{ timeAgo(row.timestamp) }}</span></template>
       <template #c-state="{ row }"><span class="badge" :class="+row.state === 2 ? 'info' : +row.state === 0 ? 'ok' : 'critical'">{{ stateLbl(row.state) }}</span></template>
       <template #c-actions="{ row }">
@@ -32,7 +32,7 @@
     </Modal>
 
     <Modal v-if="detail" :title="detail.rule" :icon="Bell" wide @close="detail = null">
-      <AlertDetail :alert="detail.raw" :rule="rules[detail.rule_id]" :device="devById[detail.device_id]" />
+      <AlertDetail :alert="details[detail.id] ? { ...detail.raw, details: details[detail.id] } : detail.raw":rule="rules[detail.rule_id]" :device="devById[detail.device_id]" />
       <template v-if="!session.read_only && (+detail.state === 1 || +detail.state === 2)" #foot>
         <button v-if="+detail.state === 1" class="btn primary" @click="ackRow = detail; ackNote = ''; untilClear = false; detail = null"><Check /> {{ t('Acquitter') }}</button>
         <button v-if="+detail.state === 2" class="btn" @click="unack(detail); detail = null"><BellRing /> {{ t('Réactiver') }}</button>
@@ -48,7 +48,7 @@ import DataTable from './DataTable.vue'
 import DeviceCell from './DeviceCell.vue'
 import Modal from './Modal.vue'
 import AlertDetail from './AlertDetail.vue'
-import { session, api, pick, safeList, devicesCached } from '../api'
+import { session, api, pick, safeList, devicesCached, alertDetails, alertTargets } from '../api'
 import { useLoader } from '../refresh'
 import { devName, fmtDate, timeAgo, severityClass, toast, toastError } from '../utils'
 import { t } from '../i18n'
@@ -65,11 +65,16 @@ const ackRow = ref(null)
 const ackNote = ref('')
 const untilClear = ref(false)
 const detail = ref(null)
+const details = ref({})
 const stateLbl = (s) => ({ 0: t('Résolue'), 1: 'Active', 2: t('Acquittée'), 3: t('Aggravée'), 4: t('Améliorée') }[s] ?? s)
 
 const rows = computed(() => raw.value
   .filter((a) => (!props.deviceId || +a.device_id === props.deviceId) && (!sev.value || severityClass(a.severity) === sev.value))
-  .map((a) => ({ ...a, rule: a.name || a.rule_name || rules.value[a.rule_id]?.name || t('Règle #{id}', { id: a.rule_id }), severity: a.severity || rules.value[a.rule_id]?.severity, raw: a })))
+  .map((a) => {
+    const det = details.value[a.id]
+    const full = det ? { ...a, details: det } : a
+    return { ...a, rule: a.name || a.rule_name || rules.value[a.rule_id]?.name || t('Règle #{id}', { id: a.rule_id }), target: alertTargets(det).join(', '), severity: a.severity || rules.value[a.rule_id]?.severity, raw: full }
+  }))
 const cols = computed(() => [
   { key: 'severity', label: t('Sévérité') }, { key: 'rule', label: t('Règle') },
   ...(props.deviceId ? [] : [{ key: 'device_id', label: t('Équipement'), sortValue: (r) => devName(devById.value[r.device_id]) }]),
@@ -85,6 +90,10 @@ const { loading, error, reload } = useLoader(async () => {
     safeList('alerts', { state: 2 }, 'alerts'),
   ])
   raw.value = a
+  // détails (port, capteur…) depuis le journal d'alertes, sans bloquer l'affichage
+  const mine = (props.deviceId ? a.filter((x) => +x.device_id === props.deviceId) : a).slice(0, 100)
+  Promise.all(mine.map((x) => alertDetails(x).then((d) => [x.id, d]).catch(() => [x.id, null])))
+    .then((l) => { details.value = { ...details.value, ...Object.fromEntries(l.filter(([, d]) => d)) } })
   if (r) rules.value = Object.fromEntries(r.map((x) => [x.id, x]))
   devById.value = Object.fromEntries(d.map((x) => [x.device_id, x]))
   const f = (l) => (props.deviceId ? l.filter((x) => +x.device_id === props.deviceId) : l).length

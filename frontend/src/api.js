@@ -61,6 +61,34 @@ export async function safeList(path, params, key) {
   try { return pick(await api.get(path, params), key) } catch { return [] }
 }
 
+/**
+ * L'endpoint /alerts ne renvoie pas les détails (port, capteur… concernés) :
+ * on les récupère dans l'entrée du journal d'alertes qui a déclenché l'alerte.
+ */
+const alertDetailsCache = new Map()
+export function alertDetails(a) {
+  if (a?.details?.rule?.length || !a?.device_id) return Promise.resolve(a?.details || null)
+  const key = `${a.id}|${a.timestamp}`
+  if (!alertDetailsCache.has(key)) {
+    const p = safeList(`logs/alertlog/${a.device_id}`, { from: a.timestamp, limit: 100 }, 'logs').then((logs) => {
+      const hit = logs.filter((l) => +l.rule_id === +a.rule_id && +l.state !== 0 && l.details?.rule?.length).pop()
+      if (!hit) alertDetailsCache.delete(key)
+      return hit?.details || null
+    })
+    alertDetailsCache.set(key, p)
+  }
+  return alertDetailsCache.get(key)
+}
+
+/** Libellé court de l'élément concerné par une alerte (port, capteur, service). */
+export function alertTargets(details) {
+  return (details?.rule || []).map((e) =>
+    e.port_id !== undefined && e.ifName !== undefined ? [e.ifName, e.ifAlias && e.ifAlias !== e.ifName ? e.ifAlias : ''].filter(Boolean).join(' · ')
+      : e.sensor_id !== undefined ? e.sensor_descr || e.sensor_type
+        : e.service_id !== undefined ? e.service_name || e.service_type
+          : '').filter(Boolean)
+}
+
 export const auth = {
   async config() { Object.assign(session, await request('/xui/config'), { loaded: true }); return session },
   async login(payload) { await request('/xui/login', { method: 'POST', body: payload }); return auth.config() },
