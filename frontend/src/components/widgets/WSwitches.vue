@@ -17,13 +17,17 @@
         <span class="small muted nowrap"><b style="color:var(--text)">{{ sw.up }}</b> / {{ sw.ports.length }} ports actifs</span>
       </div>
 
-      <div class="plate">
-        <div class="rows" :style="{ gridTemplateColumns: `repeat(${sw.cols}, 30px)` }">
-          <router-link v-for="p in sw.layout" :key="p.port_id" :to="`/port/${p.port_id}`" class="port" :class="p.cls"
-            :style="{ gridRow: p.row, gridColumn: p.col, '--fill': p.color }" :title="p.tip">
-            <span class="num">{{ p.label }}</span>
-            <i v-if="p.util > 0" class="u" :style="{ height: Math.max(8, p.util) + '%' }"></i>
-          </router-link>
+      <!-- une façade par membre de la stack, les unes sous les autres -->
+      <div class="plates">
+        <div v-for="pl in sw.plates" :key="pl.key" class="plate" :class="{ member: pl.label }">
+          <span v-if="pl.label" class="mlabel small mono">{{ pl.label }}</span>
+          <div class="rows" :style="{ gridTemplateColumns: `repeat(${pl.cols}, 30px)` }">
+            <router-link v-for="p in pl.layout" :key="p.port_id" :to="`/port/${p.port_id}`" class="port" :class="p.cls"
+              :style="{ gridRow: p.row, gridColumn: p.col, '--fill': p.color }" :title="p.tip">
+              <span class="num">{{ p.label }}</span>
+              <i v-if="p.util > 0" class="u" :style="{ height: Math.max(8, p.util) + '%' }"></i>
+            </router-link>
+          </div>
         </div>
       </div>
 
@@ -76,6 +80,36 @@ const UTIL = { 'var(--red)': '#f43f5e', 'var(--orange)': '#fb923c', 'var(--yello
 const lvl = (v) => (v >= 90 ? 'crit' : v >= 75 ? 'warn' : '')
 const shortName = (p) => (/(\d+)$/.exec(p.ifName || '') || [])[1] || p.ifName
 
+// numéro de membre de stack (ou de module) : premier nombre suivi de « / » ou « : » dans ifName
+const MAX_MEMBERS = 16
+function memberOf(p) {
+  const m = /(\d+)[/:]/.exec(p.ifName || '')
+  return m ? +m[1] : null
+}
+
+// façade : une rangée jusqu'à 12 ports, sinon impairs en haut / pairs en bas comme sur un vrai switch
+function plateOf(list) {
+  const two = list.length > 12
+  const cols = two ? Math.ceil(list.length / 2) : list.length
+  const layout = list.map((p, i) => {
+    const admin = p.ifAdminStatus === 'down'
+    const up = !admin && p.ifOperStatus === 'up'
+    const errs = n(p.ifInErrors_delta) + n(p.ifOutErrors_delta) > 0
+    const util = up ? Math.round(portUtil(p)) : 0
+    const color = !up ? '' : props.config.color === 'util' ? UTIL[utilColor(util)] : speedColor(n(p.ifSpeed))
+    return {
+      ...p, util, color, label: shortName(p),
+      row: two ? (i % 2) + 1 : 1, col: two ? Math.floor(i / 2) + 1 : i + 1,
+      cls: [admin ? 'admin' : up ? 'up' : 'off', errs ? 'err' : ''],
+      tip: [`${p.ifName}${p.ifAlias && p.ifAlias !== p.ifName ? ' — ' + p.ifAlias : ''}`,
+        admin ? t('Désactivé') : up ? t('Connecté à {s}', { s: fmtSpeed(n(p.ifSpeed)) }) : t('Déconnecté'),
+        up ? `↓ ${fmtBits(n(p.ifInOctets_rate) * 8)} · ↑ ${fmtBits(n(p.ifOutOctets_rate) * 8)} · ${util} %` : '',
+        errs ? t('Erreurs au dernier relevé') : ''].filter(Boolean).join('\n'),
+    }
+  })
+  return { cols, layout }
+}
+
 const switches = computed(() => {
   const byDev = {}
   for (const p of ports.value) if (devById.value[p.device_id] && !+p.deleted && PHYS.test(p.ifType || '')) (byDev[p.device_id] ||= []).push(p)
@@ -85,25 +119,24 @@ const switches = computed(() => {
   }).map(([id, l]) => {
     const d = devById.value[id]
     const list = [...l].sort((a, b) => n(a.ifIndex) - n(b.ifIndex))
-    // façade : une rangée jusqu'à 12 ports, sinon impairs en haut / pairs en bas comme sur un vrai switch
-    const two = list.length > 12
-    const cols = two ? Math.ceil(list.length / 2) : list.length
-    const layout = list.map((p, i) => {
-      const admin = p.ifAdminStatus === 'down'
-      const up = !admin && p.ifOperStatus === 'up'
-      const errs = n(p.ifInErrors_delta) + n(p.ifOutErrors_delta) > 0
-      const util = up ? Math.round(portUtil(p)) : 0
-      const color = !up ? '' : props.config.color === 'util' ? UTIL[utilColor(util)] : speedColor(n(p.ifSpeed))
-      return {
-        ...p, util, color, label: shortName(p),
-        row: two ? (i % 2) + 1 : 1, col: two ? Math.floor(i / 2) + 1 : i + 1,
-        cls: [admin ? 'admin' : up ? 'up' : 'off', errs ? 'err' : ''],
-        tip: [`${p.ifName}${p.ifAlias && p.ifAlias !== p.ifName ? ' — ' + p.ifAlias : ''}`,
-          admin ? t('Désactivé') : up ? t('Connecté à {s}', { s: fmtSpeed(n(p.ifSpeed)) }) : t('Déconnecté'),
-          up ? `↓ ${fmtBits(n(p.ifInOctets_rate) * 8)} · ↑ ${fmtBits(n(p.ifOutOctets_rate) * 8)} · ${util} %` : '',
-          errs ? t('Erreurs au dernier relevé') : ''].filter(Boolean).join('\n'),
-      }
-    })
+    // stack : un groupe de ports par membre, déduit du nom (Gi2/0/1, ge-1/0/3, 2/A1…)
+    const groups = new Map()
+    for (const p of list) {
+      const m = memberOf(p)
+      if (!groups.has(m)) groups.set(m, [])
+      groups.get(m).push(p)
+    }
+    // ports de gestion : sans numéro de membre (EMP-CMMA-CHAS1 sur OmniSwitch) ou Gi0/0 isolé sur une stack Cisco
+    // numérotée à partir de 1 → façade « Gestion » à part, en fin de liste
+    const mgmt = [...(groups.get(null) || []), ...(groups.size >= 2 && groups.get(0)?.length <= 2 ? groups.get(0) : [])]
+    const members = [...groups].filter(([m]) => m !== null && !(m === 0 && mgmt.includes(groups.get(0)[0])))
+    const stacked = members.length > 1 && members.length <= MAX_MEMBERS
+    const plates = stacked
+      ? members.sort((a, b) => a[0] - b[0]).map(([m, pl]) => ({ key: m, label: t('Membre {n}', { n: m }), ...plateOf(pl) }))
+      : [{ key: 'all', label: '', ...plateOf(list) }]
+    if (stacked && mgmt.length) plates.push({ key: 'mgmt', label: t('Gestion'), ...plateOf(mgmt) })
+    const layout = plates.flatMap((pl) => pl.layout)
+
     const upList = layout.filter((p) => p.cls[0] === 'up')
     const procs = cpu.value.filter((c) => +c.device_id === +id && c.usage != null)
     const sys = mem.value.find((m) => +m.device_id === +id && m.cls === 'system') || mem.value.find((m) => +m.device_id === +id && !['virtual', 'buffers', 'cached', 'shared', 'swap'].includes(m.cls))
@@ -113,7 +146,7 @@ const switches = computed(() => {
     const poeU = sens.find((s) => s.sensor_class === 'power' && /poe/i.test(s.sensor_descr) && /used|consum|draw/i.test(s.sensor_descr))
     return {
       device_id: +id, hostname: d.hostname, name: devName(d), ip: d.overwrite_ip || d.ip || (/^[\d.]+$|:/.test(d.hostname) ? d.hostname : ''), model: [d.hardware, d.version].filter(Boolean).join(' · '), down: +d.status === 0, uptime: n(d.uptime),
-      ports: list, layout, cols, up: upList.length,
+      ports: list, layout, plates, up: upList.length,
       rin: upList.reduce((s, p) => s + n(p.ifInOctets_rate) * 8, 0), rout: upList.reduce((s, p) => s + n(p.ifOutOctets_rate) * 8, 0),
       cpu: procs.length ? Math.round(procs.reduce((s, c) => s + +c.usage, 0) / procs.length) : null,
       mem: sys ? Math.round(+sys.perc) : null,
@@ -145,8 +178,12 @@ const { error } = useLoader(async () => {
 .sw.embedded { padding: 0; background: none; border: 0; }
 .head { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .head a:hover { text-decoration: none; }
+.plates { display: flex; flex-direction: column; gap: 6px; }
 .plate { overflow-x: auto; padding: 10px; border-radius: 10px; background: linear-gradient(180deg, #1f2937, #111827); border: 1px solid #374151; }
 [data-theme='light'] .plate { background: linear-gradient(180deg, #e5e7eb, #cbd5e1); border-color: #94a3b8; }
+.plate.member { display: flex; align-items: center; gap: 10px; }
+.mlabel { flex: none; width: 64px; color: #94a3b8; font-weight: 700; }
+[data-theme='light'] .mlabel { color: #475569; }
 .rows { display: grid; gap: 6px; width: max-content; }
 .port { position: relative; width: 30px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden;
   background: #0b1220; border: 2px solid #475569; color: #94a3b8; font-size: 10.5px; font-weight: 700; transition: transform .12s; }

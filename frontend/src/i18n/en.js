@@ -554,6 +554,8 @@ export default {
   "Filtrer les ports (nom ou description)": "Filter ports (name or description)",
   "Ex. « wan », « uplink », « eth0 ». Plusieurs termes séparés par des virgules.": "e.g. \"wan\", \"uplink\", \"eth0\". Several terms separated by commas.",
   "Ports en erreur": "Ports with errors",
+  "Membre {n}": "Member {n}",
+  "Gestion": "Management",
   "Ports qui produisent des erreurs (taux, % des paquets, cumul) et ports activés mais déconnectés.": "Ports producing errors (rate, % of packets, total) and enabled but disconnected ports.",
   "Erreurs au dernier relevé": "Errors at last poll",
   "Compteurs cumulés": "Cumulative counters",
