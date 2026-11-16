@@ -55,7 +55,9 @@ DB_PORT = int(os.getenv("LIBRENMS_DB_PORT", "3306") or 3306)
 DB_NAME = os.getenv("LIBRENMS_DB_NAME", "librenms").strip() or "librenms"
 DB_USER = os.getenv("LIBRENMS_DB_USER", "").strip()
 DB_PASSWORD = os.getenv("LIBRENMS_DB_PASSWORD", "")
-DB_ENABLED = bool(DB_HOST and DB_USER)
+# socket Unix de MySQL/MariaDB monté dans le conteneur (base sur le même hôte, sans accès réseau)
+DB_SOCKET = os.getenv("LIBRENMS_DB_SOCKET", "").strip()
+DB_ENABLED = bool((DB_HOST or DB_SOCKET) and DB_USER)
 
 RRD_DIR = Path(os.getenv("RRD_DIR", "/rrd"))
 # temps réel : XUI lit lui-même les compteurs du port en SNMP (identifiants fournis par l'API LibreNMS)
@@ -159,7 +161,7 @@ _MSG_EN = {
     "Nouvelle salle": "New room",
     "Seul le propriétaire peut supprimer cette salle": "Only the owner can delete this room",
     "Erreur SNMP : {e}": "SNMP error: {e}",
-    "Base LibreNMS non configurée (LIBRENMS_DB_HOST / LIBRENMS_DB_USER)": "LibreNMS database not configured (LIBRENMS_DB_HOST / LIBRENMS_DB_USER)",
+    "Base LibreNMS non configurée (LIBRENMS_DB_HOST ou LIBRENMS_DB_SOCKET, LIBRENMS_DB_USER)": "LibreNMS database not configured (LIBRENMS_DB_HOST or LIBRENMS_DB_SOCKET, LIBRENMS_DB_USER)",
     "Base LibreNMS injoignable : {e}": "LibreNMS database unreachable: {e}",
 }
 _MSG_RE = [(re.compile("^" + re.sub(r"\\\{(\w+)\\\}", r"(?P<\1>.*)", re.escape(fr)) + "$", re.S), en)
@@ -1756,7 +1758,8 @@ _DELETED_PORT_COLS = (
 
 def _db_query(sql: str, args: tuple = ()) -> list[dict]:
     import pymysql
-    conn = pymysql.connect(host=DB_HOST, port=DB_PORT, user=DB_USER, password=DB_PASSWORD, database=DB_NAME,
+    where = {"unix_socket": DB_SOCKET} if DB_SOCKET else {"host": DB_HOST, "port": DB_PORT}
+    conn = pymysql.connect(**where, user=DB_USER, password=DB_PASSWORD, database=DB_NAME,
                            charset="utf8mb4", connect_timeout=5, read_timeout=30,
                            cursorclass=pymysql.cursors.DictCursor)
     try:
@@ -1771,7 +1774,7 @@ def _db_query(sql: str, args: tuple = ()) -> list[dict]:
 async def ports_deleted(request: Request):
     _require(request)
     if not DB_ENABLED:
-        raise HTTPException(404, "Base LibreNMS non configurée (LIBRENMS_DB_HOST / LIBRENMS_DB_USER)")
+        raise HTTPException(404, "Base LibreNMS non configurée (LIBRENMS_DB_HOST ou LIBRENMS_DB_SOCKET, LIBRENMS_DB_USER)")
     cols = ", ".join(f"`{c}`" for c in _DELETED_PORT_COLS)
     try:
         rows = await asyncio.to_thread(_db_query, f"SELECT {cols} FROM `ports` WHERE `deleted` = 1")

@@ -74,7 +74,7 @@ Tout se règle dans `.env` (voir `.env.example`, commenté). Principales variabl
 | `RRD_PATH` | Dossier `rrd` de LibreNMS sur l'hôte (monté en lecture seule) |
 | `RRDCACHED` | Adresse de rrdcached si LibreNMS l'utilise (ex. `rrdcached:42217`) |
 | `REALTIME` | `true` (défaut) = graphique « Temps réel » des ports ; le conteneur doit joindre les équipements en SNMP (UDP 161) |
-| `LIBRENMS_DB_HOST` / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Facultatif : base MySQL de LibreNMS en lecture seule, pour la liste des ports supprimés (voir ci-dessous) |
+| `LIBRENMS_DB_HOST` (ou `_SOCKET`) / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Facultatif : base MySQL de LibreNMS en lecture seule, pour la liste des ports supprimés (voir ci-dessous) |
 | `READ_ONLY` | `true` = aucune modification possible depuis XUI |
 | `XUI_PORT` | Port publié (8095 par défaut) |
 | `COOKIE_SECURE` | `true` derrière un reverse-proxy HTTPS |
@@ -115,6 +115,17 @@ GRANT SELECT ON librenms.ports TO 'xui'@'<IP de XUI>';
 
 puis renseigner `LIBRENMS_DB_HOST`, `LIBRENMS_DB_USER` et `LIBRENMS_DB_PASSWORD` dans `.env` (MySQL doit écouter
 sur le réseau et le port 3306 être accessible depuis le conteneur). Sans ces variables, le filtre est masqué.
+
+Si la base est sur le même hôte que XUI et que MySQL n'écoute que sur `127.0.0.1`, passer plutôt par le socket
+Unix : compte `'xui'@'localhost'`, `LIBRENMS_DB_SOCKET=/run/mysqld/mysqld.sock` (à la place de `LIBRENMS_DB_HOST`)
+et montage du dossier dans un `docker-compose.override.yml` :
+
+```yaml
+services:
+  librenms-xui:
+    volumes:
+      - /run/mysqld:/run/mysqld:ro
+```
 
 ### Mode kiosque (écran mural)
 

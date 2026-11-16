@@ -14,3 +14,6 @@ __pycache__/
 
 # captures non floutées
 img-originaux/
+
+# surcharge locale de docker-compose
+docker-compose.override.yml
