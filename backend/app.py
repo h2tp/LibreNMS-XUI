@@ -1356,6 +1356,12 @@ async def _collect(token: str, kind: str) -> list:
     health, mapper = _AGG.get(kind, (None, None))
     data = await _lnms_get(token, "devices")
     devices = [d for d in (data or {}).get("devices", []) if not int(d.get("disabled") or 0)]
+    # base configurée : une seule requête au lieu de 1 + N appels API par équipement
+    # (et seule source possible avec LibreNMS < 26.7, voir _HEALTH_TABLES)
+    if health and DB_ENABLED:
+        by_id = {int(d["device_id"]): d for d in devices}
+        rows = await asyncio.to_thread(_health_rows, health, list(by_id))
+        return [mapper(by_id[int(g["device_id"])], g) for g in rows]
     sem = _agg_semaphore()
 
     async def get(path):
@@ -1768,6 +1774,42 @@ def _db_query(sql: str, args: tuple = ()) -> list[dict]:
             return list(cur.fetchall())
     finally:
         conn.close()
+
+
+# Avant LibreNMS 26.7 (corrigé par #19953), l'API (list_available_health_graphs) annonce
+# device_processor / device_mempool / device_storage mais cherche ensuite ces éléments dans la
+# table `sensors` : la liste revient toujours vide. On lit alors les tables processors / mempools /
+# storage. La fiche équipement n'y recourt que si l'API renvoie une liste vide.
+_HEALTH_TABLES = {
+    "device_processor": "processors",
+    "device_mempool": "mempools",
+    "device_storage": "storage",
+}
+
+
+def _health_rows(htype: str, device_ids: list[int]) -> list[dict]:
+    if not device_ids:
+        return []
+    marks = ", ".join(["%s"] * len(device_ids))
+    return _db_query(f"SELECT * FROM `{_HEALTH_TABLES[htype]}` WHERE `device_id` IN ({marks})",
+                     tuple(int(i) for i in device_ids))
+
+
+@app.get("/xui/devices/{host}/health/{htype}")
+async def device_health(host: str, htype: str, request: Request):
+    s = _require(request, need_token=True)
+    if not DB_ENABLED or htype not in _HEALTH_TABLES:
+        raise HTTPException(404, "Base LibreNMS non configurée (LIBRENMS_DB_HOST ou LIBRENMS_DB_SOCKET, LIBRENMS_DB_USER)")
+    # droits : l'équipement doit être visible avec le jeton de l'utilisateur
+    j = await _lnms_get(s["token"], f"devices/{quote(host, safe='')}")
+    devs = (j or {}).get("devices") or []
+    if not devs:
+        raise HTTPException(404, "Équipement introuvable")
+    try:
+        rows = await asyncio.to_thread(_health_rows, htype, [devs[0]["device_id"]])
+    except Exception as e:  # pymysql.Error, OSError…
+        raise HTTPException(502, f"Base LibreNMS injoignable : {e}") from e
+    return {"graphs": rows}
 
 
 @app.get("/xui/ports/deleted")

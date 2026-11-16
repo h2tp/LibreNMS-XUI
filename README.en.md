@@ -8,7 +8,8 @@ LibreNMS keeps doing what it does well (discovery, SNMP polling, alerting); XUI 
 on top of it: customizable dashboards, interactive graphs, live network diagrams, dark theme… It relies on
 the **LibreNMS API** and its **RRD files** (mounted read-only): nothing to change or install in LibreNMS. Two
 optional exceptions: a port's "Real time" graph polls the device over SNMP, using the credentials from the API; the
-list of deleted ports is read from the LibreNMS MySQL database (read-only account), since the API does not expose them.
+list of deleted ports is read from the LibreNMS MySQL database (read-only account), since the API does not expose them;
+this database is also used for CPU / memory / storage with LibreNMS < 26.7.
 
 > The interface is available in **English and French** (FR / EN button in the top bar; defaults to the browser language).
 > Screenshots show the French version.
@@ -75,7 +76,7 @@ Everything is set in `.env` (see the commented `.env.example`). Main variables:
 | `RRD_PATH` | LibreNMS `rrd` directory on the host (mounted read-only) |
 | `RRDCACHED` | rrdcached address if LibreNMS uses it (e.g. `rrdcached:42217`) |
 | `REALTIME` | `true` (default) = ports' "Real time" graph; the container must reach devices over SNMP (UDP 161) |
-| `LIBRENMS_DB_HOST` (or `_SOCKET`) / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Optional: read-only LibreNMS MySQL database, for the list of deleted ports (see below) |
+| `LIBRENMS_DB_HOST` (or `_SOCKET`) / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Optional: read-only LibreNMS MySQL database, for deleted ports and CPU / memory / storage (see below) |
 | `READ_ONLY` | `true` = no changes allowed from XUI |
 | `XUI_PORT` | Published port (default 8095) |
 | `COOKIE_SECURE` | `true` behind an HTTPS reverse proxy |
@@ -104,14 +105,25 @@ passwords) are masked before being sent to the browser.
 With the `rrd` directory mounted, graphs are drawn from the real data. Without it, the interface falls back to
 the PNG images rendered by LibreNMS.
 
-### Deleted ports (optional)
+### LibreNMS database: deleted ports, CPU / memory / storage (optional)
 
-The LibreNMS API never returns deleted ports. To show the **Deleted** filter on the Ports page, XUI reads the
-LibreNMS `ports` table directly. Create a MySQL account limited to reading that table:
+The LibreNMS API never returns deleted ports: to show the **Deleted** filter on the Ports page, XUI reads the
+LibreNMS `ports` table directly.
+
+The database is also used for CPU, memory and storage:
+- before LibreNMS **26.7**, the API always returns empty lists for this data (bug fixed by
+  [#19953](https://github.com/librenms/librenms/pull/19953)): without the database, the device page cannot show it;
+- the CPU / memory / storage dashboard widgets read it in a single query instead of several API calls per device
+  (faster, whatever the version).
+
+Create a MySQL account limited to reading these tables:
 
 ```sql
 CREATE USER 'xui'@'<XUI IP>' IDENTIFIED BY '...';
 GRANT SELECT ON librenms.ports TO 'xui'@'<XUI IP>';
+GRANT SELECT ON librenms.processors TO 'xui'@'<XUI IP>';
+GRANT SELECT ON librenms.mempools TO 'xui'@'<XUI IP>';
+GRANT SELECT ON librenms.storage TO 'xui'@'<XUI IP>';
 ```
 
 then set `LIBRENMS_DB_HOST`, `LIBRENMS_DB_USER` and `LIBRENMS_DB_PASSWORD` in `.env` (MySQL must listen on the

@@ -1,4 +1,4 @@
-import { api, pick, L } from './api'
+import { api, pick, L, healthDbApi } from './api'
 import { t } from './i18n'
 
 export const HEALTH_LABELS = {
@@ -13,6 +13,8 @@ async function pool(items, n, fn) {
   }))
   return out
 }
+
+const DB_TYPES = ['device_processor', 'device_mempool', 'device_storage']
 
 function idOf(it) {
   return it.sensor_id ?? it.processor_id ?? it.mempool_id ?? it.storage_id ?? it.id
@@ -30,6 +32,12 @@ export async function loadHealth(host, only = null) {
   const data = {}
   await pool(types, 4, async (t) => {
     const items = pick(await api.get(`devices/${h}/health/${t.name}`), 'graphs')
+    // LibreNMS < 26.7 : type annoncé mais liste toujours vide pour processeurs / mémoire / stockage
+    // (cherchés dans la table des capteurs) -> lecture dans la base si XUI y a accès
+    if (!items.length && DB_TYPES.includes(t.name)) {
+      const rows = await healthDbApi.list(host, t.name).catch(() => null)
+      if (rows) { data[t.name] = rows.map((r) => ({ ...r, _id: idOf(r) })); return }
+    }
     const details = await pool(items, 6, async (it) => {
       const id = idOf(it)
       const d = pick(await api.get(`devices/${h}/health/${t.name}/${id}`), 'graphs')[0]

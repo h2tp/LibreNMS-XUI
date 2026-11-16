@@ -102,6 +102,7 @@ export const rrd = {
   batch: (items) => request('/xui/rrd/batch', { method: 'POST', body: { items } }),
 }
 
+export const healthDbApi = { list: (host, type) => request(`/xui/devices/${encodeURIComponent(host)}/health/${type}`).then((r) => (r && r.graphs) || []) }
 export const deletedPortsApi = { list: () => request('/xui/ports/deleted').then((r) => (r && r.ports) || []) }
 
 export const realtimeApi = {

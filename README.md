@@ -9,7 +9,8 @@ une interface rapide et claire : tableaux de bord personnalisables, graphiques i
 direct, thème sombre… Il s'appuie sur l'**API de LibreNMS** et sur ses **fichiers RRD** (montés en lecture
 seule) : rien à modifier ni à installer dans LibreNMS. Deux exceptions, facultatives : le graphique « Temps réel »
 d'un port interroge l'équipement en SNMP, avec les identifiants fournis par l'API ; la liste des ports supprimés
-est lue dans la base MySQL de LibreNMS (compte en lecture seule), car l'API ne les expose pas.
+est lue dans la base MySQL de LibreNMS (compte en lecture seule), car l'API ne les expose pas ; cette base sert aussi
+au CPU / mémoire / stockage avec LibreNMS < 26.7.
 
 ![Tableau de bord](img/tdb.png)
 
@@ -74,7 +75,7 @@ Tout se règle dans `.env` (voir `.env.example`, commenté). Principales variabl
 | `RRD_PATH` | Dossier `rrd` de LibreNMS sur l'hôte (monté en lecture seule) |
 | `RRDCACHED` | Adresse de rrdcached si LibreNMS l'utilise (ex. `rrdcached:42217`) |
 | `REALTIME` | `true` (défaut) = graphique « Temps réel » des ports ; le conteneur doit joindre les équipements en SNMP (UDP 161) |
-| `LIBRENMS_DB_HOST` (ou `_SOCKET`) / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Facultatif : base MySQL de LibreNMS en lecture seule, pour la liste des ports supprimés (voir ci-dessous) |
+| `LIBRENMS_DB_HOST` (ou `_SOCKET`) / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` | Facultatif : base MySQL de LibreNMS en lecture seule, pour les ports supprimés et le CPU / mémoire / stockage (voir ci-dessous) |
 | `READ_ONLY` | `true` = aucune modification possible depuis XUI |
 | `XUI_PORT` | Port publié (8095 par défaut) |
 | `COOKIE_SECURE` | `true` derrière un reverse-proxy HTTPS |
@@ -103,14 +104,25 @@ Le jeton ne quitte jamais le serveur (sessions côté serveur, cookie HttpOnly) 
 Avec le dossier `rrd` monté, les courbes sont tracées à partir des données réelles. Sans montage,
 l'interface se rabat sur les images PNG générées par LibreNMS.
 
-### Ports supprimés (facultatif)
+### Base LibreNMS : ports supprimés, CPU / mémoire / stockage (facultatif)
 
-L'API LibreNMS ne renvoie jamais les ports supprimés. Pour afficher le filtre **Supprimés** de la page Ports,
-XUI lit directement la table `ports` de LibreNMS. Créer un compte MySQL limité à la lecture de cette table :
+L'API LibreNMS ne renvoie jamais les ports supprimés : pour afficher le filtre **Supprimés** de la page Ports, XUI
+lit directement la table `ports` de LibreNMS.
+
+La base sert aussi pour le CPU, la mémoire et le stockage :
+- avant LibreNMS **26.7**, l'API renvoie toujours des listes vides pour ces données (bug corrigé par
+  [#19953](https://github.com/librenms/librenms/pull/19953)) : sans la base, la fiche équipement ne les affiche pas ;
+- les widgets CPU / mémoire / stockage des tableaux de bord la lisent en une seule requête au lieu de plusieurs
+  appels API par équipement (plus rapide, quelle que soit la version).
+
+Créer un compte MySQL limité à la lecture de ces tables :
 
 ```sql
 CREATE USER 'xui'@'<IP de XUI>' IDENTIFIED BY '...';
 GRANT SELECT ON librenms.ports TO 'xui'@'<IP de XUI>';
+GRANT SELECT ON librenms.processors TO 'xui'@'<IP de XUI>';
+GRANT SELECT ON librenms.mempools TO 'xui'@'<IP de XUI>';
+GRANT SELECT ON librenms.storage TO 'xui'@'<IP de XUI>';
 ```
 
 puis renseigner `LIBRENMS_DB_HOST`, `LIBRENMS_DB_USER` et `LIBRENMS_DB_PASSWORD` dans `.env` (MySQL doit écouter
