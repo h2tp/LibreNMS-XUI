@@ -1,6 +1,17 @@
 <template>
-  <div>
-    <div class="page-head">
+  <div :class="{ 'in-kiosk': kiosk.on }">
+    <!-- Mode kiosque : bandeau minimal -->
+    <div v-if="kiosk.on" v-show="kiosk.header" class="kiosk-head">
+      <span class="grad-text ellipsis kh-name">{{ dash?.name || t('Tableau de bord') }}</span>
+      <span v-if="rotation.length > 1" class="kh-dots" :title="t('Rotation toutes les {n} s', { n: kiosk.rotate })">
+        <i v-for="d in rotation" :key="d.id" :class="{ on: d.id === dash?.id }"></i>
+      </span>
+      <div class="grow"></div>
+      <span class="small muted nowrap">{{ t('mis à jour {t}', { t: timeAgo(clock.last) }) }}</span>
+      <span class="kh-clock">{{ now }}</span>
+    </div>
+
+    <div v-else class="page-head">
       <div style="min-width:0">
         <h1 class="row" style="gap:10px">
           <span class="grad-text ellipsis">{{ dash?.name || t('Tableau de bord') }}</span>
@@ -30,6 +41,7 @@
           </select>
           <button class="btn" :title="t('Nouveau tableau de bord')" @click="openCreate()"><Plus /> {{ t('Nouveau') }}</button>
           <button v-if="dash" class="btn ghost icon" :title="t('Dupliquer ce tableau de bord')" @click="openCreate('copy')"><Copy /></button>
+          <button v-if="dash" class="btn ghost icon" :title="t('Mode kiosque')" @click="openKiosk"><Tv /></button>
           <button v-if="dash?.can_edit && !mobile" class="btn primary" @click="startEdit"><Pencil /> {{ t('Personnaliser') }}</button>
         </template>
         <template v-else>
@@ -54,7 +66,7 @@
     <div v-else-if="dash && !dash.widgets.length" class="card empty big-empty">
       <LayoutDashboard />
       <div>{{ t('Ce tableau de bord est vide.') }}</div>
-      <div v-if="dash.can_edit" class="row mt" style="justify-content:center">
+      <div v-if="dash.can_edit && !kiosk.on" class="row mt" style="justify-content:center">
         <button class="btn primary" @click="startEdit(); galleryOpen = true"><Plus /> {{ t('Ajouter un widget') }}</button>
         <button class="btn" @click="loadStarter"><Sparkles /> {{ t('Partir du modèle par défaut') }}</button>
       </div>
@@ -63,7 +75,7 @@
     <div v-else-if="dash && mobile" class="col" style="gap:16px">
       <!-- widgets sans cadre (compteurs) : hauteur selon leur contenu, les tuiles passant sur plusieurs lignes -->
       <div v-for="w in sorted" :key="w.i" :style="WIDGETS[w.type]?.frameless ? {} : { height: `${Math.min(w.h, 14) * ROW + (Math.min(w.h, 14) - 1) * GAP}px` }">
-        <WidgetFrame :widget="w" :can-edit="dash.can_edit" @configure="configure(w)" />
+        <WidgetFrame :widget="w" :can-edit="dash.can_edit && !kiosk.on" @configure="configure(w)" />
       </div>
     </div>
 
@@ -72,7 +84,7 @@
       @layout-updated="onLayout">
       <GridItem v-for="w in dash.widgets" :key="w.i" :i="w.i" :x="w.x" :y="w.y" :w="w.w" :h="w.h"
         :min-w="2" :min-h="WIDGETS[w.type]?.minH || 3" drag-allow-from=".w-drag" drag-ignore-from=".w-nodrag">
-        <WidgetFrame :widget="w" :editing="editing" :can-edit="dash.can_edit"
+        <WidgetFrame :widget="w" :editing="editing" :can-edit="dash.can_edit && !kiosk.on"
           @configure="configure(w)" @duplicate="duplicate(w)" @remove="removeWidget(w)" />
       </GridItem>
     </GridLayout>
@@ -116,6 +128,48 @@
       </template>
     </Modal>
 
+    <!-- Mode kiosque : lancement et lien pour un écran mural -->
+    <Modal v-if="kioskOpen" :title="t('Mode kiosque')" :icon="Tv" @close="kioskOpen = false">
+      <div class="col" style="gap:16px">
+        <div class="small muted">{{ t('Affiche le tableau de bord seul, en plein écran, sans menu : idéal pour un écran mural. Échap pour quitter.') }}</div>
+        <label class="field"><span>{{ t('Rotation entre tableaux') }}</span>
+          <select v-model.number="kf.rotate" class="input">
+            <option :value="0">{{ t('Aucune (ce tableau seulement)') }}</option>
+            <option v-for="n in [15, 30, 60, 120, 300, 600]" :key="n" :value="n">{{ n < 60 ? `${n} s` : `${n / 60} min` }}</option>
+          </select>
+        </label>
+        <div v-if="kf.rotate" class="field">
+          <span>{{ t('Tableaux de la rotation') }}</span>
+          <label v-for="d in list" :key="d.id" class="check"><input v-model="kf.boards" type="checkbox" :value="d.id" /> {{ d.name }}<span v-if="!d.mine" class="muted small"> — {{ d.owner }}</span></label>
+        </div>
+        <div class="row wrap" style="gap:16px">
+          <label class="field" style="flex:1"><span>{{ t('Rafraîchissement') }}</span>
+            <select v-model.number="kf.refresh" class="input">
+              <option :value="0">{{ t('Comme l\'interface') }}</option>
+              <option v-for="n in [15, 30, 60, 300]" :key="n" :value="n">{{ n < 60 ? `${n} s` : `${n / 60} min` }}</option>
+            </select>
+          </label>
+          <label class="field" style="flex:1"><span>{{ t('Thème') }}</span>
+            <select v-model="kf.theme" class="input">
+              <option value="">{{ t('Comme l\'interface') }}</option><option value="dark">{{ t('Sombre') }}</option><option value="light">{{ t('Clair') }}</option>
+            </select>
+          </label>
+        </div>
+        <label class="check"><input v-model="kf.header" type="checkbox" /> {{ t('Afficher le bandeau (nom du tableau, horloge)') }}</label>
+        <label class="field"><span>{{ t('Lien pour un écran mural') }}</span>
+          <div class="row"><input class="input" readonly :value="kioskLink" style="flex:1;font-family:var(--mono);font-size:12px" @focus="(e) => e.target.select()" />
+            <button class="btn icon" :title="t('Copier le lien')" @click="copyKiosk"><ClipboardCopy /></button></div>
+        </label>
+        <div v-if="kf.rotate && kf.boards.some((id) => list.find((d) => d.id === id && d.access === 'private'))" class="small muted">
+          {{ t('Les tableaux privés ne s\'affichent que pour leur propriétaire : l\'écran doit être connecté avec ce compte.') }}
+        </div>
+      </div>
+      <template #foot>
+        <button class="btn" @click="kioskOpen = false">{{ t('Annuler') }}</button>
+        <button class="btn primary" :disabled="kf.rotate > 0 && !kf.boards.length" @click="startKiosk"><Maximize /> {{ t('Démarrer') }}</button>
+      </template>
+    </Modal>
+
     <!-- Nouveau tableau -->
     <Modal v-if="createOpen" :title="t('Nouveau tableau de bord')" :icon="Plus" @close="createOpen = false">
       <div class="col" style="gap:16px">
@@ -149,7 +203,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { GridLayout, GridItem } from 'grid-layout-plus'
 import {
   Plus, Pencil, Check, Copy, Settings, Star, Trash2, Download, Move, Loader2, CircleCheck, CircleAlert,
-  LayoutDashboard, Sparkles, Lock, Eye, Users,
+  LayoutDashboard, Sparkles, Lock, Eye, Users, Tv, Maximize, ClipboardCopy,
 } from 'lucide-vue-next'
 import Modal from '../components/Modal.vue'
 import WidgetFrame from '../components/WidgetFrame.vue'
@@ -158,8 +212,9 @@ import { dashApi } from '../api'
 import { D } from '../dashboard/data'
 import { WIDGETS, available, defaultConfig, missingConfig, starterWidgets, newId } from '../dashboard/widgets'
 import { clock } from '../refresh'
+import { kiosk, kioskQuery, kioskUrl, enterKiosk } from '../kiosk'
 import { timeAgo, toast, toastError, confirmAction } from '../utils'
-import { t } from '../i18n'
+import { t, locale } from '../i18n'
 
 const ROW = 30
 const GAP = 16
@@ -213,7 +268,7 @@ async function load(id) {
     dash.value = d
   } catch (e) {
     error.value = e.message
-    if (e.status === 404 && defaultId.value && id !== defaultId.value) router.replace('/')
+    if (e.status === 404 && defaultId.value && id !== defaultId.value) router.replace({ path: '/', query: route.query })
   } finally { loading.value = false }
 }
 
@@ -234,6 +289,51 @@ watch(() => route.params.id, (id, old) => {
   if (id === old || (dash.value && (id || defaultId.value) === dash.value.id)) return
   stopEdit(); load(id || defaultId.value)
 })
+
+// ---------------------------------------------------------------- kiosque
+// Tableaux de la rotation : ceux de l'URL (dans cet ordre) ou, à défaut, tous ceux visibles.
+const rotation = computed(() => {
+  if (!kiosk.on || !kiosk.rotate) return []
+  const ids = kiosk.boards
+  return ids.length ? ids.map((id) => list.value.find((d) => d.id === id)).filter(Boolean) : list.value
+})
+let rotTimer = null
+function armRotation() {
+  clearTimeout(rotTimer)
+  if (rotation.value.length < 2 || !dash.value) return
+  rotTimer = setTimeout(async () => {
+    const i = rotation.value.findIndex((d) => d.id === dash.value?.id)
+    const next = rotation.value[(i + 1) % rotation.value.length]
+    // la liste peut avoir changé (tableau supprimé, partage retiré) : on la relit avant de passer au suivant
+    refreshList().catch(() => {})
+    router.replace({ path: `/dashboard/${next.id}`, query: kioskQuery() })
+  }, kiosk.rotate * 1000)
+}
+watch(() => [dash.value?.id, rotation.value.map((d) => d.id).join(), kiosk.rotate], armRotation)
+
+const now = ref('')
+function tickNow() { now.value = new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) }
+tickNow()
+const nowTimer = setInterval(tickNow, 5000)
+
+const kioskOpen = ref(false)
+const kf = reactive({ rotate: 0, boards: [], refresh: 0, theme: '', header: true })
+function openKiosk() {
+  if (!kf.boards.length) kf.boards = list.value.map((d) => d.id)
+  kioskOpen.value = true
+}
+// boards vide = tous les tableaux visibles (y compris ceux créés ou partagés plus tard)
+const kioskOpts = computed(() => ({ ...kf, boards: kf.boards.length === list.value.length ? [] : list.value.map((d) => d.id).filter((id) => kf.boards.includes(id)) }))
+// le premier tableau affiché doit faire partie de la rotation
+const kioskFirst = computed(() => (kf.rotate && dash.value && !kf.boards.includes(dash.value.id) ? list.value.find((d) => kf.boards.includes(d.id))?.id : dash.value?.id))
+const kioskLink = computed(() => (kioskFirst.value ? location.origin + kioskUrl(kioskFirst.value, kioskOpts.value) : ''))
+function startKiosk() {
+  kioskOpen.value = false
+  enterKiosk(kioskUrl(kioskFirst.value, kioskOpts.value))
+}
+async function copyKiosk() {
+  try { await navigator.clipboard.writeText(kioskLink.value); toast(t('Lien copié'), 'success') } catch { toastError(new Error(t('Copie impossible : sélectionnez le lien et copiez-le.'))) }
+}
 
 // ---------------------------------------------------------------- enregistrement
 let timer = null
@@ -260,7 +360,7 @@ async function flush() {
 }
 function onLayout() { if (editing.value) scheduleSave() }
 
-function startEdit() { if (dash.value?.can_edit) { editing.value = true; saveState.value = 'saved' } }
+function startEdit() { if (dash.value?.can_edit && !kiosk.on) { editing.value = true; saveState.value = 'saved' } }
 async function stopEdit() {
   if (!editing.value) return
   editing.value = false
@@ -386,6 +486,7 @@ function onLeave(e) { if (timer || pending) { e.preventDefault(); e.returnValue 
 onMounted(() => { init(); window.addEventListener('resize', onResize); window.addEventListener('beforeunload', onLeave) })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize); window.removeEventListener('beforeunload', onLeave)
+  clearTimeout(rotTimer); clearInterval(nowTimer)
   if (timer) flush()
 })
 </script>
@@ -406,4 +507,10 @@ onBeforeUnmount(() => {
 .gitem:disabled { opacity: .45; cursor: not-allowed; }
 .gico { flex: none; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
 .access { padding: 6px 0; align-items: flex-start; }
+.kiosk-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; min-width: 0; }
+.kh-name { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.kh-clock { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kh-dots { display: inline-flex; gap: 6px; }
+.kh-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); transition: background .3s; }
+.kh-dots i.on { background: var(--accent); }
 </style>

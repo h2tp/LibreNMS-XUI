@@ -43,7 +43,7 @@ d'un port interroge l'équipement en SNMP, avec les identifiants fournis par l'A
 - **Gestion** : ajout / suppression d'équipements, acquittement d'alertes, règles d'alerte avec assistant,
   groupes, emplacements, maintenance.
 - **Confort** : interface en français ou en anglais (bouton FR / EN, langue du navigateur par défaut), recherche globale `Ctrl+K`,
-  thème clair / sombre, pleine largeur sur les grands écrans, rafraîchissement automatique, export CSV partout.
+  thème clair / sombre, pleine largeur sur les grands écrans, rafraîchissement automatique, export CSV partout, mode kiosque pour écran mural.
 
 ## Démarrage rapide
 
@@ -100,6 +100,26 @@ Le jeton ne quitte jamais le serveur (sessions côté serveur, cookie HttpOnly) 
 
 Avec le dossier `rrd` monté, les courbes sont tracées à partir des données réelles. Sans montage,
 l'interface se rabat sur les images PNG générées par LibreNMS.
+
+### Mode kiosque (écran mural)
+
+Bouton **écran** (📺) en haut d'un tableau de bord : le tableau s'affiche seul, en plein écran, sans menu ni
+barre du haut, avec un bandeau minimal (nom, horloge). Rotation possible entre plusieurs tableaux. Échap ou le
+bouton « Quitter » (visible au mouvement de la souris) ramène à l'interface normale.
+
+Tout passe par l'URL, à mettre en page de démarrage du navigateur de l'écran :
+
+| Paramètre | Effet |
+|---|---|
+| `?kiosk` | active le mode kiosque (`/dashboard/<id>?kiosk`) |
+| `&rotate=60` | passe au tableau suivant toutes les 60 s |
+| `&boards=<id1>,<id2>` | tableaux de la rotation (défaut : tous ceux visibles) |
+| `&refresh=30` | rafraîchissement en secondes, sans modifier les préférences |
+| `&theme=dark` / `light` | thème imposé |
+| `&header=0` | masque le bandeau |
+
+L'écran reste allumé (Wake Lock, en HTTPS ou sur `localhost`). Pour qu'il ne retombe pas sur la page de connexion,
+augmentez `SESSION_HOURS` (ex. `720`) ; le navigateur doit aussi démarrer en plein écran (ex. `chromium --kiosk <url>`).
 
 ## Données et sauvegarde
 

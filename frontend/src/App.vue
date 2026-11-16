@@ -4,6 +4,23 @@
   <div v-if="!session.loaded" class="boot"><Loader2 class="spin" :size="36" /></div>
   <Login v-else-if="!session.authenticated" />
 
+  <!-- Mode kiosque : le tableau de bord seul, sur toute la largeur -->
+  <div v-else-if="kiosk.on" class="kiosk" :class="{ idle }" @mousemove="poke" @touchstart.passive="poke">
+    <main class="content wide">
+      <router-view v-slot="{ Component, route }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" :key="route.fullPath.split('?')[0].split('/').slice(0, 2).join('/')" />
+        </transition>
+      </router-view>
+    </main>
+    <div class="kiosk-ctl">
+      <button class="btn sm" :title="isFull ? t('Quitter le plein écran') : t('Plein écran')" @click="toggleFull">
+        <Minimize v-if="isFull" /><Maximize v-else />
+      </button>
+      <button class="btn sm" :title="t('Quitter le mode kiosque (Échap)')" @click="exitKiosk"><LogOut /> {{ t('Quitter') }}</button>
+    </div>
+  </div>
+
   <div v-else class="layout">
     <transition name="fade"><div v-if="isMobile && prefs.sidebar" class="sb-backdrop" @click="closeSidebar"></div></transition>
     <aside class="sidebar" :class="{ collapsed: !prefs.sidebar, mobile: isMobile }">
@@ -82,10 +99,12 @@ import {
   Activity, LayoutDashboard, Server, Network, Bell, ScrollText, Map, Share2, Boxes, MapPin, HeartPulse,
   Route, Database, Receipt, Settings2, Search, PanelLeft, Sun, Moon, ExternalLink, LogOut, UserRound, RefreshCw,
   Loader2, CircleCheck, CircleAlert, Info, Lock, Thermometer, Code2, X, Workflow, Rows3, FoldHorizontal, UnfoldHorizontal,
+  Maximize, Minimize,
 } from 'lucide-vue-next'
 import { session, auth, api, pick } from './api'
 import { prefs, save, toasts } from './utils'
 import { clock, refreshNow } from './refresh'
+import { kiosk, exitKiosk } from './kiosk'
 import router from './router'
 import Login from './views/Login.vue'
 import CommandPalette from './components/CommandPalette.vue'
@@ -125,7 +144,19 @@ const paletteOpen = ref(false)
 const alertCount = ref(0)
 const spinning = ref(false)
 
-function applyTheme() { document.documentElement.dataset.theme = prefs.theme }
+function applyTheme() { document.documentElement.dataset.theme = (kiosk.on && kiosk.theme) || prefs.theme }
+watch(() => [kiosk.on, kiosk.theme], applyTheme)
+
+// Kiosque : commandes et curseur masqués après quelques secondes sans mouvement.
+const idle = ref(true)
+const isFull = ref(!!document.fullscreenElement)
+let idleTimer = null
+function poke() { idle.value = false; clearTimeout(idleTimer); idleTimer = setTimeout(() => (idle.value = true), 3000) }
+function onFull() { isFull.value = !!document.fullscreenElement }
+function toggleFull() {
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+  else document.documentElement.requestFullscreen?.().catch(() => {})
+}
 function toggleWide() { prefs.wide = !prefs.wide; save('wide', prefs.wide); window.dispatchEvent(new Event('resize')) }
 function toggleTheme() { prefs.theme = prefs.theme === 'dark' ? 'light' : 'dark'; save('theme', prefs.theme); applyTheme() }
 // Sur mobile, le menu est un panneau superposé : il se ferme par la croix, le fond, Échap ou en changeant de page.
@@ -150,17 +181,26 @@ watch(() => session.authenticated, (v) => v && loadAlerts())
 
 function onKey(e) {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen.value = !paletteOpen.value }
+  if (kiosk.on) {
+    // Échap quitte d'abord le plein écran (géré par le navigateur), puis le kiosque.
+    if (e.key === 'Escape' && !document.fullscreenElement && !document.querySelector('.overlay')) exitKiosk()
+    return
+  }
   if (e.key === 'Escape') { paletteOpen.value = false; if (isMobile.value) prefs.sidebar = false }
 }
 onMounted(async () => {
   applyTheme()
   window.addEventListener('keydown', onKey)
   window.addEventListener('resize', onResize)
+  document.addEventListener('fullscreenchange', onFull)
   try { await auth.config() } catch { session.loaded = true }
   if (window.innerWidth < 900) prefs.sidebar = false
   loadAlerts()
 })
-onBeforeUnmount(() => { window.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize) })
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize)
+  document.removeEventListener('fullscreenchange', onFull); clearTimeout(idleTimer)
+})
 </script>
 
 <style>
@@ -169,4 +209,10 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKey); window.rem
 @media (max-width: 900px) { .refresh-ctl, .user-chip { display: none !important; } }
 @media (max-width: 1900px) { .wide-btn { display: none !important; } } /* sans effet sous 1800 px de contenu */
 .wide-btn.on { color: var(--accent); }
+.kiosk { min-height: 100vh; }
+.kiosk .content { padding: 16px 20px; }
+.kiosk.idle, .kiosk.idle * { cursor: none !important; }
+.kiosk-ctl { position: fixed; right: 16px; bottom: 16px; z-index: 30; display: flex; gap: 8px; transition: opacity .3s; }
+.kiosk-ctl .btn { background: var(--panel); backdrop-filter: blur(14px); box-shadow: var(--shadow); }
+.kiosk.idle .kiosk-ctl { opacity: 0; pointer-events: none; }
 </style>

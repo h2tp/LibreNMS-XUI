@@ -44,7 +44,7 @@ optional, exception: a port's "Real time" graph polls the device over SNMP, usin
 - **Management**: add / delete devices, acknowledge alerts, alert rules with a wizard, groups, locations,
   maintenance.
 - **Convenience**: English / French interface, global search `Ctrl+K`, light / dark theme, full width on large screens, auto-refresh, CSV
-  export everywhere.
+  export everywhere, kiosk mode for wall displays.
 
 ## Quick start
 
@@ -101,6 +101,26 @@ passwords) are masked before being sent to the browser.
 
 With the `rrd` directory mounted, graphs are drawn from the real data. Without it, the interface falls back to
 the PNG images rendered by LibreNMS.
+
+### Kiosk mode (wall display)
+
+**Screen** button (📺) at the top of a dashboard: the dashboard is shown alone, full screen, without the menu or
+top bar, with a minimal header (name, clock). It can rotate between several dashboards. Esc or the "Exit" button
+(shown when the mouse moves) returns to the normal interface.
+
+Everything is in the URL, to be set as the display browser's start page:
+
+| Parameter | Effect |
+|---|---|
+| `?kiosk` | enables kiosk mode (`/dashboard/<id>?kiosk`) |
+| `&rotate=60` | switches to the next dashboard every 60 s |
+| `&boards=<id1>,<id2>` | dashboards in the rotation (default: all visible ones) |
+| `&refresh=30` | refresh interval in seconds, without changing preferences |
+| `&theme=dark` / `light` | forced theme |
+| `&header=0` | hides the header |
+
+The screen is kept awake (Wake Lock, over HTTPS or on `localhost`). To keep it from falling back to the sign-in page,
+raise `SESSION_HOURS` (e.g. `720`); the browser should also start full screen (e.g. `chromium --kiosk <url>`).
 
 ## Data and backup
 
