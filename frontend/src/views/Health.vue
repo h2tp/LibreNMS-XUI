@@ -12,7 +12,7 @@
       <div class="card">
         <DataTable :rows="current" :columns="cols" :filename="`capteurs-${cls}.csv`" :row-click="go" :default-sort="{ key: 'sensor_current', dir: -1 }">
           <template #c-device_id="{ row }"><DeviceCell :device="devById[row.device_id]" :show-icon="false" :sub="false" /></template>
-          <template #c-sensor_current="{ row }"><b :style="{ color: alarm(row) ? 'var(--red)' : '' }">{{ row.sensor_current }} {{ sensorUnit(row.sensor_class) }}</b></template>
+          <template #c-sensor_current="{ row }"><b v-if="row._state" :style="{ color: STATE_COLOR[row._state[1]] || '' }" :title="t('valeur {v}', { v: row.sensor_current })">{{ row._state[0] }}</b><b v-else :style="{ color: alarm(row) ? 'var(--red)' : '' }">{{ row.sensor_current }} {{ sensorUnit(row.sensor_class) }}</b></template>
         </DataTable>
       </div>
     </template>
@@ -25,7 +25,8 @@ import { Thermometer } from 'lucide-vue-next'
 import EChart from '../components/EChart.vue'
 import DataTable from '../components/DataTable.vue'
 import DeviceCell from '../components/DeviceCell.vue'
-import { api, pick, devicesCached } from '../api'
+import { api, pick, devicesCached, stateTrApi } from '../api'
+import { stateLabel } from '../dashboard/states'
 import { useLoader } from '../refresh'
 import { SENSOR_LABELS, sensorUnit } from '../rrdmeta'
 import { barOption } from '../charts'
@@ -39,6 +40,7 @@ const cls = ref('temperature')
 const byClass = computed(() => { const m = {}; sensors.value.forEach((s) => (m[s.sensor_class] ||= []).push(s)); return m })
 const classes = computed(() => Object.keys(byClass.value).sort((a, b) => byClass.value[b].length - byClass.value[a].length))
 const current = computed(() => (byClass.value[cls.value] || []).slice().sort((a, b) => b.sensor_current - a.sensor_current))
+const STATE_COLOR = { crit: 'var(--red)', warn: 'var(--orange)', stby: 'color-mix(in srgb, var(--yellow) 75%, var(--text))' }
 const alarm = (s) => (s.sensor_limit && +s.sensor_current >= +s.sensor_limit) || (s.sensor_limit_low && +s.sensor_current <= +s.sensor_limit_low)
 const chart = computed(() => {
   const o = barOption(current.value.map((s) => `${devName(devById.value[s.device_id])} · ${s.sensor_descr}`), current.value.map((s) => +s.sensor_current), { unit: sensorUnit(cls.value) || 'num', color: '#22d3ee' })
@@ -52,7 +54,8 @@ const cols = [
 function go(s) { const d = devById.value[s?.device_id]; if (d) router.push(`/device/${encodeURIComponent(d.hostname)}/health`) }
 const { loading, error } = useLoader(async () => {
   const [s, d] = await Promise.all([api.get('resources/sensors').then((r) => pick(r, 'sensors')), devicesCached()])
-  sensors.value = s; devById.value = Object.fromEntries(d.map((x) => [x.device_id, x]))
+  const tr = s.some((x) => x.sensor_class === 'state') ? await stateTrApi.get() : null
+  sensors.value = s.map((x) => (x.sensor_class === 'state' ? { ...x, _state: stateLabel(x, tr) } : x)); devById.value = Object.fromEntries(d.map((x) => [x.device_id, x]))
   if (!byClass.value[cls.value] && classes.value.length) cls.value = classes.value[0]
 })
 </script>

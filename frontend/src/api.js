@@ -103,6 +103,8 @@ export const rrd = {
 }
 
 export const healthDbApi = { list: (host, type) => request(`/xui/devices/${encodeURIComponent(host)}/health/${type}`).then((r) => (r && r.graphs) || []) }
+let stateTr = null
+export const stateTrApi = { get: () => (stateTr ||= request('/xui/state-translations').catch(() => { stateTr = null; return null })) }
 export const deletedPortsApi = { list: () => request('/xui/ports/deleted').then((r) => (r && r.ports) || []) }
 
 export const realtimeApi = {

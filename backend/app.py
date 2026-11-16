@@ -1812,6 +1812,34 @@ async def device_health(host: str, htype: str, request: Request):
     return {"graphs": rows}
 
 
+# Capteurs d'état : l'API ne renvoie que la valeur brute (ex. 4) ; LibreNMS stocke sa traduction
+# (« passive ») et son niveau (0 ok, 1 warn, 2 crit, 3 inconnu) dans state_translations.
+_STATE_TR: tuple[float, dict] = (0.0, {})
+
+
+def _state_translations() -> dict:
+    idx: dict[str, dict] = {}
+    for r in _db_query("SELECT `state_index_id`, `state_value`, `state_descr`, `state_generic_value` FROM `state_translations`"):
+        idx.setdefault(str(r["state_index_id"]), {})[str(r["state_value"])] = [r["state_descr"], int(r["state_generic_value"])]
+    sensors = {str(r["sensor_id"]): str(r["state_index_id"])
+               for r in _db_query("SELECT `sensor_id`, `state_index_id` FROM `sensors_to_state_indexes`")}
+    return {"indexes": idx, "sensors": sensors}
+
+
+@app.get("/xui/state-translations")
+async def state_translations(request: Request):
+    global _STATE_TR
+    _require(request)
+    if not DB_ENABLED:
+        raise HTTPException(404, "Base LibreNMS non configurée (LIBRENMS_DB_HOST ou LIBRENMS_DB_SOCKET, LIBRENMS_DB_USER)")
+    if time.time() - _STATE_TR[0] > 300:
+        try:
+            _STATE_TR = (time.time(), await asyncio.to_thread(_state_translations))
+        except Exception as e:  # pymysql.Error, OSError…
+            raise HTTPException(502, f"Base LibreNMS injoignable : {e}") from e
+    return _STATE_TR[1]
+
+
 @app.get("/xui/ports/deleted")
 async def ports_deleted(request: Request):
     _require(request)

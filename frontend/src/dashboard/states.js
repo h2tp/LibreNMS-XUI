@@ -2,6 +2,8 @@ import { t } from '../i18n'
 // Traductions connues des capteurs d'état LibreNMS (l'API ne fournit que la valeur brute).
 // Chaque entrée : valeur -> [libellé, niveau] avec niveau ok | warn | crit | unk.
 const N = (l) => [l, 'ok']; const W = (l) => [l, 'warn']; const C = (l) => [l, 'crit']; const U = (l) => [l, 'unk']
+// stby : normal mais en attente (membre passif d'un cluster), affiché en jaune
+const S = (l) => [l, 'stby']
 const SYNO = { 1: N('Normal'), 2: C(t('En panne')) }
 
 export const STATE_MAPS = {
@@ -38,6 +40,27 @@ export const STATE_MAPS = {
   hrDeviceStatus: { 1: U('Inconnu'), 2: N(t('En marche')), 3: W('Avertissement'), 4: N('Test'), 5: C('Hors service') },
   hrPrinterDetectedErrorState: { 0: N('Normal'), 1: W('Papier bas'), 2: C(t('Plus de papier')), 3: W('Toner bas'), 4: C(t('Plus de toner')), 5: C('Capot ouvert'), 6: C('Bourrage'), 7: C('Hors ligne'), 8: C('Intervention requise'), 9: W('Plusieurs avertissements'), 10: C(t('Plusieurs problèmes')) },
   upsOutputSource: { 1: U('Autre'), 2: C('Aucune'), 3: N('Secteur'), 4: W('Bypass'), 5: C('Batterie'), 6: W('Boost'), 7: W(t('Réduction')) },
+  // pare-feu Palo Alto (traductions de LibreNMS, resources/definitions/os_discovery/panos.yaml) ;
+  // « Passif » : membre de secours du cluster (jaune) ; Panorama non connecté : neutre (souvent pas de 2e serveur)
+  panSysHAMode: { 1: N(t('Actif / Passif')), 2: N(t('Actif / Actif')) },
+  panSysHaStateEnum: { 0: U(t('Inconnu')), 1: C(t('Suspendu')), 2: C(t('Non fonctionnel')), 3: W(t('Initial')), 4: S(t('Passif')), 5: N(t('Actif')), 10: W(t('Provisoire')), 11: N(t('Actif secondaire')), 12: N(t('Actif principal')) },
+  panMgmtPanoramaConnected: { 0: U(t('Non connecté')), 1: N(t('Connecté')) },
+  panMgmtPanorama2Connected: { 0: U(t('Non connecté')), 1: N(t('Connecté')) },
+}
+
+const LEVELS = ['ok', 'warn', 'crit', 'unk']
+
+/**
+ * Libellé d'un capteur d'état : traduction française de XUI, sinon celle de LibreNMS
+ * (tr = réponse de /xui/state-translations), sinon la valeur brute. Retourne [libellé, niveau] ou null.
+ */
+export function stateLabel(s, tr) {
+  if (s?.sensor_class !== 'state') return null
+  const v = +s.sensor_current
+  const m = STATE_MAPS[s.sensor_type] || STATE_MAPS[String(s.sensor_type).replace(/State$/, '')]
+  if (m?.[v]) return m[v]
+  const x = tr?.indexes?.[tr.sensors?.[s.sensor_id]]?.[String(v)]
+  return x ? [x[0], LEVELS[x[1]] || 'unk'] : null
 }
 
 /** Traduit un capteur d'état ; okValue (« 1 » ou « 1, 3 ») force l'interprétation normal / anormal. */

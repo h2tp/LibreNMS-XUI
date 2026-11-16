@@ -38,7 +38,8 @@
       <div class="grid gauto-s">
         <div v-for="s in g.rows" :key="s._id" class="sensor" :class="[sensorState(s), { sel: open === g.type + s._id }]" @click="toggle(g.type + s._id)">
           <div class="small muted ellipsis" :title="s.sensor_descr || s.desc">{{ s.sensor_descr || s.desc }}</div>
-          <div class="sval">{{ fmtVal(s.sensor_current) }}<small> {{ sensorUnit(g.cls) }}</small></div>
+          <div v-if="s._state" class="sval state" :title="t('valeur {v}', { v: s.sensor_current })">{{ s._state[0] }}</div>
+          <div v-else class="sval">{{ fmtVal(s.sensor_current) }}<small> {{ sensorUnit(g.cls) }}</small></div>
           <div v-if="s.sensor_limit || s.sensor_limit_low" class="small faint">
             <span v-if="s.sensor_limit_low">min {{ fmtVal(s.sensor_limit_low) }}</span> <span v-if="s.sensor_limit">max {{ fmtVal(s.sensor_limit) }}</span>
           </div>
@@ -91,6 +92,7 @@ const sensorGroups = computed(() => types.value.filter((t) => !['device_processo
 function fmtPct(v) { return v === undefined || v === null ? '—' : `${Math.round(+v)} %` }
 function fmtVal(v) { if (v === undefined || v === null || v === '') return '—'; const x = +v; return Math.abs(x) >= 100 ? Math.round(x) : Math.round(x * 100) / 100 }
 function sensorState(s) {
+  if (s._state) return { crit: 'critical', warn: 'warning', stby: 'standby' }[s._state[1]] || 'ok'
   const v = +s.sensor_current
   if (s.sensor_limit && v >= +s.sensor_limit) return 'critical'
   if (s.sensor_limit_low && v <= +s.sensor_limit_low) return 'critical'
@@ -123,5 +125,8 @@ const { loading } = useLoader(async () => {
 .sensor.critical { border-color: rgba(244, 63, 94, .5); background: rgba(244, 63, 94, .08); }
 .sensor.warning { border-color: rgba(251, 146, 60, .5); }
 .sval { font-size: 24px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.sval.state { font-size: 18px; line-height: 1.35; }
+.sensor.standby { border-color: color-mix(in srgb, var(--yellow) 45%, transparent); }
+.sensor.standby .sval { color: color-mix(in srgb, var(--yellow) 75%, var(--text)); }
 .sval small { font-size: 13px; color: var(--muted); font-weight: 500; }
 </style>

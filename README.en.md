@@ -114,7 +114,9 @@ The database is also used for CPU, memory and storage:
 - before LibreNMS **26.7**, the API always returns empty lists for this data (bug fixed by
   [#19953](https://github.com/librenms/librenms/pull/19953)): without the database, the device page cannot show it;
 - the CPU / memory / storage dashboard widgets read it in a single query instead of several API calls per device
-  (faster, whatever the version).
+  (faster, whatever the version);
+- state sensors (firewall HA, Panorama, power supplies…): the API only gives the raw value ("4"); XUI shows the
+  label ("Passive") defined by LibreNMS when it has no translation of its own.
 
 Create a MySQL account limited to reading these tables:
 
@@ -124,6 +126,8 @@ GRANT SELECT ON librenms.ports TO 'xui'@'<XUI IP>';
 GRANT SELECT ON librenms.processors TO 'xui'@'<XUI IP>';
 GRANT SELECT ON librenms.mempools TO 'xui'@'<XUI IP>';
 GRANT SELECT ON librenms.storage TO 'xui'@'<XUI IP>';
+GRANT SELECT ON librenms.state_translations TO 'xui'@'<XUI IP>';
+GRANT SELECT ON librenms.sensors_to_state_indexes TO 'xui'@'<XUI IP>';
 ```
 
 then set `LIBRENMS_DB_HOST`, `LIBRENMS_DB_USER` and `LIBRENMS_DB_PASSWORD` in `.env` (MySQL must listen on the
@@ -179,7 +183,7 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   Widgets: counters (cards, tinted tiles, large numbers, gauges, compact strip or list), fleet status
   (donut, pie, half ring, stacked bar, numbers or breakdown by location / type / OS), availability map (tiles, squares, hexagons, detailed cards, list or summary;
   grouping by location / type / OS, colored by status or latency), OS, latency, busiest ports, alerts, offline devices,
-  locations, logs (events / syslog / alerts), device card, temperatures / sensors, fans, power (PSU, PoE), UPS,
+  locations, logs (events / syslog / alerts), device card, temperatures / sensors, translated states (firewall HA and Panorama…), fans, power (PSU, PoE), UPS,
   servers, NAS (RAID, disk health), switches (front-panel ports), Wi-Fi access points, printers (supplies read
   from RRD), LibreNMS services, ports with errors, availability / SLA (24 h to 1 year, outages), aggregated
   network traffic, disk storage, RAM and CPU, interactive RRD graph, port traffic, port counter (current in / out throughput, utilization, trend; click to open the port), LibreNMS graph, geographic

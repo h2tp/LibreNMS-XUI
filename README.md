@@ -113,9 +113,11 @@ La base sert aussi pour le CPU, la mémoire et le stockage :
 - avant LibreNMS **26.7**, l'API renvoie toujours des listes vides pour ces données (bug corrigé par
   [#19953](https://github.com/librenms/librenms/pull/19953)) : sans la base, la fiche équipement ne les affiche pas ;
 - les widgets CPU / mémoire / stockage des tableaux de bord la lisent en une seule requête au lieu de plusieurs
-  appels API par équipement (plus rapide, quelle que soit la version).
+  appels API par équipement (plus rapide, quelle que soit la version) ;
+- les capteurs d'état (HA d'un pare-feu, Panorama, alimentations…) : l'API ne donne que la valeur brute (« 4 »),
+  XUI affiche le libellé (« Passif ») défini par LibreNMS quand il n'a pas sa propre traduction française.
 
-Créer un compte MySQL limité à la lecture de ces tables :
+Créer un compte MySQL limité à la lecture des tables concernées :
 
 ```sql
 CREATE USER 'xui'@'<IP de XUI>' IDENTIFIED BY '...';
@@ -123,6 +125,8 @@ GRANT SELECT ON librenms.ports TO 'xui'@'<IP de XUI>';
 GRANT SELECT ON librenms.processors TO 'xui'@'<IP de XUI>';
 GRANT SELECT ON librenms.mempools TO 'xui'@'<IP de XUI>';
 GRANT SELECT ON librenms.storage TO 'xui'@'<IP de XUI>';
+GRANT SELECT ON librenms.state_translations TO 'xui'@'<IP de XUI>';
+GRANT SELECT ON librenms.sensors_to_state_indexes TO 'xui'@'<IP de XUI>';
 ```
 
 puis renseigner `LIBRENMS_DB_HOST`, `LIBRENMS_DB_USER` et `LIBRENMS_DB_PASSWORD` dans `.env` (MySQL doit écouter
@@ -179,7 +183,7 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   (anneau, camembert, demi-anneau, barre empilée, chiffres ou répartition par emplacement / type / OS), carte de disponibilité (tuiles, carrés, hexagones, cartes détaillées, liste ou
   synthèse ; regroupement par emplacement / type / OS, couleur selon l'état ou la latence), OS, latence, ports les plus chargés, alertes,
   équipements hors ligne, emplacements, journaux (évènements / syslog / alertes), fiche équipement,
-  températures / capteurs, ventilateurs, alimentation (PSU, PoE), onduleurs, serveurs, NAS (RAID, santé des
+  températures / capteurs, états traduits (HA et Panorama des pare-feu…), ventilateurs, alimentation (PSU, PoE), onduleurs, serveurs, NAS (RAID, santé des
   disques), switchs (façade des ports), points d'accès Wi-Fi, imprimantes (consommables lus dans les RRD),
   services LibreNMS, ports en erreur, disponibilité / SLA (24 h à 1 an, coupures), trafic réseau cumulé,
   stockage des disques, mémoire RAM et CPU, graphique RRD interactif, trafic d'un port, compteur de port (débit entrant / sortant actuel, utilisation, tendance ; un clic ouvre le port), graphique LibreNMS,

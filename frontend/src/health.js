@@ -1,4 +1,5 @@
-import { api, pick, L, healthDbApi } from './api'
+import { api, pick, L, healthDbApi, stateTrApi } from './api'
+import { stateLabel } from './dashboard/states'
 import { t } from './i18n'
 
 export const HEALTH_LABELS = {
@@ -45,6 +46,11 @@ export async function loadHealth(host, only = null) {
     })
     data[t.name] = details.map((d, i) => d || { ...items[i], _id: idOf(items[i]) })
   })
+  // capteurs d'état : libellé traduit (« Actif », « Connecté »…) au lieu de la valeur brute
+  if (data.device_state?.length) {
+    const tr = await stateTrApi.get()
+    data.device_state = data.device_state.map((r) => ({ ...r, _state: stateLabel(r, tr) }))
+  }
   return { types, data }
 }
 

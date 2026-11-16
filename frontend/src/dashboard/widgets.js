@@ -4,7 +4,7 @@
 import { defineAsyncComponent } from 'vue'
 import {
   LayoutGrid, PieChart, Cpu, Timer, ArrowDownUp, Bell, CircleX, MapPin, ScrollText,
-  Grid3x3, LineChart, Cable, Image, Map, StickyNote, Server, Thermometer, Fan, HardDrive, MemoryStick, Activity, ShieldCheck, AppWindow, HeartPulse, TriangleAlert, Plug, BatteryCharging, Printer, Wifi, Network, ServerCog, HardDriveDownload, Workflow, Rows3, Gauge,
+  Grid3x3, LineChart, Cable, Image, Map, StickyNote, Server, Thermometer, Fan, HardDrive, MemoryStick, Activity, ShieldCheck, AppWindow, HeartPulse, TriangleAlert, Plug, BatteryCharging, Printer, Wifi, Network, ServerCog, HardDriveDownload, Workflow, Rows3, Gauge, ListChecks,
 } from 'lucide-vue-next'
 import { session } from '../api'
 import { SENSOR_LABELS } from '../rrdmeta'
@@ -262,6 +262,25 @@ export const WIDGETS = {
       { key: 'lowBattery', label: t('Charge batterie critique (%)'), type: 'number', default: 30, min: 0, max: 100 },
       { key: 'lowRuntime', label: t('Autonomie critique (minutes)'), type: 'number', default: 10, min: 0, max: 600 },
       { key: 'okValue', label: t('Valeur d\'état normale (avancé)'), type: 'text', default: '', help: t('À renseigner seulement si un état s\'affiche « État n ».') },
+    ],
+  },
+  states: {
+    label: t('États (HA, Panorama…)'), icon: ListChecks, desc: t('Capteurs d\'état traduits, regroupés par équipement : haute disponibilité et Panorama d\'un pare-feu, alimentations, RAID…'),
+    w: 6, h: 6, component: W('WStates'),
+    fields: [
+      { key: 'mode', label: t('Affichage'), type: 'select', default: 'cards', options: [
+        { v: 'cards', l: t('Cartes par équipement') }, { v: 'matrix', l: t('Tableau croisé (équipements × capteurs)') },
+        { v: 'tiles', l: t('Tuiles compactes (écran mural)') }, { v: 'list', l: t('Liste (une ligne par capteur)') },
+      ] },
+      { key: 'devtype', label: t('Type d\'équipement'), type: 'select', default: 'firewall', options: [
+        { v: '', l: t('Tous') }, { v: 'firewall', l: t('Pare-feu') }, { v: 'network', l: t('Réseau') }, { v: 'server', l: t('Serveur') },
+        { v: 'storage', l: t('Stockage') }, { v: 'wireless', l: t('Sans fil') }, { v: 'power', l: t('Énergie') }, { v: 'appliance', l: t('Appliance') },
+        { v: 'collaboration', l: t('Collaboration') }, { v: 'printer', l: t('Imprimante') }, { v: 'environment', l: t('Environnement') },
+      ] },
+      { key: 'device', label: t('Équipement'), type: 'device', default: '' },
+      GROUP_FIELD,
+      { key: 'filter', label: t('Filtrer les capteurs'), type: 'text', default: '', help: t('Texte ou expression régulière sur la description, ex. « High Availability|Panorama »') },
+      { key: 'onlyAlarm', label: t('Seulement les équipements avec un état anormal'), type: 'bool', default: false },
     ],
   },
   fans: {
