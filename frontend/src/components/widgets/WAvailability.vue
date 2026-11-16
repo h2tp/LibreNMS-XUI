@@ -1,10 +1,15 @@
 <template>
   <div>
-    <div class="row small muted mb2">
-      <span class="row"><span class="dot up"></span>{{ c.up }}</span>
-      <span class="row"><span class="dot down"></span>{{ c.down }}</span>
-      <span v-if="c.disabled + c.ignored" class="row"><span class="dot disabled"></span>{{ c.disabled + c.ignored }}</span>
-      <span v-if="config.color === 'latency'" class="lat-legend">
+    <!-- compteurs à côté du titre du widget (dans le corps si le cadre n'a pas d'en-tête) -->
+    <Teleport :to="headEl" :disabled="!headEl" defer>
+      <span class="counts" :class="{ 'row small muted mb2': !headEl }">
+        <span class="row" :title="t('En ligne')"><span class="dot up"></span>{{ c.up }}</span>
+        <span class="row" :title="t('Hors ligne')"><span class="dot down"></span>{{ c.down }}</span>
+        <span v-if="c.disabled + c.ignored" class="row" :title="t('Désactivés')"><span class="dot disabled"></span>{{ c.disabled + c.ignored }}</span>
+      </span>
+    </Teleport>
+    <div v-if="config.color === 'latency'" class="row small muted mb2">
+      <span class="lat-legend">
         <i v-for="l in LAT" :key="l.max" :style="{ background: l.color }" :title="l.max === Infinity ? `≥ ${LAT.at(-2).max} ms` : `< ${l.max} ms`"></i>
         <span class="faint">{{ t('latence') }}</span>
       </span>
@@ -73,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, inject } from 'vue'
 import { CircleCheck } from 'lucide-vue-next'
 import { devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
@@ -82,6 +87,8 @@ import { t } from '../../i18n'
 
 const props = defineProps({ config: Object, size: Object })
 const devices = ref([])
+const headRef = inject('widgetHead', null)
+const headEl = computed(() => headRef?.value || null)
 const mode = computed(() => props.config.mode || 'tiles')
 const order = { down: 0, up: 1, ignored: 2, disabled: 3 }
 const devLink = (d) => `/device/${encodeURIComponent(d.hostname)}`
@@ -136,6 +143,8 @@ useLoader(async () => { devices.value = await devicesFor(props.config) })
 
 <style scoped>
 .mb2 { margin-bottom: 10px; gap: 14px; flex-wrap: wrap; }
+.counts { display: inline-flex; align-items: center; gap: 10px; }
+.counts .row { gap: 5px; }
 .lat-legend { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; }
 .lat-legend i { width: 12px; height: 8px; border-radius: 2px; }
 .lat-legend .faint { margin-left: 5px; }

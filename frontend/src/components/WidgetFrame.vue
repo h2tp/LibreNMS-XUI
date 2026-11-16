@@ -4,6 +4,8 @@
       <GripVertical v-if="editing" :size="15" class="faint grip" />
       <component :is="def?.icon || Puzzle" :size="16" class="ico" />
       <span class="ellipsis wtitle">{{ title }}</span>
+      <!-- informations que le widget place à côté du titre (provide « widgetHead » + Teleport) -->
+      <span ref="headSlot" class="whead-extra"></span>
       <div class="grow"></div>
       <template v-if="editing">
         <button class="btn ghost sm icon w-nodrag" :title="t('Configurer')" @click="$emit('configure')"><Settings2 /></button>
@@ -25,7 +27,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, provide, onMounted, onBeforeUnmount } from 'vue'
 import { GripVertical, Settings2, Copy, Trash2, Puzzle } from 'lucide-vue-next'
 import { WIDGETS, available, missingConfig } from '../dashboard/widgets'
 import { t } from '../i18n'
@@ -42,6 +44,8 @@ const title = computed(() => props.widget.config?.title || props.widget.config?.
 const cfgKey = computed(() => JSON.stringify(props.widget.config || {}))
 
 const body = ref(null)
+const headSlot = ref(null)
+provide('widgetHead', headSlot)
 const size = reactive({ w: 0, h: 0 })
 let ro = null
 onMounted(() => {
@@ -61,6 +65,8 @@ onBeforeUnmount(() => ro && ro.disconnect())
 .whead .ico { color: var(--accent); flex: none; }
 .whead.floating { position: absolute; z-index: 3; top: -12px; left: 12px; right: 12px; margin: 0; padding: 2px 6px 2px 10px; border-radius: 10px; background: var(--panel-solid); border: 1px solid var(--border); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
 .wtitle { min-width: 0; }
+.whead-extra { display: inline-flex; align-items: center; gap: 10px; flex: none; font-weight: 500; font-size: 12px; color: var(--muted); }
+.whead-extra:empty { display: none; }
 .w-drag { cursor: grab; user-select: none; }
 .w-drag:active { cursor: grabbing; }
 .grip { flex: none; margin-left: -4px; }
