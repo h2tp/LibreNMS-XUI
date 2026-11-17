@@ -69,7 +69,7 @@
         <!-- tuiles, carrés compacts, hexagones -->
         <div v-else class="avail" :class="mode">
           <router-link v-for="d in g.items" :key="d.device_id" :to="devLink(d)" class="tile" :class="devStatus(d)" :style="{ '--c': tileColor(d) }" :title="tip(d)">
-            <span v-if="mode === 'tiles'" class="ellipsis">{{ devName(d) }}</span>
+            <span v-if="mode === 'tiles'" class="nowrap">{{ devName(d) }}</span>
           </router-link>
         </div>
       </section>
@@ -154,14 +154,14 @@ useLoader(async () => { devices.value = await devicesFor(props.config) })
 /* tuiles, carrés, hexagones */
 .avail { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
 /* tuiles avec nom : condensées pour afficher plus d'équipements */
-.avail.tiles { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 3px; }
+.avail.tiles { display: flex; flex-wrap: wrap; gap: 3px; }
 .avail.compact { grid-template-columns: repeat(auto-fill, 20px); gap: 4px; }
 .avail.hex { grid-template-columns: repeat(auto-fill, 26px); gap: 3px 2px; }
 .tile { display: flex; align-items: center; min-width: 0; padding: 6px 9px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; background: var(--c, #16a34a); transition: transform .15s, filter .15s; }
 .tile:hover { text-decoration: none; transform: translateY(-1px); filter: brightness(1.15); }
 /* tuiles avec nom : teinte douce de la couleur d'état plutôt qu'un aplat ; hors ligne plus marqué */
 .tiles .tile { color: var(--text); font-weight: 600; background: color-mix(in srgb, var(--c) 16%, var(--panel-2));
-  border: 1px solid color-mix(in srgb, var(--c) 40%, var(--border)); border-left: 3px solid var(--c); padding: 2px 5px; border-radius: 4px; font-size: 10.5px; line-height: 1.35; }
+  border: 1px solid color-mix(in srgb, var(--c) 40%, var(--border)); border-left: 3px solid var(--c); padding: 2px 5px; border-radius: 4px; font-size: 10px; line-height: 1.35; }
 .tiles .tile:hover { filter: none; background: color-mix(in srgb, var(--c) 26%, var(--panel-2)); }
 .tiles .tile.down { background: color-mix(in srgb, var(--c) 34%, var(--panel-2)); border-color: var(--c); }
 .tiles .tile.disabled, .tiles .tile.ignored { color: var(--muted); }
