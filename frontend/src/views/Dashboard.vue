@@ -12,14 +12,14 @@
     </div>
 
     <div v-else class="page-head">
-      <div style="min-width:0">
+      <div class="row" style="min-width:0;gap:14px;align-items:baseline;flex-wrap:wrap">
         <h1 class="row" style="gap:10px">
           <span class="grad-text ellipsis">{{ dash?.name || t('Tableau de bord') }}</span>
           <button v-if="dash && !editing" class="btn ghost sm icon" :title="isDefault ? t('Tableau par défaut') : t('Définir comme tableau par défaut')" @click="makeDefault">
             <Star :size="17" :fill="isDefault ? 'var(--yellow)' : 'none'" :color="isDefault ? 'var(--yellow)' : 'currentColor'" />
           </button>
         </h1>
-        <div class="sub">
+        <div class="sub" style="margin-top:0">
           {{ system?.local_ver ? `LibreNMS ${system.local_ver}` : t('LibreNMS') }}
           <template v-if="dash">
             · <span :title="ACCESS[dash.access].desc"><component :is="ACCESS[dash.access].icon" :size="13" style="vertical-align:-2px" /> {{ ACCESS[dash.access].l }}</span>
