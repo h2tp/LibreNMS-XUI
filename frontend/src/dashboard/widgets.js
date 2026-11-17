@@ -279,6 +279,7 @@ export const WIDGETS = {
       ] },
       { key: 'devices', label: t('Équipements affichés'), type: 'devices', typeKey: 'devtype', default: [], help: t('Vide : tous les équipements du type et du groupe choisis. Sinon, uniquement ceux-ci, dans cet ordre, avec leur nom affiché (la liste proposée suit le type choisi).') },
       GROUP_FIELD,
+      { key: 'sensors', label: t('Capteurs affichés'), type: 'statesensors', default: [], help: t('Aucun coché : tous les capteurs d\'état. Sinon, uniquement ceux cochés (la liste suit les équipements et le type choisis).') },
       { key: 'filter', label: t('Filtrer les capteurs'), type: 'text', default: '', help: t('Texte ou expression régulière sur la description, ex. « High Availability|Panorama »') },
       { key: 'onlyAlarm', label: t('Seulement les équipements avec un état anormal'), type: 'bool', default: false },
     ],

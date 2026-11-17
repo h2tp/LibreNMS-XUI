@@ -75,12 +75,14 @@ const picks = computed(() => (props.config.devices?.length ? props.config.device
 const order = computed(() => Object.fromEntries(picks.value.map((x, i) => [x.h, i])))
 const alias = computed(() => Object.fromEntries(picks.value.filter((x) => x.n).map((x) => [x.h, x.n])))
 const name = (d) => alias.value[d.hostname] || devName(d)
-const filtered = computed(() => !!(picks.value.length || props.config.group || props.config.devtype || props.config.filter))
+const filtered = computed(() => !!(picks.value.length || props.config.group || props.config.devtype || props.config.filter || only.value))
 const re = computed(() => {
   const f = String(props.config.filter || '').trim()
   if (!f) return null
   try { return new RegExp(f, 'i') } catch { return new RegExp(f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
 })
+// capteurs cochés (par description) ; vide = tous
+const only = computed(() => (props.config.sensors?.length ? new Set(props.config.sensors) : null))
 // « High Availability Local Status » -> « HA Local », « Panorama Server 1 » -> « Panorama 1 »
 const short = (d) => String(d || '').replace(/high availability/i, 'HA').replace(/\s+(status|state)$/i, '').replace(/\bserver\s+/i, '').trim()
 const tip = (s) => `${s.sensor_descr}\n${t('valeur {v}', { v: s.sensor_current })} (${s.sensor_type})`
@@ -96,6 +98,7 @@ const cards = computed(() => {
   for (const s of all.value) {
     const c = byDev[s.device_id]
     if (!c || s.sensor_class !== 'state' || +s.sensor_deleted) continue
+    if (only.value && !only.value.has(s.sensor_descr)) continue
     if (re.value && !re.value.test(`${s.sensor_descr} ${s.sensor_type}`)) continue
     const [label, st] = stateLabel(s, tr.value) || [t('État {v}', { v: s.sensor_current }), 'unk']
     c.rows.push({ ...s, label, st, dev: c.dev })

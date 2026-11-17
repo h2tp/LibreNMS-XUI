@@ -34,6 +34,21 @@
           <small v-if="f.help" class="faint">{{ f.help }}</small>
         </div>
 
+        <div v-else-if="f.type === 'statesensors'" class="field full">
+          <span>{{ f.label }}<template v-if="cfg[f.key].length"> ({{ cfg[f.key].length }})</template></span>
+          <div class="row" style="gap:6px">
+            <input v-model="sensFilter" class="input grow" :placeholder="t('Filtrer les capteurs…')" />
+            <button v-if="cfg[f.key].length" class="btn sm" @click="cfg[f.key] = []">{{ t('Tout décocher') }}</button>
+          </div>
+          <div class="ssel">
+            <label v-for="o in stateOptions(f)" :key="o.d" class="check" :title="o.d">
+              <input v-model="cfg[f.key]" type="checkbox" :value="o.d" /> <span class="ellipsis">{{ o.d }}</span><span class="faint small">×{{ o.n }}</span>
+            </label>
+            <div v-if="!stateOptions(f).length" class="small faint">{{ t('Aucun capteur d\'état') }}</div>
+          </div>
+          <small v-if="f.help" class="faint">{{ f.help }}</small>
+        </div>
+
         <label v-else class="field" :class="{ full: ['textarea', 'device', 'rrd', 'port', 'graph'].includes(f.type) }">
           <span>{{ f.label }}<b v-if="f.required" style="color:var(--red)"> *</b></span>
 
@@ -123,7 +138,7 @@ const props = defineProps({ type: String, config: Object, isNew: Boolean })
 const emit = defineEmits(['save', 'close'])
 const def = WIDGETS[props.type]
 const cfg = reactive(JSON.parse(JSON.stringify(props.config || {})))
-for (const f of def.fields) if ((f.type === 'multi' || f.type === 'devices') && !Array.isArray(cfg[f.key])) cfg[f.key] = []
+for (const f of def.fields) if (['multi', 'devices', 'statesensors'].includes(f.type) && !Array.isArray(cfg[f.key])) cfg[f.key] = []
 
 const devices = ref([])
 const diagrams = ref([])
@@ -150,6 +165,19 @@ function pickOptions(f) {
 }
 function addPick(key, h) { if (h && !cfg[key].some((x) => x.h === h)) cfg[key].push({ h, n: '' }) }
 function move(key, i, d) { const l = cfg[key]; [l[i], l[i + d]] = [l[i + d], l[i]] }
+// champ « statesensors » : capteurs d'état cochés, par description (commune à plusieurs équipements)
+const stateSensors = ref([])
+const sensFilter = ref('')
+function stateOptions(f) {
+  const picked = new Set((cfg.devices || []).map((x) => x.h))
+  const ids = new Set(devices.value.filter((d) => picked.size ? picked.has(d.hostname) : !cfg.devtype || d.type === cfg.devtype).map((d) => +d.device_id))
+  const count = new Map(cfg[f.key].map((d) => [d, 0]))  // garde les capteurs déjà cochés même s'ils ne sont plus proposés
+  for (const s of stateSensors.value) if (ids.has(+s.device_id)) count.set(s.sensor_descr, (count.get(s.sensor_descr) || 0) + 1)
+  const q = sensFilter.value.trim().toLowerCase()
+  return [...count].map(([d, n]) => ({ d, n }))
+    .filter((o) => !q || o.d.toLowerCase().includes(q) || cfg[f.key].includes(o.d))
+    .sort((a, b) => a.d.localeCompare(b.d, undefined, { numeric: true }))
+}
 function devLabel(h) { const d = devices.value.find((x) => x.hostname === h); return d ? devName(d) : h }
 const rrdGroups = computed(() => {
   const q = rrdFilter.value.trim().toLowerCase()
@@ -189,7 +217,8 @@ async function loadDeps(host, first) {
 function setPortName() { cfg.portName = lists.ports.find((p) => +p.port_id === +cfg.port)?.ifName || '' }
 
 onMounted(async () => {
-  if (needs('device') || needs('devices')) devices.value = await D.devices().catch(() => [])
+  if (needs('device') || needs('devices') || needs('statesensors')) devices.value = await D.devices().catch(() => [])
+  if (needs('statesensors')) stateSensors.value = (await D.sensors().catch(() => [])).filter((s) => s.sensor_class === 'state' && !+s.sensor_deleted && s.sensor_descr)
   if (needs('group')) groups.value = await D.groups().catch(() => [])
   if (needs('diagram')) diagrams.value = (await diagApi.list().catch(() => ({ items: [] }))).items
   if (needs('rack')) {
@@ -213,6 +242,8 @@ function save() {
 <style scoped>
 .dsel { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
 .dsel-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto auto auto; gap: 6px; align-items: center; }
+.ssel { display: flex; flex-direction: column; gap: 4px; max-height: 190px; overflow: auto; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; }
+.ssel .check { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; }
 .dsel-host { font-size: 13px; font-weight: 600; }
 @media (max-width: 560px) { .dsel-row { grid-template-columns: minmax(0, 1fr) auto auto auto; } .dsel-row .input { grid-column: 1 / -1; grid-row: 2; } }
 </style>
