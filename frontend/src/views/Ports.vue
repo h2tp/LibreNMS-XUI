@@ -18,7 +18,7 @@
         <template #c-ifAlias="{ row }"><span class="small muted">{{ row.ifAlias }}</span></template>
         <template #c-ifSpeed="{ row }">{{ fmtSpeed(row.ifSpeed) }}</template>
         <template #c-traffic="{ row }">
-          <div class="col" style="gap:4px;min-width:150px"><span class="small mono nowrap"><span style="color:var(--accent)">↓ {{ fmtBits(row.ifInOctets_rate * 8) }}</span> <span style="color:#a78bfa">↑ {{ fmtBits(row.ifOutOctets_rate * 8) }}</span></span>
+          <div class="col" style="gap:4px;min-width:150px"><span class="small mono nowrap"><span style="color:var(--in)">↓ {{ fmtBits(row.ifInOctets_rate * 8) }}</span> <span style="color:var(--out)">↑ {{ fmtBits(row.ifOutOctets_rate * 8) }}</span></span>
             <div class="bar"><i :style="{ width: Math.max(1, row.util) + '%', background: utilColor(row.util) }"></i></div></div>
         </template>
         <template #c-util="{ row }"><span class="small">{{ row.util.toFixed(1) }} %</span></template>

@@ -32,7 +32,7 @@
       </div>
 
       <div v-if="config.kpis !== false" class="kpis">
-        <div><span>{{ t('Trafic') }}</span><b class="tr"><span><ArrowDown :size="12" color="var(--accent)" />{{ fmtBits(sw.rin) }}</span><span><ArrowUp :size="12" color="#a78bfa" />{{ fmtBits(sw.rout) }}</span></b></div>
+        <div><span>{{ t('Trafic') }}</span><b class="tr"><span><ArrowDown :size="12" color="var(--in)" />{{ fmtBits(sw.rin) }}</span><span><ArrowUp :size="12" color="var(--out)" />{{ fmtBits(sw.rout) }}</span></b></div>
         <div v-if="sw.cpu !== null" :class="lvl(sw.cpu)"><span>CPU</span><b>{{ sw.cpu }} %</b></div>
         <div v-if="sw.mem !== null" :class="lvl(sw.mem)"><span>RAM</span><b>{{ sw.mem }} %</b></div>
         <div v-if="sw.temp !== null"><span>{{ t('Température') }}</span><b>{{ sw.temp }} °C</b></div>

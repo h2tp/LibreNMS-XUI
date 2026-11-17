@@ -37,7 +37,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Radio, Pause, Play, Eraser, X, TriangleAlert, LoaderCircle } from 'lucide-vue-next'
 import EChart from './EChart.vue'
 import { realtimeApi } from '../api'
-import { timeOption } from '../charts'
+import { timeOption, IN_COLOR, OUT_COLOR } from '../charts'
 import { fmtBits, prefs, save } from '../utils'
 import { t } from '../i18n'
 
@@ -46,7 +46,7 @@ defineEmits(['close'])
 
 const INTERVALS = [1, 2, 5, 10]
 const WINDOWS = [{ v: 60, l: '1 min' }, { v: 300, l: '5 min' }, { v: 900, l: '15 min' }]
-const IN = '#22d3ee'; const OUT = '#a78bfa'
+const IN = IN_COLOR; const OUT = OUT_COLOR
 
 const points = ref([]) // [{ ts (ms), in (bits/s), out (bits/s) }]
 const speed = ref(0)

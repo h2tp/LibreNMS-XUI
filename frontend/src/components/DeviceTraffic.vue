@@ -32,7 +32,7 @@ import ApiGraph from './ApiGraph.vue'
 import RangePicker from './RangePicker.vue'
 import { session, api, pick, rrd } from '../api'
 import { clock } from '../refresh'
-import { timeOption } from '../charts'
+import { timeOption, IN_COLOR, OUT_COLOR } from '../charts'
 import { stats } from '../rrdmeta'
 import { fmtBits, prefs } from '../utils'
 import { t } from '../i18n'
@@ -79,8 +79,8 @@ async function load() {
     }
     const ts = [...acc.keys()].sort((a, b) => a - b)
     series.value = ts.length ? [
-      { name: t('Entrant'), color: '#22c55e', data: ts.map((t) => [t * 1000, acc.get(t)[0]]) },
-      { name: t('Sortant'), color: '#6366f1', negate: true, data: ts.map((t) => [t * 1000, acc.get(t)[1]]) },
+      { name: t('Entrant'), color: IN_COLOR, data: ts.map((t) => [t * 1000, acc.get(t)[0]]) },
+      { name: t('Sortant'), color: OUT_COLOR, negate: true, data: ts.map((t) => [t * 1000, acc.get(t)[1]]) },
     ] : []
     error.value = null
   } catch (e) { error.value = e.message }

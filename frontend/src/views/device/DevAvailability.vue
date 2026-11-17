@@ -1,5 +1,6 @@
 <template>
   <div class="col" style="gap:18px">
+    <div class="card"><AvailabilityBar :device="device" /></div>
     <div class="grid g4">
       <div v-for="a in avail" :key="a.duration" class="card av">
         <Ring :value="+a.availability_perc" :text="(+a.availability_perc).toFixed(1) + '%'" :size="120" :colors="availColors(+a.availability_perc)" />
@@ -31,6 +32,7 @@ import { ref, computed } from 'vue'
 import { Unplug, Activity, Gauge } from 'lucide-vue-next'
 import Ring from '../../components/Ring.vue'
 import RrdChart from '../../components/RrdChart.vue'
+import AvailabilityBar from '../../components/AvailabilityBar.vue'
 import DataTable from '../../components/DataTable.vue'
 import { safeList, L } from '../../api'
 import { useLoader } from '../../refresh'

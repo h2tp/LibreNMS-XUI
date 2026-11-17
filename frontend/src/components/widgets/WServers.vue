@@ -41,7 +41,7 @@
       </div>
 
       <div class="foot small muted">
-        <span class="nowrap"><ArrowDown :size="12" color="var(--accent)" /> {{ fmtBits(s.rin) }} <ArrowUp :size="12" color="#a78bfa" /> {{ fmtBits(s.rout) }}</span>
+        <span class="nowrap"><ArrowDown :size="12" color="var(--in)" /> {{ fmtBits(s.rin) }} <ArrowUp :size="12" color="var(--out)" /> {{ fmtBits(s.rout) }}</span>
         <span v-if="s.temp !== null" class="nowrap"><Thermometer :size="12" /> {{ s.temp }} °C</span>
         <span v-if="s.uptime && !s.down" class="nowrap"><Clock :size="12" /> {{ fmtUptime(s.uptime) }}</span>
       </div>

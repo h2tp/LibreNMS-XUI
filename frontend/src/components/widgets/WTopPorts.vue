@@ -4,7 +4,7 @@
     <router-link v-for="p in top" :key="p.port_id" :to="`/port/${p.port_id}`" class="tp">
       <div class="row">
         <b class="ellipsis">{{ p.ifName }}</b><span class="muted small ellipsis grow">{{ p.ifAlias }} · {{ devName(devById[p.device_id]) }}</span>
-        <span class="small nowrap"><span style="color:var(--accent)">↓ {{ fmtBits(p.ifInOctets_rate * 8) }}</span> · <span style="color:#a78bfa">↑ {{ fmtBits(p.ifOutOctets_rate * 8) }}</span></span>
+        <span class="small nowrap"><span style="color:var(--in)">↓ {{ fmtBits(p.ifInOctets_rate * 8) }}</span> · <span style="color:var(--out)">↑ {{ fmtBits(p.ifOutOctets_rate * 8) }}</span></span>
       </div>
       <div class="bar"><i :style="{ width: Math.max(2, portUtil(p)) + '%', background: utilColor(portUtil(p)) }"></i></div>
     </router-link>

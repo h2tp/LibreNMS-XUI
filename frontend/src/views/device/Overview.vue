@@ -20,6 +20,8 @@
     </div>
 
     <div class="col" style="gap:18px;min-width:0">
+      <div class="card"><AvailabilityBar :device="device" /></div>
+
       <template v-if="isPing">
         <div class="grid g4">
           <div v-for="a in availList" :key="a.d" class="card ring-card">
@@ -101,6 +103,7 @@ import DeviceTraffic from '../../components/DeviceTraffic.vue'
 import WSwitches from '../../components/widgets/WSwitches.vue'
 import DevicePhotos from '../../components/DevicePhotos.vue'
 import DeviceRack from '../../components/DeviceRack.vue'
+import AvailabilityBar from '../../components/AvailabilityBar.vue'
 import { api, pick, safeList, L } from '../../api'
 import { useLoader } from '../../refresh'
 import { loadHealth } from '../../health'

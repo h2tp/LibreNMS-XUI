@@ -1,7 +1,10 @@
 import * as echarts from 'echarts'
 import { fmtBits, fmtBytes, fmtNum, fmtUptime } from './utils'
 
-export const PALETTE = ['#22d3ee', '#a78bfa', '#34d399', '#fb923c', '#f472b6', '#facc15', '#60a5fa', '#f87171', '#2dd4bf', '#c084fc']
+// Couleurs entrant / sortant reprises des graphes LibreNMS (vert olive / violet lavande)
+export const IN_COLOR = '#91b13c'
+export const OUT_COLOR = '#8080bd'
+export const PALETTE = [IN_COLOR, OUT_COLOR, '#34d399', '#fb923c', '#f472b6', '#facc15', '#60a5fa', '#f87171', '#2dd4bf', '#c084fc']
 
 export function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() }
 
@@ -32,6 +35,8 @@ export function timeOption(series, { unit = 'num', zoom = true, legend = true, c
   const grid = css('--border') || 'rgba(148,163,184,.12)'
   const panel = css('--panel-solid') || '#121a2c'
   const fg = css('--text') || '#e6ebf5'
+  // graphe « duplex » (entrant au-dessus, sortant en miroir) : aplats pleins façon LibreNMS
+  const duplex = series.some((s) => s.negate)
   return {
     animationDuration: 900,
     animationEasing: 'cubicOut',
@@ -57,10 +62,10 @@ export function timeOption(series, { unit = 'num', zoom = true, legend = true, c
         name: s.name, type: 'line', showSymbol: false, smooth: 0.25, sampling: 'lttb', connectNulls: false,
         stack: s.stack || (stack ? 'total' : undefined),
         data: s.negate ? s.data.map(([t, v]) => [t, v === null ? null : -v]) : s.data,
-        lineStyle: { width: compact ? 1.5 : 1.8, color, type: s.dashed ? 'dashed' : 'solid' },
+        lineStyle: { width: duplex ? 1 : compact ? 1.5 : 1.8, color, type: s.dashed ? 'dashed' : 'solid' },
         itemStyle: { color },
         areaStyle: s.area === false ? undefined : {
-          color: new echarts.graphic.LinearGradient(0, s.negate ? 1 : 0, 0, s.negate ? 0 : 1, [{ offset: 0, color: color + (stack ? 'aa' : '66') }, { offset: 1, color: color + '05' }]),
+          color: new echarts.graphic.LinearGradient(0, s.negate ? 1 : 0, 0, s.negate ? 0 : 1, duplex ? [{ offset: 0, color: color + 'e6' }, { offset: 1, color: color + 'c8' }] : [{ offset: 0, color: color + (stack ? 'aa' : '66') }, { offset: 1, color: color + '05' }]),
         },
         emphasis: { focus: 'series' },
       }

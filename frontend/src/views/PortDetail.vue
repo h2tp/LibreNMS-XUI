@@ -16,8 +16,8 @@
       </div>
 
       <div class="grid g4 stagger">
-        <div class="card big-stat"><span class="muted small">{{ t('Entrant') }}</span><b style="color:var(--accent)">{{ fmtBits(port.ifInOctets_rate * 8) }}</b><div class="bar"><i :style="{ width: pIn + '%', background: 'var(--accent)' }"></i></div><span class="small faint">{{ t('{p} % de {s}', { p: pIn.toFixed(1), s: fmtSpeed(port.ifSpeed) }) }}</span></div>
-        <div class="card big-stat"><span class="muted small">{{ t('Sortant') }}</span><b style="color:#a78bfa">{{ fmtBits(port.ifOutOctets_rate * 8) }}</b><div class="bar"><i :style="{ width: pOut + '%', background: '#a78bfa' }"></i></div><span class="small faint">{{ t('{p} % de {s}', { p: pOut.toFixed(1), s: fmtSpeed(port.ifSpeed) }) }}</span></div>
+        <div class="card big-stat"><span class="muted small">{{ t('Entrant') }}</span><b style="color:var(--in)">{{ fmtBits(port.ifInOctets_rate * 8) }}</b><div class="bar"><i :style="{ width: pIn + '%', background: 'var(--in)' }"></i></div><span class="small faint">{{ t('{p} % de {s}', { p: pIn.toFixed(1), s: fmtSpeed(port.ifSpeed) }) }}</span></div>
+        <div class="card big-stat"><span class="muted small">{{ t('Sortant') }}</span><b style="color:var(--out)">{{ fmtBits(port.ifOutOctets_rate * 8) }}</b><div class="bar"><i :style="{ width: pOut + '%', background: 'var(--out)' }"></i></div><span class="small faint">{{ t('{p} % de {s}', { p: pOut.toFixed(1), s: fmtSpeed(port.ifSpeed) }) }}</span></div>
         <div class="card big-stat"><span class="muted small">{{ t('Paquets in / out') }}</span><b>{{ fmtNum(port.ifInUcastPkts_rate) }} / {{ fmtNum(port.ifOutUcastPkts_rate) }}</b><span class="small faint">{{ t('pps unicast') }}</span></div>
         <div class="card big-stat"><span class="muted small">{{ t('Erreurs in / out') }}</span><b :style="{ color: errs ? 'var(--red)' : '' }">{{ fmtNum(port.ifInErrors_rate) }} / {{ fmtNum(port.ifOutErrors_rate) }}</b><span class="small faint">{{ t('par seconde · discards {i}/{o}', { i: fmtNum(port.ifInDiscards_rate), o: fmtNum(port.ifOutDiscards_rate) }) }}</span></div>
       </div>

@@ -8,14 +8,14 @@
       <div v-else-if="!pts" class="skeleton" :style="{ height: `${H}px`, marginTop: '8px' }"></div>
       <svg v-else :width="W" :height="H" :viewBox="`0 0 ${W} ${H}`" class="lh-chart">
         <line :x1="0" :x2="W" :y1="H / 2" :y2="H / 2" class="axis" />
-        <path :d="pts.inArea" fill="#22d3ee" fill-opacity=".25" /><path :d="pts.inLine" fill="none" stroke="#22d3ee" stroke-width="1.5" />
-        <path :d="pts.outArea" fill="#a78bfa" fill-opacity=".25" /><path :d="pts.outLine" fill="none" stroke="#a78bfa" stroke-width="1.5" />
+        <path :d="pts.inArea" fill="var(--in)" fill-opacity=".25" /><path :d="pts.inLine" fill="none" stroke="var(--in)" stroke-width="1.5" />
+        <path :d="pts.outArea" fill="var(--out)" fill-opacity=".25" /><path :d="pts.outLine" fill="none" stroke="var(--out)" stroke-width="1.5" />
         <text x="2" y="10" class="ax">{{ fmtBits(pts.max) }}</text>
         <text x="2" :y="H - 3" class="ax">{{ fmtBits(pts.max) }}</text>
       </svg>
       <div v-if="pts" class="lh-legend small">
-        <span><i style="background:#22d3ee"></i>vers {{ link.nameA }} · moy. {{ fmtBits(pts.avgIn) }} · max {{ fmtBits(pts.maxIn) }}</span>
-        <span><i style="background:#a78bfa"></i>depuis {{ link.nameA }} · moy. {{ fmtBits(pts.avgOut) }} · max {{ fmtBits(pts.maxOut) }}</span>
+        <span><i style="background:var(--in)"></i>vers {{ link.nameA }} · moy. {{ fmtBits(pts.avgIn) }} · max {{ fmtBits(pts.maxIn) }}</span>
+        <span><i style="background:var(--out)"></i>depuis {{ link.nameA }} · moy. {{ fmtBits(pts.avgOut) }} · max {{ fmtBits(pts.maxOut) }}</span>
         <span class="muted">{{ t('24 dernières heures') }}</span>
       </div>
     </template>

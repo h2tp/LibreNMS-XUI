@@ -1,8 +1,8 @@
 <template>
   <div class="col" style="gap:10px;height:100%">
     <div class="summary small">
-      <span class="row nowrap"><ArrowDown :size="14" color="var(--accent)" /> {{ t('Entrant') }} <b>{{ fmtBits(now.in) }}</b></span>
-      <span class="row nowrap"><ArrowUp :size="14" color="#a78bfa" /> {{ t('Sortant') }} <b>{{ fmtBits(now.out) }}</b></span>
+      <span class="row nowrap"><ArrowDown :size="14" color="var(--in)" /> {{ t('Entrant') }} <b>{{ fmtBits(now.in) }}</b></span>
+      <span class="row nowrap"><ArrowUp :size="14" color="var(--out)" /> {{ t('Sortant') }} <b>{{ fmtBits(now.out) }}</b></span>
       <span v-if="peak" class="muted nowrap">pic {{ fmtBits(peak) }}</span>
       <span class="faint nowrap" style="margin-left:auto">{{ t('{n} port(s)', { n: ports.length }) }}{{ truncated ? ` ${t('({n} max. pour la courbe)', { n: MAX })}` : '' }}</span>
     </div>
@@ -27,7 +27,7 @@ import EChart from '../EChart.vue'
 import { session, rrd } from '../../api'
 import { D, devicesFor, isPhysical } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
-import { timeOption, css } from '../../charts'
+import { timeOption, css, IN_COLOR, OUT_COLOR } from '../../charts'
 import { devName, fmtBits } from '../../utils'
 import { t } from '../../i18n'
 
@@ -78,8 +78,8 @@ const devOpt = computed(() => {
     xAxis: { type: 'value', axisLabel: { color: text, formatter: (v) => fmtBits(v, 0) }, splitLine: { lineStyle: { color: grid, type: 'dashed' } } },
     yAxis: { type: 'category', data: rows.map((r) => r.name), axisLabel: { color: text, width: 120, overflow: 'truncate' }, axisLine: { show: false }, axisTick: { show: false } },
     series: [
-      { name: t('Entrant'), type: 'bar', stack: 't', data: rows.map((r) => r.in), itemStyle: { color: '#22d3ee', borderRadius: [0, 0, 0, 0] }, barMaxWidth: 16 },
-      { name: t('Sortant'), type: 'bar', stack: 't', data: rows.map((r) => r.out), itemStyle: { color: '#a78bfa', borderRadius: [0, 6, 6, 0] }, barMaxWidth: 16 },
+      { name: t('Entrant'), type: 'bar', stack: 't', data: rows.map((r) => r.in), itemStyle: { color: IN_COLOR, borderRadius: [0, 0, 0, 0] }, barMaxWidth: 16 },
+      { name: t('Sortant'), type: 'bar', stack: 't', data: rows.map((r) => r.out), itemStyle: { color: OUT_COLOR, borderRadius: [0, 6, 6, 0] }, barMaxWidth: 16 },
     ],
   }
 })
@@ -105,8 +105,8 @@ async function loadSeries() {
   }
   const ts = [...acc.keys()].sort((a, b) => a - b)
   series.value = [
-    { name: t('Entrant'), color: '#22d3ee', data: ts.map((t) => [t * 1000, acc.get(t)[2] ? acc.get(t)[0] : null]) },
-    { name: t('Sortant'), color: '#a78bfa', negate: true, data: ts.map((t) => [t * 1000, acc.get(t)[2] ? acc.get(t)[1] : null]) },
+    { name: t('Entrant'), color: IN_COLOR, data: ts.map((t) => [t * 1000, acc.get(t)[2] ? acc.get(t)[0] : null]) },
+    { name: t('Sortant'), color: OUT_COLOR, negate: true, data: ts.map((t) => [t * 1000, acc.get(t)[2] ? acc.get(t)[1] : null]) },
   ]
 }
 
