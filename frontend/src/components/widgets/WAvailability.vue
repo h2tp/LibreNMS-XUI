@@ -101,10 +101,13 @@ const lat = (d) => (d.last_ping_timetaken === null || d.last_ping_timetaken === 
 const latColor = (d) => { const v = lat(d); return v === null ? '' : LAT.find((l) => v < l.max).color }
 const latTxt = (d) => { const v = lat(d); return v === null ? '—' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms` }
 const STATUS_COL = { up: '#16a34a', down: '#e11d48', disabled: '#64748b', ignored: '#64748b' }
+// tuiles avec nom : couleurs des labels Bootstrap de LibreNMS (label-success / danger / default)
+const LNMS_COL = { up: '#5cb85c', down: '#d9534f', disabled: '#777', ignored: '#777' }
 function tileColor(d) {
   const st = devStatus(d)
   if (st === 'up' && props.config.color === 'latency') return latColor(d) || STATUS_COL.up
-  return STATUS_COL[st] || STATUS_COL.disabled
+  const pal = mode.value === 'tiles' ? LNMS_COL : STATUS_COL
+  return pal[st] || pal.disabled
 }
 const tip = (d) => [`${devName(d)} — ${statusLabel[devStatus(d)]}`, d.ip || d.hostname, devStatus(d) === 'up' ? `${t('Latence')} ${latTxt(d)} · ${t('Uptime')} ${fmtUptime(d.uptime)}` : d.status_reason, d.location].filter(Boolean).join('\n')
 
@@ -154,17 +157,15 @@ useLoader(async () => { devices.value = await devicesFor(props.config) })
 /* tuiles, carrés, hexagones */
 .avail { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
 /* tuiles avec nom : condensées pour afficher plus d'équipements */
-.avail.tiles { display: flex; flex-wrap: wrap; gap: 3px; }
+.avail.tiles { display: flex; flex-wrap: wrap; gap: 4px 3px; }
 .avail.compact { grid-template-columns: repeat(auto-fill, 20px); gap: 4px; }
 .avail.hex { grid-template-columns: repeat(auto-fill, 26px); gap: 3px 2px; }
 .tile { display: flex; align-items: center; min-width: 0; padding: 6px 9px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; background: var(--c, #16a34a); transition: transform .15s, filter .15s; }
 .tile:hover { text-decoration: none; transform: translateY(-1px); filter: brightness(1.15); }
-/* tuiles avec nom : teinte douce de la couleur d'état plutôt qu'un aplat ; hors ligne plus marqué */
-.tiles .tile { color: var(--text); font-weight: 600; background: color-mix(in srgb, var(--c) 16%, var(--panel-2));
-  border: 1px solid color-mix(in srgb, var(--c) 40%, var(--border)); border-left: 3px solid var(--c); padding: 2px 5px; border-radius: 4px; font-size: 10px; line-height: 1.35; }
-.tiles .tile:hover { filter: none; background: color-mix(in srgb, var(--c) 26%, var(--panel-2)); }
-.tiles .tile.down { background: color-mix(in srgb, var(--c) 34%, var(--panel-2)); border-color: var(--c); }
-.tiles .tile.disabled, .tiles .tile.ignored { color: var(--muted); }
+/* tuiles avec nom : identiques aux labels de LibreNMS (Bootstrap .label) */
+.tiles .tile { display: inline-block; padding: .2em .6em .3em; border: 0; border-radius: .25em; font-size: 10.5px; font-weight: 700; line-height: 1;
+  color: #fff; text-align: center; white-space: nowrap; vertical-align: baseline; background: var(--c); transition: none; }
+.tiles .tile:hover { transform: none; filter: none; color: #fff; text-decoration: none; opacity: .85; }
 .compact .tile { width: 20px; height: 20px; padding: 0; border-radius: 5px; }
 .hex .tile { width: 26px; height: 30px; padding: 0; border-radius: 0; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
 .tile.down { animation: pulse 2s infinite; }
