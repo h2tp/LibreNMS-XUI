@@ -25,7 +25,8 @@ import { Thermometer } from 'lucide-vue-next'
 import EChart from '../components/EChart.vue'
 import DataTable from '../components/DataTable.vue'
 import DeviceCell from '../components/DeviceCell.vue'
-import { api, pick, devicesCached, stateTrApi } from '../api'
+import { devicesCached, stateTrApi } from '../api'
+import { D } from '../dashboard/data'
 import { stateLabel } from '../dashboard/states'
 import { useLoader } from '../refresh'
 import { SENSOR_LABELS, sensorUnit } from '../rrdmeta'
@@ -53,7 +54,7 @@ const cols = [
 ]
 function go(s) { const d = devById.value[s?.device_id]; if (d) router.push(`/device/${encodeURIComponent(d.hostname)}/health`) }
 const { loading, error } = useLoader(async () => {
-  const [s, d] = await Promise.all([api.get('resources/sensors').then((r) => pick(r, 'sensors')), devicesCached()])
+  const [s, d] = await Promise.all([D.sensors(), devicesCached()])
   const tr = s.some((x) => x.sensor_class === 'state') ? await stateTrApi.get() : null
   sensors.value = s.map((x) => (x.sensor_class === 'state' ? { ...x, _state: stateLabel(x, tr) } : x)); devById.value = Object.fromEntries(d.map((x) => [x.device_id, x]))
   if (!byClass.value[cls.value] && classes.value.length) cls.value = classes.value[0]

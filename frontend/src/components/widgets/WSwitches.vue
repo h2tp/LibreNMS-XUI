@@ -165,7 +165,11 @@ const { error } = useLoader(async () => {
   // la façade n'attend que les ports ; CPU / RAM (agrégations plus lentes à froid) complètent ensuite
   D.cpu().then((c) => (cpu.value = c)).catch(() => {})
   D.memory().then((m) => (mem.value = m)).catch(() => {})
-  const [p, d, s] = await Promise.all([D.ports(), devicesFor(props.config), D.sensors().catch(() => [])])
+  const one = props.config.device
+  const [p, d, s] = await Promise.all([
+    one ? D.devPorts(one) : D.ports(), devicesFor(props.config),
+    (one ? D.devSensors(one, ['device_temperature', 'device_power']) : D.sensors()).catch(() => []),
+  ])
   ports.value = p; sensors.value = s
   devById.value = Object.fromEntries(d.map((x) => [x.device_id, x]))
   loaded.value = true

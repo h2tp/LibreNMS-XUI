@@ -51,17 +51,32 @@ async function loadPlaces() {
   try { raw.value = await rackApi.byDevice(props.device.device_id) } catch { raw.value = [] }
 }
 watch(() => props.device?.device_id, loadPlaces, { immediate: true })
-useLoader(async () => {
+const AROUND = 3
+// ports des seuls équipements utiles : ceux de l'extrait et ceux au bout des câbles de l'équipement
+// (au lieu des ports de tout le parc)
+function neededIds() {
+  const ids = new Set()
+  for (const { room, rack, item } of raw.value) {
+    const it = (room.items || []).find((x) => x.id === item)
+    if (!it) continue
+    const lo = it.u - AROUND; const hi = it.u + it.h - 1 + AROUND
+    const keep = new Set((room.items || []).filter((x) => x.rack === rack && x.u >= lo && x.u + x.h - 1 <= hi).map((x) => x.id))
+    for (const c of room.cables || []) if (c.a.item === item || c.b.item === item) { keep.add(c.a.item); keep.add(c.b.item) }
+    for (const x of room.items || []) if (keep.has(x.id) && x.device_id) ids.add(+x.device_id)
+  }
+  return ids
+}
+async function loadPorts() {
   if (!raw.value.length) return
-  const [d, p] = await Promise.all([D.devices(), D.ports()])
-  devices.value = d; ports.value = p
-})
-watch(raw, async (v) => {
-  if (v.length && !devices.value.length) { const [d, p] = await Promise.all([D.devices(), D.ports()]); devices.value = d; ports.value = p }
-})
+  const d = await D.devices()
+  const ids = neededIds()
+  const lists = await Promise.all(d.filter((x) => ids.has(+x.device_id)).map((x) => D.devPorts(x.hostname).catch(() => [])))
+  devices.value = d; ports.value = lists.flat()
+}
+useLoader(loadPorts)
+watch(raw, (v) => { if (v.length && !devices.value.length) loadPorts() })
 
 // extrait : l'équipement et ses voisins (3 U au-dessus et en dessous), numérotation des U conservée
-const AROUND = 3
 const places = computed(() => raw.value.map(({ room, rack, item }) => {
   room.items ||= []; room.cables ||= []
   const r = room.racks.find((x) => x.id === rack)

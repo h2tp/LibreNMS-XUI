@@ -149,7 +149,7 @@ export const diagApi = {
   removeImage: (name) => request(`/xui/diagram-images/${enc(name)}`, { method: 'DELETE' }),
 }
 
-export const storageApi = { all: () => request('/xui/storage'), memory: () => request('/xui/memory'), cpu: () => request('/xui/cpu'), availability: () => request('/xui/availability'), printers: () => request('/xui/printers'), wireless: () => request('/xui/wireless') }
+export const storageApi = { all: () => request('/xui/storage'), memory: () => request('/xui/memory'), cpu: () => request('/xui/cpu'), availability: () => request('/xui/availability'), printers: () => request('/xui/printers'), wireless: () => request('/xui/wireless'), sensors: () => request('/xui/sensors') }
 
 export const L = {
   devices: (params) => api.get('devices', params).then((r) => pick(r, 'devices')),

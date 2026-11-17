@@ -23,6 +23,7 @@ from urllib.parse import quote
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -87,6 +88,8 @@ else:
 SESSIONS: dict[str, dict] = {}
 
 app = FastAPI(title="LibreNMS XUI", docs_url=None, redoc_url=None, openapi_url=None)
+# JSON de l'API très compressible (capteurs : 15 Mo -> 0,5 Mo, ports : 28 Mo -> ~1,5 Mo)
+app.add_middleware(GZipMiddleware, minimum_size=2048, compresslevel=5)
 client: httpx.AsyncClient | None = None
 
 # --------------------------------------------------------------------------- langue des messages
@@ -1345,7 +1348,29 @@ async def _collect_wireless(token: str) -> list:
     return [x for r in await asyncio.gather(*(one(d) for d in devs)) for x in r]
 
 
+_SENSOR_COLS = ("sensor_id", "device_id", "sensor_class", "sensor_type", "sensor_index", "sensor_descr", "group",
+                "sensor_current", "sensor_prev", "sensor_limit", "sensor_limit_warn", "sensor_limit_low",
+                "sensor_limit_low_warn", "sensor_deleted")
+
+
+async def _collect_sensors(token: str) -> list:
+    """Capteurs de tous les équipements visibles par le jeton, lus dans la base avec les seules colonnes
+    utiles aux widgets (resources/sensors renvoie ~15 Mo et occupe un processus PHP)."""
+    if not DB_ENABLED:
+        raise HTTPException(501, "Base LibreNMS non configurée (LIBRENMS_DB_HOST ou LIBRENMS_DB_SOCKET, LIBRENMS_DB_USER)")
+    data = await _lnms_get(token, "devices?type=all&columns=device_id")
+    ids = [int(d["device_id"]) for d in (data or {}).get("devices", [])]
+    if not ids:
+        return []
+    cols = ", ".join(f"`{c}`" for c in _SENSOR_COLS)
+    marks = ", ".join(["%s"] * len(ids))
+    return await asyncio.to_thread(
+        _db_query, f"SELECT {cols} FROM `sensors` WHERE `sensor_deleted` = 0 AND `device_id` IN ({marks})", tuple(ids))
+
+
 async def _collect(token: str, kind: str) -> list:
+    if kind == "sensors":
+        return await _collect_sensors(token)
     if kind == "wireless":
         return await _collect_wireless(token)
     if kind == "printers":
@@ -1446,7 +1471,7 @@ async def _aggregate(request: Request, kind: str, fresh: bool):
 async def _agg_warmup() -> None:
     """Au démarrage, remplit les caches avec le jeton serveur (mode mot de passe / comptes LibreNMS)."""
     await asyncio.sleep(2)
-    for kind in ("cpu", "memory", "storage", "wireless", "printers", "availability"):
+    for kind in ("cpu", "memory", "storage", "wireless", "printers", "availability") + (("sensors",) if DB_ENABLED else ()):
         try:
             await _agg_refresh(LIBRENMS_TOKEN, kind)
         except Exception:  # noqa: BLE001
@@ -1461,6 +1486,11 @@ async def storage_all(request: Request, fresh: bool = False):
 @app.get("/xui/wireless")
 async def wireless_all(request: Request, fresh: bool = False):
     return await _aggregate(request, "wireless", fresh)
+
+
+@app.get("/xui/sensors")
+async def sensors_all(request: Request, fresh: bool = False):
+    return await _aggregate(request, "sensors", fresh)
 
 
 @app.get("/xui/printers")
