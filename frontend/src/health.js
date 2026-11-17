@@ -25,8 +25,25 @@ function idOf(it) {
  * Charge les données de santé d'un équipement via l'API.
  * Retourne { types: [{name, desc}], data: { device_temperature: [row...], ... } }
  */
+let dbHealth = true  // passe à false si XUI n'a pas accès à la base (on reste alors sur l'API)
+
+async function fromDb(host, only) {
+  try {
+    const r = await healthDbApi.all(host, only)
+    const data = {}
+    for (const [k, rows] of Object.entries(r.data || {})) data[k] = rows.map((x) => ({ ...x, _id: idOf(x) }))
+    return { types: r.types || [], data }
+  } catch (e) {
+    if (e?.status === 501) dbHealth = false
+    return null
+  }
+}
+
 export async function loadHealth(host, only = null) {
   const h = L.enc(host)
+  // base disponible : une seule requête au lieu d'un appel API par capteur (LibreNMS n'a que peu de processus PHP)
+  const db = dbHealth ? await fromDb(host, only) : null
+  if (db) return withStates(db)
   let types = []
   try { types = pick(await api.get(`devices/${h}/health`), 'graphs') } catch { return { types: [], data: {} } }
   if (only) types = types.filter((t) => only.includes(t.name))
@@ -46,12 +63,16 @@ export async function loadHealth(host, only = null) {
     })
     data[t.name] = details.map((d, i) => d || { ...items[i], _id: idOf(items[i]) })
   })
-  // capteurs d'état : libellé traduit (« Actif », « Connecté »…) au lieu de la valeur brute
-  if (data.device_state?.length) {
+  return withStates({ types, data })
+}
+
+// capteurs d'état : libellé traduit (« Actif », « Connecté »…) au lieu de la valeur brute
+async function withStates(r) {
+  if (r.data.device_state?.length) {
     const tr = await stateTrApi.get()
-    data.device_state = data.device_state.map((r) => ({ ...r, _state: stateLabel(r, tr) }))
+    r.data.device_state = r.data.device_state.map((x) => ({ ...x, _state: stateLabel(x, tr) }))
   }
-  return { types, data }
+  return r
 }
 
 export function sensorClassOf(type) { return type.replace(/^device_/, '') }

@@ -1812,6 +1812,47 @@ async def device_health(host: str, htype: str, request: Request):
     return {"graphs": rows}
 
 
+def _json_row(r: dict) -> dict:
+    # datetime -> « AAAA-MM-JJ HH:MM:SS » comme l'API LibreNMS
+    return {k: (v.strftime("%Y-%m-%d %H:%M:%S") if hasattr(v, "strftime") else v) for k, v in r.items()}
+
+
+def _device_health_db(device_id: int, names: set[str]) -> dict[str, list]:
+    data: dict[str, list] = {}
+    sensors = [n for n in names if n not in _HEALTH_TABLES]
+    if sensors:
+        for r in _db_query("SELECT * FROM `sensors` WHERE `device_id` = %s AND `sensor_deleted` = 0 ORDER BY `sensor_id`", (device_id,)):
+            name = f"device_{r['sensor_class']}"
+            if name in names:
+                data.setdefault(name, []).append({**_json_row(r), "desc": r.get("sensor_descr")})
+    for name in names & _HEALTH_TABLES.keys():
+        data[name] = [_json_row(r) for r in _health_rows(name, [device_id])]
+    return data
+
+
+@app.get("/xui/devices/{host}/health-all")
+async def device_health_all(host: str, request: Request, types: str = ""):
+    """Toute la santé d'un équipement en une requête : la liste des types vient de l'API (qui vérifie
+    aussi les droits du jeton), les éléments de la base, au lieu d'un appel API par capteur."""
+    s = _require(request, need_token=True)
+    if not DB_ENABLED:
+        raise HTTPException(501, "Base LibreNMS non configurée (LIBRENMS_DB_HOST ou LIBRENMS_DB_SOCKET, LIBRENMS_DB_USER)")
+    h = quote(host, safe="")
+    lst, dev = await asyncio.gather(_lnms_get(s["token"], f"devices/{h}/health"), _lnms_get(s["token"], f"devices/{h}"))
+    devs = (dev or {}).get("devices") or []
+    if lst is None or not devs:
+        raise HTTPException(404, "Équipement introuvable")
+    graphs = lst.get("graphs") or []
+    only = {x for x in types.split(",") if x}
+    if only:
+        graphs = [g for g in graphs if g.get("name") in only]
+    try:
+        data = await asyncio.to_thread(_device_health_db, int(devs[0]["device_id"]), {g["name"] for g in graphs if g.get("name")})
+    except Exception as e:  # pymysql.Error, OSError…
+        raise HTTPException(502, f"Base LibreNMS injoignable : {e}") from e
+    return {"types": graphs, "data": data}
+
+
 # Capteurs d'état : l'API ne renvoie que la valeur brute (ex. 4) ; LibreNMS stocke sa traduction
 # (« passive ») et son niveau (0 ok, 1 warn, 2 crit, 3 inconnu) dans state_translations.
 _STATE_TR: tuple[float, dict] = (0.0, {})

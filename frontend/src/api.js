@@ -102,7 +102,10 @@ export const rrd = {
   batch: (items) => request('/xui/rrd/batch', { method: 'POST', body: { items } }),
 }
 
-export const healthDbApi = { list: (host, type) => request(`/xui/devices/${encodeURIComponent(host)}/health/${type}`).then((r) => (r && r.graphs) || []) }
+export const healthDbApi = {
+  list: (host, type) => request(`/xui/devices/${encodeURIComponent(host)}/health/${type}`).then((r) => (r && r.graphs) || []),
+  all: (host, types) => request(`/xui/devices/${encodeURIComponent(host)}/health-all${types ? `?types=${types.join(',')}` : ''}`),
+}
 let stateTr = null
 export const stateTrApi = { get: () => (stateTr ||= request('/xui/state-translations').catch(() => { stateTr = null; return null })) }
 export const deletedPortsApi = { list: () => request('/xui/ports/deleted').then((r) => (r && r.ports) || []) }
