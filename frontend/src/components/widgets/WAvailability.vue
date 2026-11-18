@@ -101,12 +101,12 @@ const lat = (d) => (d.last_ping_timetaken === null || d.last_ping_timetaken === 
 const latColor = (d) => { const v = lat(d); return v === null ? '' : LAT.find((l) => v < l.max).color }
 const latTxt = (d) => { const v = lat(d); return v === null ? '—' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms` }
 const STATUS_COL = { up: '#16a34a', down: '#e11d48', disabled: '#64748b', ignored: '#64748b' }
-// tuiles avec nom : couleurs des labels Bootstrap de LibreNMS (label-success / danger / default)
-const LNMS_COL = { up: '#5cb85c', down: '#d9534f', disabled: '#777', ignored: '#777' }
+// tuiles avec nom : couleurs des badges de l'interface (.badge.ok / .badge.down / .badge.disabled)
+const BADGE_COL = { up: 'var(--green)', down: 'var(--red)', disabled: 'var(--gray)', ignored: 'var(--gray)' }
 function tileColor(d) {
   const st = devStatus(d)
   if (st === 'up' && props.config.color === 'latency') return latColor(d) || STATUS_COL.up
-  const pal = mode.value === 'tiles' ? LNMS_COL : STATUS_COL
+  const pal = mode.value === 'tiles' ? BADGE_COL : STATUS_COL
   return pal[st] || pal.disabled
 }
 const tip = (d) => [`${devName(d)} — ${statusLabel[devStatus(d)]}`, d.ip || d.hostname, devStatus(d) === 'up' ? `${t('Latence')} ${latTxt(d)} · ${t('Uptime')} ${fmtUptime(d.uptime)}` : d.status_reason, d.location].filter(Boolean).join('\n')
@@ -162,10 +162,12 @@ useLoader(async () => { devices.value = await devicesFor(props.config) })
 .avail.hex { grid-template-columns: repeat(auto-fill, 26px); gap: 3px 2px; }
 .tile { display: flex; align-items: center; min-width: 0; padding: 6px 9px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; background: var(--c, #16a34a); transition: transform .15s, filter .15s; }
 .tile:hover { text-decoration: none; transform: translateY(-1px); filter: brightness(1.15); }
-/* tuiles avec nom : identiques aux labels de LibreNMS (Bootstrap .label) */
-.tiles .tile { display: inline-block; padding: .2em .6em .3em; border: 0; border-radius: .25em; font-size: 10.5px; font-weight: 700; line-height: 1;
-  color: #fff; text-align: center; white-space: nowrap; vertical-align: baseline; background: var(--c); transition: none; }
-.tiles .tile:hover { transform: none; filter: none; color: #fff; text-decoration: none; opacity: .85; }
+/* tuiles avec nom : style « badge » (fond teinté translucide, bordure et texte colorés, coins arrondis) */
+.tiles .tile { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; line-height: 1.3;
+  white-space: nowrap; color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 28%, transparent); transition: background .15s, border-color .15s; }
+.tiles .tile:hover { transform: none; filter: none; color: var(--c); text-decoration: none;
+  background: color-mix(in srgb, var(--c) 22%, transparent); border-color: color-mix(in srgb, var(--c) 45%, transparent); }
 .compact .tile { width: 20px; height: 20px; padding: 0; border-radius: 5px; }
 .hex .tile { width: 26px; height: 30px; padding: 0; border-radius: 0; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
 .tile.down { animation: pulse 2s infinite; }
