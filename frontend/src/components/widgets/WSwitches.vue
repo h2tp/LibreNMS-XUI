@@ -115,7 +115,8 @@ const switches = computed(() => {
   for (const p of ports.value) if (devById.value[p.device_id] && !+p.deleted && PHYS.test(p.ifType || '')) (byDev[p.device_id] ||= []).push(p)
   return Object.entries(byDev).filter(([id, l]) => {
     const d = devById.value[id]
-    return d.type === 'network' && l.length >= 4 && (!props.config.device || d.hostname === props.config.device)
+    // types d'équipement dessinés en façade : switchs par défaut, la vue d'ensemble y ajoute les pare-feu
+    return (props.config.types || ['network']).includes(d.type) && l.length >= 4 && (!props.config.device || d.hostname === props.config.device)
   }).map(([id, l]) => {
     const d = devById.value[id]
     const list = [...l].sort((a, b) => n(a.ifIndex) - n(b.ifIndex))

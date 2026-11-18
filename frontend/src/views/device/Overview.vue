@@ -44,7 +44,7 @@
         <div class="card ring-card"><Ring :value="avail" :text="avail !== null ? avail.toFixed(1) + '%' : '—'" :label="t('Dispo. 30 j')" :colors="availColors(avail)" /><span class="small muted">{{ fmtNum(device.last_ping_timetaken) }} ms ICMP</span></div>
       </div>
 
-      <div v-if="device.type === 'network' && swCount !== 0" class="card"><WSwitches :config="{ device: device.hostname, embedded: true }" @count="(c) => (swCount = c)" /></div>
+      <div v-if="FACE_TYPES.includes(device.type) && swCount !== 0" class="card"><WSwitches :config="{ device: device.hostname, embedded: true, types: FACE_TYPES }" @count="(c) => (swCount = c)" /></div>
 
       <div class="card"><DeviceTraffic :device="device" :files="files" height="240px" /></div>
 
@@ -120,6 +120,8 @@ const ports = ref([])
 const events = ref([])
 const avail = ref(null)
 const swCount = ref(null)
+// équipements dont on dessine la façade (ports physiques) dans la vue d'ensemble
+const FACE_TYPES = ['network', 'firewall']
 const availAll = ref([])
 // équipement ajouté en ping seul : ni SNMP ni ports, seule la latence ICMP et la disponibilité ont du sens
 const isPing = computed(() => props.device.os === 'ping' || !!+props.device.snmp_disable)
