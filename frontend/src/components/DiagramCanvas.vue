@@ -13,6 +13,20 @@
       <rect v-if="view.background === 'grid'" :x="vb.x - 5000" :y="vb.y - 5000" :width="vb.w + 10000" :height="vb.h + 10000" fill="url(#dgrid)" />
       <image v-if="view.background === 'image' && bgUrl && view.bgW" :href="bgUrl" x="0" y="0" :width="view.bgW" :height="view.bgH" :opacity="view.bgOpacity ?? .6" preserveAspectRatio="none" />
 
+      <!-- images libres (sous les liens et les équipements) -->
+      <g v-for="im in drawnImages" :key="im.id" :transform="`translate(${im.x},${im.y})`" class="node image" :class="{ sel: selected?.type === 'node' && selected.id === im.id }"
+        @pointerdown.stop="onNodeDown(im, $event)" @dblclick.stop="$emit('edit-node', im.raw)">
+        <title v-if="im.label">{{ im.label }}</title>
+        <image v-if="im.img" :href="im.img" :x="-im.W / 2" :y="-im.H / 2" :width="im.W" :height="im.H" :opacity="im.opacity ?? 1" preserveAspectRatio="xMidYMid meet" />
+        <rect v-else :x="-im.W / 2" :y="-im.H / 2" :width="im.W" :height="im.H" rx="8" class="img-missing" />
+        <text v-if="im.label" :y="im.H / 2 + 14" text-anchor="middle" dominant-baseline="central" class="caption">{{ im.label }}</text>
+        <template v-if="editing">
+          <rect :x="-im.W / 2" :y="-im.H / 2" :width="im.W" :height="im.H" class="img-box" />
+          <rect v-if="selected?.type === 'node' && selected.id === im.id" :x="im.W / 2 - 6" :y="im.H / 2 - 6" width="12" height="12" rx="2" class="resize"
+            @pointerdown.stop="onResizeDown(im, $event)" />
+        </template>
+      </g>
+
       <!-- liens -->
       <g v-for="l in drawnLinks" :key="l.id" class="link" :class="{ sel: selected?.type === 'link' && selected.id === l.id, down: l.st.down, unknown: !l.st.known }"
         @pointerdown.stop="onLinkDown(l, $event)" @dblclick.stop="$emit('edit-link', l.raw)"
@@ -100,7 +114,7 @@ const props = defineProps({
   diagram: Object, live: Object, editing: Boolean, tool: { type: String, default: 'select' },
   selected: Object, bgUrl: String, wheel: { type: String, default: 'zoom' }, navigate: { type: Boolean, default: true },
 })
-const emit = defineEmits(['update:selected', 'move', 'moved', 'connect', 'drop-device', 'edit-node', 'edit-link'])
+const emit = defineEmits(['update:selected', 'move', 'moved', 'connect', 'drop-device', 'drop-image', 'edit-node', 'edit-link'])
 const router = useRouter()
 const wrap = ref(null); const svg = ref(null)
 const vb = reactive({ x: -600, y: -350, w: 1200, h: 700 })
@@ -123,7 +137,11 @@ function fitText(text, max, size, weight = 400) {
   while (lo < hi) { const m = (lo + hi + 1) >> 1; if (measure(text.slice(0, m).trimEnd() + '…', font) <= max) lo = m; else hi = m - 1 }
   return text.slice(0, lo).trimEnd() + '…'
 }
-const drawnNodes = computed(() => (props.diagram?.nodes || []).map((n) => {
+// images libres : dimensions affichées = dimensions de base × taille
+const drawnImages = computed(() => (props.diagram?.nodes || []).filter((n) => n.kind === 'image').map((n) => ({
+  ...n, raw: n, W: (n.w || 160) * (n.size || 1), H: (n.h || 120) * (n.size || 1), img: n.image ? diagApi.imgUrl(n.image) : null,
+})))
+const drawnNodes = computed(() => (props.diagram?.nodes || []).filter((n) => n.kind !== 'image').map((n) => {
   const d = n.kind === 'device' ? props.live.devById.value[n.device_id] : null
   const status = nodeStatus(n, props.live.devById.value)
   const boxed = n.kind === 'device' || n.kind === 'custom' // rendu en carte (équipement LibreNMS ou élément libre)
@@ -218,8 +236,10 @@ function fit() {
   const ratio = (el.clientWidth || 1200) / (el.clientHeight || 700)
   let x0 = -400; let y0 = -250; let x1 = 400; let y1 = 250
   if (ns.length) {
-    x0 = Math.min(...ns.map((n) => n.x)) - 120; x1 = Math.max(...ns.map((n) => n.x)) + 120
-    y0 = Math.min(...ns.map((n) => n.y)) - 70; y1 = Math.max(...ns.map((n) => n.y)) + 70
+    const hw = (n) => (n.kind === 'image' ? ((n.w || 160) * (n.size || 1)) / 2 + 20 : 120)
+    const hh = (n) => (n.kind === 'image' ? ((n.h || 120) * (n.size || 1)) / 2 + 30 : 70)
+    x0 = Math.min(...ns.map((n) => n.x - hw(n))); x1 = Math.max(...ns.map((n) => n.x + hw(n)))
+    y0 = Math.min(...ns.map((n) => n.y - hh(n))); y1 = Math.max(...ns.map((n) => n.y + hh(n)))
   }
   if (view.value.background === 'image' && view.value.bgW) { x0 = Math.min(x0, 0); y0 = Math.min(y0, 0); x1 = Math.max(x1, view.value.bgW); y1 = Math.max(y1, view.value.bgH) }
   let w = x1 - x0; let h = y1 - y0
@@ -251,6 +271,12 @@ function onNodeDown(nd, e) {
   drag.value = { kind: 'node', id: nd.id, ox: p.x - nd.x, oy: p.y - nd.y, moved: false }
   svg.value.setPointerCapture(e.pointerId)
 }
+// poignée d'une image : redimensionnement proportionnel depuis le centre
+function onResizeDown(im, e) {
+  if (!props.editing) return
+  drag.value = { kind: 'resize', id: im.id, w: im.w || 160, h: im.h || 120, x: im.x, y: im.y, moved: false }
+  svg.value.setPointerCapture(e.pointerId)
+}
 function onLinkDown(l, e) {
   if (!props.editing) { if (e.button === 0) popupAt(l, e, true); return }
   emit('update:selected', { type: 'link', id: l.id })
@@ -271,6 +297,11 @@ function onMove(e) {
     const snap = (v) => Math.round(v / 10) * 10
     emit('move', { id: g.id, x: snap(p.x - g.ox), y: snap(p.y - g.oy) })
     g.moved = true
+  } else if (g.kind === 'resize') {
+    const p = toSvg(e)
+    const k = Math.max(Math.abs(p.x - g.x) / (g.w / 2), Math.abs(p.y - g.y) / (g.h / 2))
+    emit('move', { id: g.id, size: Math.round(Math.min(10, Math.max(0.1, k)) * 100) / 100 })
+    g.moved = true
   } else if (g.kind === 'bend') {
     // courbure : déplacement perpendiculaire au lien
     const l = props.diagram.links.find((x) => x.id === g.id); const A = nodeById.value[l.a]; const B = nodeById.value[l.b]
@@ -283,22 +314,26 @@ function onMove(e) {
 function onUp() {
   const g = drag.value
   drag.value = null
-  if (g && (g.kind === 'node' || g.kind === 'bend') && g.moved) emit('moved')
+  if (g && (g.kind === 'node' || g.kind === 'bend' || g.kind === 'resize') && g.moved) emit('moved')
   if (g?.click && props.navigate) {
     const d = props.live.devById.value[g.click.device_id]
     if (d) router.push(`/device/${encodeURIComponent(d.hostname)}`)
   }
 }
 function onNodeClick(nd) {
-  if (!props.editing || props.tool !== 'link') return
+  if (!props.editing || props.tool !== 'link' || nd.kind === 'image') return
   if (!linkFrom.value) { linkFrom.value = nd.id; return }
   if (linkFrom.value !== nd.id) emit('connect', { a: linkFrom.value, b: nd.id })
   linkFrom.value = null; cursor.value = null
 }
 function onDrop(e) {
-  const id = e.dataTransfer.getData('text/x-device')
-  if (!id || !props.editing) return
+  if (!props.editing) return
   const p = toSvg(e)
+  // fichier image déposé depuis l'ordinateur : nouvelle image libre à cet endroit
+  const file = [...(e.dataTransfer.files || [])].find((f) => /^image\/(png|jpeg|webp|gif)$/.test(f.type))
+  if (file) { emit('drop-image', { file, x: Math.round(p.x / 10) * 10, y: Math.round(p.y / 10) * 10 }); return }
+  const id = e.dataTransfer.getData('text/x-device')
+  if (!id) return
   emit('drop-device', { device_id: +id, x: Math.round(p.x / 10) * 10, y: Math.round(p.y / 10) * 10 })
 }
 
@@ -356,6 +391,12 @@ onBeforeUnmount(() => { ro && ro.disconnect(); window.removeEventListener('keydo
 .pulse { fill: none; stroke: #f43f5e; animation: pulse 1.6s ease-out infinite; }
 @keyframes pulse { 0% { r: 4; opacity: .9; } 100% { r: 30; opacity: 0; } }
 .cloud { fill: var(--panel-solid); stroke: var(--border); stroke-width: 1.5; }
+.node.image .img-box { fill: none; stroke: transparent; stroke-width: 1.5; pointer-events: all; }
+.editing .node.image:hover .img-box { stroke: var(--border); stroke-dasharray: 4 4; }
+.node.image.sel .img-box { stroke: var(--accent); stroke-dasharray: 6 4; }
+.img-missing { fill: var(--panel-2); stroke: var(--border); stroke-dasharray: 4 4; }
+.resize { fill: var(--panel-solid); stroke: var(--accent); stroke-width: 2; cursor: nwse-resize; }
+.caption { font-size: 12px; font-weight: 600; fill: var(--text); paint-order: stroke; stroke: var(--panel-2); stroke-width: 4px; }
 .free { font-size: 16px; font-weight: 700; fill: var(--text); paint-order: stroke; stroke: var(--panel-2); stroke-width: 5px; }
 .zoom { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 4px; background: var(--panel-solid); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
 </style>

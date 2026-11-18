@@ -596,7 +596,7 @@ _IMG_NAME_RE = re.compile(r"^[0-9a-f]{16}\.(png|jpg|webp|gif)$")
 _NODE_DISPLAYS = ("card", "icon", "image")
 _diag_lock = asyncio.Lock()
 _BG_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}
-_NODE_KINDS = ("device", "text", "cloud", "custom")
+_NODE_KINDS = ("device", "text", "cloud", "custom", "image")  # image : image libre (logo, photo, plan…)
 
 
 def _diag_load() -> dict:
@@ -643,14 +643,18 @@ def _clean_diagram(body: dict, d: dict) -> None:
             ids.add(nid)
             kind = n.get("kind") if n.get("kind") in _NODE_KINDS else "device"
             dev = n.get("device_id")
-            nodes.append({
+            node = {
                 "id": nid, "kind": kind, "x": _num(n.get("x"), -20000, 20000, 0), "y": _num(n.get("y"), -20000, 20000, 0),
                 "device_id": int(dev) if kind == "device" and str(dev).isdigit() else None,
-                "label": _txt(n.get("label")), "size": _num(n.get("size"), 0.5, 3, 1),
+                "label": _txt(n.get("label")), "size": _num(n.get("size"), 0.1, 10, 1) if kind == "image" else _num(n.get("size"), 0.5, 3, 1),
                 "sub": _txt(n.get("sub"), 60) if kind == "custom" else "",
                 "image": n.get("image") if isinstance(n.get("image"), str) and _IMG_NAME_RE.match(n["image"]) else None,
                 "display": n.get("display") if n.get("display") in _NODE_DISPLAYS else "card",
-            })
+            }
+            if kind == "image":  # dimensions de base (ratio de l'image) et opacité
+                node |= {"w": _num(n.get("w"), 4, 4000, 160), "h": _num(n.get("h"), 4, 4000, 120),
+                         "opacity": _num(n.get("opacity"), 0.05, 1, 1)}
+            nodes.append(node)
         d["nodes"] = nodes
     if "links" in body:
         if not isinstance(body["links"], list):

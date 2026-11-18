@@ -402,6 +402,13 @@ export default {
   'Apparence': 'Appearance',
   'Carte + image': 'Card + image',
   'Image seule': 'Image only',
+  'Légende (facultative)': 'Caption (optional)',
+  'Taille : {p} %': 'Size: {p}%',
+  'Opacité : {p} %': 'Opacity: {p}%',
+  "Faites glisser la poignée en bas à droite de l'image pour la redimensionner. Les images restent sous les liens et les équipements.":
+    'Drag the handle at the bottom right of the image to resize it. Images stay below links and devices.',
+  'Image libre : logo, photo, plan… Vous pouvez aussi déposer un fichier sur le schéma ou le coller (Ctrl+V).':
+    'Free image: logo, photo, floor plan… You can also drop a file onto the diagram or paste it (Ctrl+V).',
   "Choisissez d'abord une image ci-dessous": 'Choose an image below first',
   'Image': 'Image',
   'Aucune image': 'No image',

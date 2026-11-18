@@ -37,11 +37,28 @@
 
         <!-- inspecteur -->
         <div v-if="selNode" class="insp">
-          <div class="insp-title"><component :is="selNode.kind === 'device' ? Server : selNode.kind === 'custom' ? Box : selNode.kind === 'cloud' ? Cloud : Type" :size="15" /> {{ selNodeName }}</div>
-          <label class="field"><span>{{ selNode.kind === 'device' ? t('Libellé (vide : nom de l\'équipement)') : selNode.kind === 'custom' ? t('Nom') : t('Texte') }}</span><input v-model="selNode.label" class="input" maxlength="60" @focus="push()" @input="changed()" /></label>
+          <div class="insp-title"><component :is="selNode.kind === 'device' ? Server : selNode.kind === 'custom' ? Box : selNode.kind === 'cloud' ? Cloud : selNode.kind === 'image' ? ImageIcon : Type" :size="15" /> {{ selNodeName }}</div>
+          <label class="field"><span>{{ selNode.kind === 'device' ? t('Libellé (vide : nom de l\'équipement)') : selNode.kind === 'custom' ? t('Nom') : selNode.kind === 'image' ? t('Légende (facultative)') : t('Texte') }}</span><input v-model="selNode.label" class="input" maxlength="60" @focus="push()" @input="changed()" /></label>
           <label v-if="selNode.kind === 'custom'" class="field"><span>{{ t('Sous-titre') }}</span><input v-model="selNode.sub" class="input" maxlength="60" :placeholder="t('Ex. box opérateur, 192.0.2.1, baie B2…')" @focus="push()" @input="changed()" /></label>
           <div v-if="selNode.kind === 'custom'" class="small faint">{{ t('Élément hors LibreNMS : pas d\'état ni de trafic. Ses liens avec un équipement affichent le trafic du port côté équipement.') }}</div>
-          <label class="field"><span>{{ t('Taille') }}</span><input v-model.number="selNode.size" type="range" min="0.6" max="2" step="0.1" @pointerdown="push()" @input="changed()" /></label>
+          <template v-if="selNode.kind === 'image'">
+            <label class="field"><span>{{ t('Taille : {p} %', { p: Math.round((selNode.size || 1) * 100) }) }}</span><input v-model.number="selNode.size" type="range" min="0.1" max="5" step="0.05" @pointerdown="push()" @input="changed()" /></label>
+            <label class="field"><span>{{ t('Opacité : {p} %', { p: Math.round((selNode.opacity ?? 1) * 100) }) }}</span><input v-model.number="selNode.opacity" type="range" min="0.1" max="1" step="0.05" @pointerdown="push()" @input="changed()" /></label>
+            <div class="small faint">{{ t('Faites glisser la poignée en bas à droite de l\'image pour la redimensionner. Les images restent sous les liens et les équipements.') }}</div>
+          </template>
+          <label v-else class="field"><span>{{ t('Taille') }}</span><input v-model.number="selNode.size" type="range" min="0.6" max="2" step="0.1" @pointerdown="push()" @input="changed()" /></label>
+          <div v-if="selNode.kind === 'image'" class="field"><span>{{ t('Image') }}</span>
+            <div class="gallery">
+              <div v-for="im in images" :key="im.name" class="gwrap">
+                <button class="gimg" :class="{ on: selNode.image === im.name }" @click="setImage(im.name)"><img :src="diagApi.imgUrl(im.name)" alt="" loading="lazy" /></button>
+                <button class="gdel" :title="t('Supprimer de la bibliothèque')" @click.stop="deleteImage(im.name)">×</button>
+              </div>
+              <label class="gimg add" :title="t('Importer une image (PNG, JPEG, WebP, GIF, 2 Mo max.)')">
+                <Loader2 v-if="imgBusy" :size="15" class="spin" /><ImageUp v-else :size="15" />
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden @change="uploadImage" />
+              </label>
+            </div>
+          </div>
           <template v-if="selNode.kind === 'device' || selNode.kind === 'custom'">
             <div class="field"><span>{{ t('Apparence') }}</span>
               <div class="seg" style="width:100%">
@@ -96,6 +113,10 @@
             <button class="btn sm" :title="t('Élément qui n\'existe pas dans LibreNMS (box, caméra, équipement non supervisé…)')" @click="addFree('custom')"><Box :size="13" /> {{ t('Élément') }}</button>
             <button class="btn sm" @click="addFree('cloud')"><Cloud :size="13" /> {{ t('Nuage') }}</button>
             <button class="btn sm" @click="addFree('text')"><Type :size="13" /> {{ t('Texte') }}</button>
+            <label class="btn sm" :title="t('Image libre : logo, photo, plan… Vous pouvez aussi déposer un fichier sur le schéma ou le coller (Ctrl+V).')">
+              <Loader2 v-if="imgBusy" :size="13" class="spin" /><ImageIcon v-else :size="13" /> {{ t('Image') }}
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden @change="addImageFile" />
+            </label>
             <button class="btn sm" :title="t('{n} lien(s) LLDP entre éléments du schéma', { n: missingLldp.length })" :disabled="!missingLldp.length" @click="addLldp"><Network :size="13" /> {{ t('Liens LLDP ({n})', { n: missingLldp.length }) }}</button>
           </div>
           <input v-model="q" class="input" :placeholder="t('Rechercher un équipement…')" />
@@ -112,7 +133,7 @@
       <div class="card canvas-card">
         <DiagramCanvas ref="canvas" v-model:selected="selected" :diagram="diag" :live="live" :editing="editing" :tool="tool"
           :bg-url="diag.bg ? diagApi.bgUrl(diag.id, diag.bg) : ''"
-          @move="onMove" @moved="changed()" @connect="connect" @drop-device="(e) => addDevice(e.device_id, e.x, e.y)"
+          @move="onMove" @moved="changed()" @connect="connect" @drop-device="(e) => addDevice(e.device_id, e.x, e.y)" @drop-image="(e) => addImage(e.file, e.x, e.y)"
           @edit-node="(n) => (selected = { type: 'node', id: n.id })" @edit-link="(l) => (selected = { type: 'link', id: l.id })" />
         <ScaleLegend class="legend" :view="diag.view">
           <span><i class="dash"></i>{{ t('ports non renseignés') }}</span>
@@ -167,7 +188,7 @@ import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ChevronLeft, Pencil, Check, Settings, Loader2, CircleCheck, CircleAlert, Undo2, Redo2, MousePointer2, Spline, Plus, Cloud, Type,
-  Network, Server, Trash2, ExternalLink, Minus, ImageUp, Download, Box,
+  Network, Server, Trash2, ExternalLink, Minus, ImageUp, Download, Box, Image as ImageIcon,
 } from 'lucide-vue-next'
 import DiagramCanvas from '../components/DiagramCanvas.vue'
 import Modal from '../components/Modal.vue'
@@ -190,7 +211,22 @@ const images = ref([])
 const imgBusy = ref(false)
 async function loadImages() { try { images.value = await diagApi.images() } catch { images.value = [] } }
 watch(() => editing.value, (v) => { if (v) loadImages() }, { immediate: true })
-function setImage(name) {
+// dimensions de base d'une image libre : taille naturelle ramenée à 240 px max. (ratio conservé)
+function naturalSize(src) {
+  return new Promise((res) => {
+    const i = new Image()
+    i.onload = () => { const k = Math.min(1, 240 / Math.max(i.naturalWidth || 1, i.naturalHeight || 1)); res({ w: Math.max(4, Math.round(i.naturalWidth * k)), h: Math.max(4, Math.round(i.naturalHeight * k)) }) }
+    i.onerror = () => res({ w: 160, h: 120 })
+    i.src = src
+  })
+}
+async function setImage(name) {
+  if (selNode.value?.kind === 'image') {
+    const n = selNode.value
+    const { w, h } = await naturalSize(diagApi.imgUrl(name))
+    push(); n.image = name; n.w = w; n.h = h; changed()
+    return
+  }
   push()
   selNode.value.image = name
   if (!name) selNode.value.display = 'card'
@@ -208,6 +244,24 @@ async function uploadImage(e) {
     await loadImages()
     if (selNode.value) setImage(r.name)
   } catch (err) { toastError(err) } finally { imgBusy.value = false }
+}
+// nouvelle image libre à partir d'un fichier (bouton, dépôt sur le schéma ou collage)
+async function addImage(file, x, y) {
+  if (!file || !/^image\/(png|jpeg|webp|gif)$/.test(file.type)) { toast(t('Formats acceptés : PNG, JPEG, WebP, GIF'), 'error'); return }
+  imgBusy.value = true
+  try {
+    const r = await diagApi.uploadImage(file)
+    const { w, h } = await naturalSize(diagApi.imgUrl(r.name))
+    loadImages()
+    const pos = x === undefined ? freeSpot() : { x, y }
+    addNode({ id: uid(), kind: 'image', device_id: null, x: pos.x, y: pos.y, label: '', size: 1, image: r.name, w, h, opacity: 1 })
+  } catch (err) { toastError(err) } finally { imgBusy.value = false }
+}
+function addImageFile(e) { const f = e.target.files?.[0]; e.target.value = ''; if (f) addImage(f) }
+function onPaste(e) {
+  if (!editing.value || /input|select|textarea/i.test(e.target.tagName)) return
+  const f = [...(e.clipboardData?.files || [])].find((x) => x.type.startsWith('image/'))
+  if (f) { e.preventDefault(); addImage(f) }
 }
 async function deleteImage(name) {
   if (!confirmAction(t('Supprimer cette image de la bibliothèque ?'))) return
@@ -238,7 +292,7 @@ function nodeName(id) {
   const n = diag.value.nodes.find((x) => x.id === id)
   if (!n) return '?'
   const d = live.devById.value[n.device_id]
-  return n.label || (d ? devName(d) : n.kind === 'cloud' ? t('Nuage') : n.kind === 'custom' ? t('Élément') : t('Texte'))
+  return n.label || (d ? devName(d) : n.kind === 'cloud' ? t('Nuage') : n.kind === 'custom' ? t('Élément') : n.kind === 'image' ? t('Image') : t('Texte'))
 }
 const isDev = (nodeId) => diag.value.nodes.find((x) => x.id === nodeId)?.kind === 'device'
 function portsOf(nodeId) {
@@ -277,7 +331,7 @@ let dragging = false
 function onMove(e) {
   if (!dragging) { push(); dragging = true }
   if (e.link) { const l = diag.value.links.find((x) => x.id === e.link); if (l) l.bend = e.bend }
-  else { const n = diag.value.nodes.find((x) => x.id === e.id); if (n) { n.x = e.x; n.y = e.y } }
+  else { const n = diag.value.nodes.find((x) => x.id === e.id); if (n && e.size !== undefined) n.size = e.size; else if (n) { n.x = e.x; n.y = e.y } }
 }
 function onMovedEnd() { dragging = false }
 watch(selected, onMovedEnd)
@@ -361,9 +415,9 @@ function onKey(e) {
   else if (e.key === 'Escape') { tool.value = 'select'; selected.value = null }
 }
 function onLeave(e) { if (timer) { e.preventDefault(); e.returnValue = '' } }
-onMounted(() => { window.addEventListener('keydown', onKey); window.addEventListener('beforeunload', onLeave) })
+onMounted(() => { window.addEventListener('keydown', onKey); window.addEventListener('beforeunload', onLeave); window.addEventListener('paste', onPaste) })
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onKey); window.removeEventListener('beforeunload', onLeave)
+  window.removeEventListener('keydown', onKey); window.removeEventListener('beforeunload', onLeave); window.removeEventListener('paste', onPaste)
   document.removeEventListener('pointerup', onMovedEnd)
   if (timer) flush()
 })
