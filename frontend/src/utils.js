@@ -142,6 +142,7 @@ export const prefs = reactive({
   theme: load('theme', 'dark'),
   refresh: load('refresh', 60),
   sidebar: load('sidebar', true),
+  menu: load('menu', 'side'), // 'side' : menu latéral, 'top' : barre de menus en haut (comme LibreNMS)
   devView: load('devView', 'cards'),
   range: load('range', '-1d'),
   rackZoom: load('rackZoom', 1),

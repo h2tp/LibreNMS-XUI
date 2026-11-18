@@ -16,6 +16,14 @@
           <dt>{{ t('Graphiques RRD') }}</dt><dd><span class="badge" :class="session.rrd ? 'ok' : 'warning'">{{ session.rrd ? t('disponibles (interactifs)') : t('non montés — images LibreNMS') }}</span></dd>
           <dt>{{ t('LibreNMS') }}</dt><dd><a :href="session.librenms_url" target="_blank">{{ session.librenms_url }}</a></dd>
           <dt>{{ t('Équipements') }}</dt><dd>{{ devCount }}</dd>
+          <dt>{{ t('Menu de navigation') }}</dt>
+          <dd>
+            <div class="seg">
+              <button :class="{ on: prefs.menu !== 'top' }" @click="setMenu('side')"><PanelLeft /> {{ t('Menu latéral') }}</button>
+              <button :class="{ on: prefs.menu === 'top' }" @click="setMenu('top')"><PanelTop /> {{ t('Menu en haut') }}</button>
+            </div>
+            <div class="faint" style="margin-top:4px">{{ t('Sur mobile, le menu latéral est toujours utilisé.') }}</div>
+          </dd>
         </dl>
       </div>
       <div class="card span2">
@@ -31,11 +39,13 @@
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Info, Plug, Server, Cpu } from 'lucide-vue-next'
+import { Info, Plug, Server, Cpu, PanelLeft, PanelTop } from 'lucide-vue-next'
+import { prefs, save } from '../utils'
 import ApiTable from '../components/ApiTable.vue'
 import { session, api, pick, devicesCached } from '../api'
 import { t } from '../i18n'
 const sys = ref(null)
+function setMenu(v) { prefs.menu = v; save('menu', v); window.dispatchEvent(new Event('resize')) }
 const devCount = ref('…')
 const labels = { local_ver: 'Version', local_sha: 'Commit', local_date: t('Date du commit'), local_branch: t('Branche'), db_schema: t('Schéma BDD'), php_ver: 'PHP', python_ver: 'Python', database_ver: t('Base de données'), rrdtool_ver: 'RRDtool', netsnmp_ver: 'Net-SNMP' }
 onMounted(async () => {

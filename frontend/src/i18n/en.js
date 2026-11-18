@@ -1382,4 +1382,8 @@ export default {
   'Monter': 'Move up',
   'Descendre': 'Move down',
   'Vide : tous les équipements du type et du groupe choisis. Sinon, uniquement ceux-ci, dans cet ordre, avec leur nom affiché (la liste proposée suit le type choisi).': 'Empty: all devices of the selected type and group. Otherwise only these, in this order, with their display name (the list offered follows the selected type).',
+  'Menu latéral': 'Side menu',
+  'Menu en haut': 'Top menu',
+  'Menu de navigation': 'Navigation menu',
+  'Sur mobile, le menu latéral est toujours utilisé.': 'On mobile, the side menu is always used.',
 }
