@@ -25,13 +25,15 @@
           <span class="clients"><Users :size="14" /> {{ ap.clients }}</span>
         </div>
         <div v-for="r in ap.radios" :key="r.index" class="radio">
-          <div class="row small" style="gap:8px;min-width:0">
+          <div class="rline small">
             <span class="band" :class="'b' + r.bandKey">{{ r.band }}</span>
             <b class="nowrap">{{ r.channel ? `canal ${r.channel}` : r.label }}</b>
             <span class="muted nowrap">{{ r.clients ?? '—' }} client(s)</span>
             <span class="grow"></span>
+            <span class="rf">
             <span v-if="r.noise !== null" class="muted nowrap" :class="{ warnTxt: r.noise > -80 }" :title="t('Bruit de fond')">{{ r.noise }} dBm</span>
             <span v-if="r.power !== null" class="muted nowrap" :title="t('Puissance d\'émission')">· Tx {{ r.power }} dBm</span>
+            </span>
           </div>
           <div v-if="r.util !== null" class="row" style="gap:8px">
             <div class="bar grow" :title="t('Occupation du canal : {p} %', { p: r.util })"><i :style="{ width: Math.max(1, r.util) + '%', background: COL[r.utilSt] }"></i></div>
@@ -47,7 +49,7 @@
 import { ref, computed } from 'vue'
 import { Wifi, Users } from 'lucide-vue-next'
 import EChart from '../EChart.vue'
-import { session, rrd } from '../../api'
+import { session, rrd, safeList, L } from '../../api'
 import { D, devicesFor } from '../../dashboard/data'
 import { useLoader } from '../../refresh'
 import { timeOption, PALETTE } from '../../charts'
@@ -156,7 +158,12 @@ async function loadHistory() {
 }
 
 useLoader(async () => {
-  const [w, d] = await Promise.all([D.wireless(), devicesFor(props.config)])
+  // filtré sur un seul équipement (vue d'ensemble) : on n'interroge que lui
+  const one = props.config.device
+  const [w, d] = await Promise.all([
+    one ? safeList(`devices/${L.enc(one)}/wireless-sensors`, null, 'wireless_sensors').then((l) => l.map((x) => ({ ...x, hostname: one }))) : D.wireless(),
+    devicesFor(props.config),
+  ])
   all.value = w
   devById.value = Object.fromEntries(d.map((x) => [x.device_id, x]))
   loaded.value = true
@@ -174,6 +181,10 @@ useLoader(async () => {
 .ap.warn { border-top-color: var(--orange); } .ap.crit { border-top-color: var(--red); }
 .head { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .clients { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
+/* ligne radio : passe à la ligne si la carte est étroite plutôt que de déborder */
+.rline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.rf { display: inline-flex; flex-wrap: wrap; gap: 0 6px; justify-content: flex-end; margin-left: auto; }
+.summary .ssid { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .radio { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--border); }
 .band { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 6px; background: var(--border); white-space: nowrap; }
 .band.b24 { background: color-mix(in srgb, #f59e0b 22%, transparent); color: #f59e0b; }

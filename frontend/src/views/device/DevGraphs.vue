@@ -37,6 +37,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { Sparkles, Image, Search, LineChart } from 'lucide-vue-next'
 import RrdChart from '../../components/RrdChart.vue'
 import ApiGraph from '../../components/ApiGraph.vue'
@@ -51,7 +52,7 @@ const enc = L.enc
 const mode = ref(session.rrd ? 'rrd' : 'png')
 const range = ref(prefs.range)
 const q = ref('')
-const cat = ref('system')
+const cat = ref(useRoute().query.cat || 'system')
 const limit = ref(20)
 const portNames = ref({})
 

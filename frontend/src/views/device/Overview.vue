@@ -46,6 +46,8 @@
 
       <div v-if="FACE_TYPES.includes(device.type) && swCount !== 0" class="card"><WSwitches :config="{ device: device.hostname, embedded: true, types: FACE_TYPES }" @count="(c) => (swCount = c)" /></div>
 
+      <div v-if="hasWireless" class="card"><DeviceWireless :device="device" :files="files" /></div>
+
       <div class="card"><DeviceTraffic :device="device" :files="files" height="240px" /></div>
 
       <!-- tout le contenu de l'onglet Santé (processeurs, mémoire, stockage, capteurs) -->
@@ -104,6 +106,7 @@ import WSwitches from '../../components/widgets/WSwitches.vue'
 import DevicePhotos from '../../components/DevicePhotos.vue'
 import DeviceRack from '../../components/DeviceRack.vue'
 import AvailabilityBar from '../../components/AvailabilityBar.vue'
+import DeviceWireless from '../../components/DeviceWireless.vue'
 import { api, pick, safeList, L } from '../../api'
 import { useLoader } from '../../refresh'
 import { loadHealth } from '../../health'
@@ -156,6 +159,8 @@ const disk = computed(() => {
   return { used, total, pct: total ? (used / total) * 100 : 0 }
 })
 const topPorts = computed(() => [...ports.value].filter((p) => !+p.deleted && p.ifType !== 'softwareLoopback').sort((a, b) => (+b.ifInOctets_rate + +b.ifOutOctets_rate) - (+a.ifInOctets_rate + +a.ifOutOctets_rate)).slice(0, 8))
+// borne / contrôleur Wi-Fi : capteurs sans-fil présents (onglet Graphiques › Sans-fil)
+const hasWireless = computed(() => props.device.type === 'wireless' || (props.files || []).some((f) => f.startsWith('wireless-sensor-')))
 const procFile = computed(() => (props.files || []).find((f) => f.startsWith('processor-')))
 
 useLoader(async ({ silent }) => {

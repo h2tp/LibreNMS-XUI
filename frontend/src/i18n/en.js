@@ -1393,4 +1393,9 @@ export default {
   'Menu en haut': 'Top menu',
   'Menu de navigation': 'Navigation menu',
   'Sur mobile, le menu latéral est toujours utilisé.': 'On mobile, the side menu is always used.',
+  'Clients': 'Clients',
+  'Occupation du canal': 'Channel utilization',
+  'Qualité': 'Quality',
+  'Cellule': 'Cell',
+  'Graphiques sans-fil →': 'Wireless graphs →',
 }
