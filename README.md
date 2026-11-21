@@ -12,17 +12,17 @@ d'un port interroge l'équipement en SNMP, avec les identifiants fournis par l'A
 est lue dans la base MySQL de LibreNMS (compte en lecture seule), car l'API ne les expose pas ; cette base sert aussi
 au CPU / mémoire / stockage avec LibreNMS < 26.7.
 
-![Tableau de bord](img/tdb.png)
+![Tableau de bord « Vue d'ensemble »](img/overview.png)
 
 ## Aperçu
 
 | | |
 |---|---|
-| **Équipements** : cartes ou tableau, filtres, ajout SNMP / ICMP<br>![Équipements](img/devices.png) | **Schémas réseau** : éditeur intégré, liens colorés selon la charge ou le débit<br>![Schéma réseau](img/schema.png) |
-| **Ports** : trafic, utilisation, erreurs de toutes les interfaces<br>![Ports](img/ports.png) | **Santé & capteurs** : températures, états, compteurs, puissance<br>![Santé et capteurs](img/health.png) |
-| **Alertes** : en cours, acquittement, règles, historique<br>![Alertes](img/alertes.png) | **Journaux** : évènements, syslog, alertes, authentification<br>![Journaux](img/logs.png) |
+| **Tableau « Réseaux »** : trafic Internet, switchs avec façade des ports, baie, schéma, ports chargés ou en erreur, latence<br>![Tableau de bord Réseaux](img/network.png) | **Tableau « Serveurs et NAS »** : CPU, RAM, disques, OS, état du parc, fiches équipement, journaux<br>![Tableau de bord Serveurs et NAS](img/server-nas.png) |
 
-<p align="center"><img src="img/add-widget.png" alt="Catalogue de widgets" width="560"><br><em>Plus de 30 widgets pour composer ses tableaux de bord</em></p>
+<p align="center"><img src="img/schema.png" alt="Schéma réseau"><br><em>Schémas réseau : éditeur intégré, état et débits en direct, liens colorés selon la charge ou le débit</em></p>
+
+<p align="center"><img src="img/widgets.png" alt="Catalogue de widgets" width="560"><br><em>Plus de 30 widgets pour composer ses tableaux de bord</em></p>
 
 ## Points forts
 
@@ -31,13 +31,13 @@ au CPU / mémoire / stockage avec LibreNMS < 26.7.
   plusieurs tableaux par utilisateur, partage, export / import.
 - **Graphiques interactifs** tracés à partir des RRD : zoom, survol, plages de 1 h à 1 an, statistiques.
 - **Schémas réseau en direct** : état des équipements, alertes, débits ; liens colorés selon la charge ou le
-  débit (couleurs au choix), graphe de trafic et accès aux ports d'un clic, images personnalisées, éléments
-  hors LibreNMS (box, caméra…), fond (plan, photo de baie), création depuis LLDP.
+  débit (couleurs au choix), graphe de trafic et accès aux ports d'un clic, images personnalisées, images libres
+  (logo, photo, plan), éléments hors LibreNMS (box, caméra…), fond (plan, photo de baie), création depuis LLDP.
 - **Baies de brassage** : une ou plusieurs baies par salle, équipements LibreNMS et éléments passifs (panneaux de
   brassage, PDU, étagères…) placés en U par glisser-déposer, façades avec l'état réel des ports, câblage réseau et
   électrique port à port (y compris entre baies et vers les équipements en ping) avec état et trafic en direct, liste
   des câbles exportable.
-- **Fiche équipement complète** : vue d'ensemble avec photos, ports, santé, inventaire, voisins CDP/LLDP,
+- **Fiche équipement complète** : vue d'ensemble avec photos, façade des ports (switchs, pare-feu), radios Wi-Fi, ports, santé, inventaire, voisins CDP/LLDP,
   réseau, routage, services, alertes, journaux, disponibilité, config Oxidized, gestion.
 - **Fiche d'alerte** : chronologie (première détection, durée), conditions de la règle en clair avec la
   valeur mesurée, indicateurs de l'élément concerné (port, capteur avec jauge des seuils, latence, service),
@@ -45,7 +45,7 @@ au CPU / mémoire / stockage avec LibreNMS < 26.7.
 - **Gestion** : ajout / suppression d'équipements, acquittement d'alertes, règles d'alerte avec assistant,
   groupes, emplacements, maintenance.
 - **Confort** : interface en français ou en anglais (bouton FR / EN, langue du navigateur par défaut), recherche globale `Ctrl+K`,
-  thème clair / sombre, pleine largeur sur les grands écrans, rafraîchissement automatique, export CSV partout, mode kiosque pour écran mural.
+  menu latéral ou menu en haut comme LibreNMS, thème clair / sombre, pleine largeur sur les grands écrans, rafraîchissement automatique, export CSV partout, mode kiosque pour écran mural.
 
 ## Démarrage rapide
 
@@ -104,16 +104,18 @@ Le jeton ne quitte jamais le serveur (sessions côté serveur, cookie HttpOnly) 
 Avec le dossier `rrd` monté, les courbes sont tracées à partir des données réelles. Sans montage,
 l'interface se rabat sur les images PNG générées par LibreNMS.
 
-### Base LibreNMS : ports supprimés, CPU / mémoire / stockage (facultatif)
+### Base LibreNMS : ports supprimés, CPU / mémoire / stockage, capteurs (facultatif)
 
 L'API LibreNMS ne renvoie jamais les ports supprimés : pour afficher le filtre **Supprimés** de la page Ports, XUI
 lit directement la table `ports` de LibreNMS.
 
-La base sert aussi pour le CPU, la mémoire et le stockage :
+La base sert aussi pour le CPU, la mémoire, le stockage et les capteurs :
 - avant LibreNMS **26.7**, l'API renvoie toujours des listes vides pour ces données (bug corrigé par
   [#19953](https://github.com/librenms/librenms/pull/19953)) : sans la base, la fiche équipement ne les affiche pas ;
 - les widgets CPU / mémoire / stockage des tableaux de bord la lisent en une seule requête au lieu de plusieurs
   appels API par équipement (plus rapide, quelle que soit la version) ;
+- les capteurs (températures, états, alimentation…) des widgets et la santé d'une fiche équipement sont lus
+  en une requête au lieu d'un appel API par capteur ;
 - les capteurs d'état (HA d'un pare-feu, Panorama, alimentations…) : l'API ne donne que la valeur brute (« 4 »),
   XUI affiche le libellé (« Passif ») défini par LibreNMS quand il n'a pas sa propre traduction française.
 
@@ -125,6 +127,7 @@ GRANT SELECT ON librenms.ports TO 'xui'@'<IP de XUI>';
 GRANT SELECT ON librenms.processors TO 'xui'@'<IP de XUI>';
 GRANT SELECT ON librenms.mempools TO 'xui'@'<IP de XUI>';
 GRANT SELECT ON librenms.storage TO 'xui'@'<IP de XUI>';
+GRANT SELECT ON librenms.sensors TO 'xui'@'<IP de XUI>';
 GRANT SELECT ON librenms.state_translations TO 'xui'@'<IP de XUI>';
 GRANT SELECT ON librenms.sensors_to_state_indexes TO 'xui'@'<IP de XUI>';
 ```
@@ -198,7 +201,8 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   avec choix des ports (pré-remplis par LLDP), nuages et textes libres, **éléments libres** absents de LibreNMS
   (box opérateur, caméra, équipement non supervisé… : nom, sous-titre, image ; sans état ni alertes, le trafic
   d'un lien vers un équipement est lu sur le port côté équipement), liens courbables, fond uni / grille /
-  image (PNG, JPEG, WebP, GIF, 8 Mo max.), annuler / rétablir, export SVG. En direct : état des équipements,
+  image (PNG, JPEG, WebP, GIF, 8 Mo max.), **images libres** posées sur le schéma (logo, photo, plan : bouton,
+  dépôt de fichier ou Ctrl+V, redimensionnement, opacité, légende), annuler / rétablir, export SVG. En direct : état des équipements,
   alertes, débits, couleur et épaisseur des liens selon la charge (%) ou le débit, avec paliers et couleurs
   personnalisables par schéma (par défaut, charge : bleu clair < 1 %, bleu < 10 %, vert < 40 %, ambre < 70 %,
   rouge au-delà, noir si coupé). Survol d'un lien : graphe de trafic 24 h ; clic : fenêtre épinglée avec liens
@@ -217,7 +221,8 @@ Ce que XUI stocke lui-même se trouve dans `./data` (volume `/data`) — à incl
   exportable en CSV. Câbles déplaçables (forme libre) et rebranchables en glissant leurs extrémités.
   Annuler / rétablir (Ctrl+Z / Ctrl+Y). Partage comme les schémas. Stockage : `./data/racks.json`.
 - **Équipements** : cartes / tableau, filtres comme dans LibreNMS (état, OS, version, plateforme, featureset, emplacement, type, groupe) avec listes en cascade et nombre d'équipements, conservés dans l'URL ; ajout SNMP v1/v2c/v3 ou ICMP.
-- **Fiche équipement** : vue d'ensemble (jauges CPU / RAM / disque / dispo, photos avec légendes et plein écran,
+- **Fiche équipement** : vue d'ensemble (jauges CPU / RAM / disque / dispo, barre de disponibilité sur 90 jours,
+  façade des ports des switchs et pare-feu, bloc Sans-fil des bornes Wi-Fi, photos avec légendes et plein écran,
   emplacement dans les baies avec extrait de la baie et liste des câbles),
   ports avec sparklines, santé (processeurs, mémoire, stockage, capteurs + graphiques), explorateur de tous les
   RRD, inventaire ENTITY-MIB en arbre, voisins CDP/LLDP (graphe), IP, VLAN, FDB, ARP, pile de ports,

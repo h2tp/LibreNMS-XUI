@@ -14,17 +14,17 @@ this database is also used for CPU / memory / storage with LibreNMS < 26.7.
 > The interface is available in **English and French** (FR / EN button in the top bar; defaults to the browser language).
 > Screenshots show the French version.
 
-![Dashboard](img/tdb.png)
+!["Overview" dashboard](img/overview.png)
 
 ## Overview
 
 | | |
 |---|---|
-| **Devices**: cards or table, filters, SNMP / ICMP onboarding<br>![Devices](img/devices.png) | **Network diagrams**: built-in editor, links colored by load or throughput<br>![Network diagram](img/schema.png) |
-| **Ports**: traffic, utilization and errors for every interface<br>![Ports](img/ports.png) | **Health & sensors**: temperatures, states, counters, power<br>![Health and sensors](img/health.png) |
-| **Alerts**: active alerts, acknowledgement, rules, history<br>![Alerts](img/alertes.png) | **Logs**: events, syslog, alerts, authentication<br>![Logs](img/logs.png) |
+| **"Network" dashboard**: Internet traffic, switches with front-panel port view, rack, diagram, busiest and error ports, latency<br>![Network dashboard](img/network.png) | **"Servers and NAS" dashboard**: CPU, RAM, disks, OS, fleet status, device cards, logs<br>![Servers and NAS dashboard](img/server-nas.png) |
 
-<p align="center"><img src="img/add-widget.png" alt="Widget catalog" width="560"><br><em>30+ widgets to build your own dashboards</em></p>
+<p align="center"><img src="img/schema.png" alt="Network diagram"><br><em>Network diagrams: built-in editor, live status and throughput, links colored by load or throughput</em></p>
+
+<p align="center"><img src="img/widgets.png" alt="Widget catalog" width="560"><br><em>30+ widgets to build your own dashboards</em></p>
 
 ## Highlights
 
@@ -33,19 +33,19 @@ this database is also used for CPU / memory / storage with LibreNMS < 26.7.
   sharing, export / import.
 - **Interactive graphs** drawn from the RRD files: zoom, hover, ranges from 1 h to 1 year, statistics.
 - **Live network diagrams**: device status, alerts, throughput; links colored by load or throughput (custom
-  colors), traffic graph and one-click access to ports, custom images, elements that are not in LibreNMS
+  colors), traffic graph and one-click access to ports, custom images, free images (logo, photo, floor plan), elements that are not in LibreNMS
   (ISP router, camera…), background (floor plan, rack photo), generation from LLDP.
 - **Network racks**: one or more racks per room, LibreNMS devices and passive items (patch panels, PDUs,
   shelves…) placed by U with drag-and-drop, front panels with real port status, network and power port-to-port
   cabling (including between racks and to ping-only devices) with live status and traffic, exportable cable list.
-- **Complete device page**: overview with photos, ports, health, inventory, CDP/LLDP neighbours, network,
+- **Complete device page**: overview with photos, front-panel port view (switches, firewalls), Wi-Fi radios, ports, health, inventory, CDP/LLDP neighbours, network,
   routing, services, alerts, logs, availability, Oxidized config, management.
 - **Alert details**: timeline (first detection, duration), rule conditions in plain words with the measured
   value, metrics for the affected entity (port, sensor with threshold gauge, latency, service), grouped and
   filterable properties, SNMP secrets masked.
 - **Management**: add / delete devices, acknowledge alerts, alert rules with a wizard, groups, locations,
   maintenance.
-- **Convenience**: English / French interface, global search `Ctrl+K`, light / dark theme, full width on large screens, auto-refresh, CSV
+- **Convenience**: English / French interface, global search `Ctrl+K`, side menu or LibreNMS-style top menu, light / dark theme, full width on large screens, auto-refresh, CSV
   export everywhere, kiosk mode for wall displays.
 
 ## Quick start
@@ -105,16 +105,18 @@ passwords) are masked before being sent to the browser.
 With the `rrd` directory mounted, graphs are drawn from the real data. Without it, the interface falls back to
 the PNG images rendered by LibreNMS.
 
-### LibreNMS database: deleted ports, CPU / memory / storage (optional)
+### LibreNMS database: deleted ports, CPU / memory / storage, sensors (optional)
 
 The LibreNMS API never returns deleted ports: to show the **Deleted** filter on the Ports page, XUI reads the
 LibreNMS `ports` table directly.
 
-The database is also used for CPU, memory and storage:
+The database is also used for CPU, memory, storage and sensors:
 - before LibreNMS **26.7**, the API always returns empty lists for this data (bug fixed by
   [#19953](https://github.com/librenms/librenms/pull/19953)): without the database, the device page cannot show it;
 - the CPU / memory / storage dashboard widgets read it in a single query instead of several API calls per device
   (faster, whatever the version);
+- sensors (temperatures, states, power…) in widgets and in a device's health tab are read in a single query
+  instead of one API call per sensor;
 - state sensors (firewall HA, Panorama, power supplies…): the API only gives the raw value ("4"); XUI shows the
   label ("Passive") defined by LibreNMS when it has no translation of its own.
 
@@ -126,6 +128,7 @@ GRANT SELECT ON librenms.ports TO 'xui'@'<XUI IP>';
 GRANT SELECT ON librenms.processors TO 'xui'@'<XUI IP>';
 GRANT SELECT ON librenms.mempools TO 'xui'@'<XUI IP>';
 GRANT SELECT ON librenms.storage TO 'xui'@'<XUI IP>';
+GRANT SELECT ON librenms.sensors TO 'xui'@'<XUI IP>';
 GRANT SELECT ON librenms.state_translations TO 'xui'@'<XUI IP>';
 GRANT SELECT ON librenms.sensors_to_state_indexes TO 'xui'@'<XUI IP>';
 ```
@@ -197,7 +200,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   port selection (pre-filled from LLDP), clouds and free text, **free elements** that are not in LibreNMS
   (ISP router, camera, unmonitored device…: name, subtitle, image; no status or alerts, traffic on a link to a
   device is read from the device-side port), curved links, plain / grid / image background (PNG, JPEG, WebP,
-  GIF, 8 MB max.), undo / redo, SVG export. Live: device status, alerts, throughput, link color and width by
+  GIF, 8 MB max.), **free images** placed on the diagram (logo, photo, floor plan: button, file drop or Ctrl+V,
+  resize, opacity, caption), undo / redo, SVG export. Live: device status, alerts, throughput, link color and width by
   load (%) or throughput, with per-diagram custom thresholds and colors (default load scale: light blue < 1%,
   blue < 10%, green < 40%, amber < 70%, red above, black when down). Hovering a link shows a 24 h traffic
   graph; clicking pins it with links to the port pages. Custom image per device or element (inside the card or
@@ -216,7 +220,8 @@ What XUI stores itself lives in `./data` (volume `/data`) — include it in your
   Shared like diagrams. Storage:
   `./data/racks.json`.
 - **Devices**: cards / table, LibreNMS-style filters (status, OS, version, platform, featureset, location, type, group) with cascading lists and device counts, kept in the URL; SNMP v1/v2c/v3 or ICMP onboarding.
-- **Device page**: overview (CPU / RAM / disk / availability gauges, photos with captions and full-screen view,
+- **Device page**: overview (CPU / RAM / disk / availability gauges, 90-day availability bar, front-panel port view
+  for switches and firewalls, Wireless block for Wi-Fi access points, photos with captions and full-screen view,
   rack placement with a rack extract and the list of its cables),
   ports with sparklines, health (processors, memory, storage, sensors + graphs), browser for every RRD file,
   ENTITY-MIB inventory tree, CDP/LLDP neighbours (graph), IP, VLAN, FDB, ARP, port stack, transceivers,
